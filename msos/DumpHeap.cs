@@ -69,6 +69,18 @@ namespace msos
                     return;
                 }
             }
+            if (!String.IsNullOrEmpty(TypeRegex))
+            {
+                try
+                {
+                    new Regex(TypeRegex);
+                }
+                catch (ArgumentException)
+                {
+                    context.WriteError("The regular expression specified for --type is not valid; did you forget to escape regex characters?");
+                    return;
+                }
+            }
 
             _heap = context.Runtime.GetHeap();
             if (!_heap.CanWalkHeap)
