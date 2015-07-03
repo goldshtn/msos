@@ -50,4 +50,15 @@ c        System.Object        0   instance   00000000017edd70     m_state
 17c      ....ContextCallback  0   instance   static               s_callCallbackInContext
    >> Domain:Value  000000000120e850:NotInit <<
 Elapsed: 24ms
+
+0> !gcroot 0000000001581a84
+000000000101131C -> 00000000015801C4 RefCount handle
+        -> 00000000015801C4 System.Runtime.InteropServices.WindowsRuntime.CustomPropertyImpl
+        -> 0000000001577948 System.Reflection.RuntimePropertyInfo
+        -> 000000000156A18C System.RuntimeType+RuntimeTypeCache
+        -> 0000000001574E0C System.RuntimeType+RuntimeTypeCache+MemberInfoCache<System.Reflection.RuntimePropertyInfo>
+        -> 0000000001581A70 System.Reflection.CerHashtable+Table<System.String,System.Reflection.RuntimePropertyInfo[]>
+        -> 0000000001581A84 System.String[]
+
+Elapsed: 635ms
 ```
