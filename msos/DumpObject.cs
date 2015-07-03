@@ -1,4 +1,5 @@
 ﻿using CommandLine;
+using Microsoft.Diagnostics.Runtime;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -17,8 +18,15 @@ namespace msos
         [Option("nofields", HelpText = "Do not display the object's fields.")]
         public bool NoFields { get; set; }
 
+        [Option("norecurse", HelpText = "Do not display the fields of embedded value types recursively.")]
+        public bool NoRecurse { get; set; }
+
+        private CommandExecutionContext _context;
+
         public void Execute(CommandExecutionContext context)
         {
+            _context = context;
+
             ulong objPtr;
             if (!ulong.TryParse(ObjectAddress, NumberStyles.HexNumber, null, out objPtr))
             {
@@ -59,24 +67,19 @@ namespace msos
                     "Offset", "Type", "VT", "Attr", "Value", "Name");
                 foreach (var field in type.Fields)
                 {
-                    context.WriteLine("{0,-8:x} {1,-20} {2,-3} {3,-10} {4,-20:x16} {5}",
-                        field.Offset, field.GetFieldTypeNameTrimmed(),
-                        (field.IsPrimitive() || field.IsValueClass()) ? 1 : 0,
-                        "instance", field.GetValue(objPtr), field.Name);
+                    DisplayFieldRecursively(field, new InstanceFieldValueForDisplayRetriever(objPtr), field.Offset);
                 }
                 foreach (var field in type.ThreadStaticFields)
                 {
                     context.WriteLine("{0,-8:x} {1,-20} {2,-3} {3,-10} {4,-20:x16} {5}",
                         field.Offset, field.GetFieldTypeNameTrimmed(),
                         (field.IsPrimitive() || field.IsValueClass()) ? 1 : 0,
-                        "instance", "thrstatic", field.Name);
+                        "shared", "thrstatic", field.Name);
                     foreach (var appDomain in context.Runtime.AppDomains)
                     {
                         foreach (var thread in context.Runtime.Threads)
                         {
-                            context.WriteLine("   >> Domain:Thread:Value  {0:x16}:{1}:{2} <<",
-                                appDomain.Address, thread.ManagedThreadId,
-                                field.GetValue(appDomain, thread) ?? "NotInit");
+                            DisplayFieldRecursively(field, new ThreadStaticFieldValueForDisplayRetriever(appDomain, thread), field.Offset);
                         }
                     }
                 }
@@ -85,12 +88,28 @@ namespace msos
                     context.WriteLine("{0,-8:x} {1,-20} {2,-3} {3,-10} {4,-20:x16} {5}",
                         field.Offset, field.GetFieldTypeNameTrimmed(),
                         (field.IsPrimitive() || field.IsValueClass()) ? 1 : 0,
-                        "instance", "static", field.Name);
+                        "shared", "static", field.Name);
                     foreach (var appDomain in context.Runtime.AppDomains)
                     {
-                        context.WriteLine("   >> Domain:Value  {0:x16}:{1} <<",
-                            appDomain.Address, field.GetValue(appDomain) ?? "NotInit");
+                        DisplayFieldRecursively(field, new StaticFieldValueForDisplayRetriever(appDomain), field.Offset);
                     }
+                }
+            }
+        }
+
+        private void DisplayFieldRecursively<TField>(TField field, IFieldValueForDisplayRetriever<TField> retriever, int offset, string baseName = "", int depth = 0)
+            where TField : ClrField
+        {
+            bool inner = depth > 0;
+            var address = retriever.GetFieldAddress(field, inner);
+            _context.WriteLine(retriever.GetDisplayString(field, offset, baseName, inner));
+
+            if (!NoRecurse && field.ElementType == ClrElementType.Struct)
+            {
+                foreach (var innerField in field.Type.Fields)
+                {
+                    var innerRetriever = new InstanceFieldValueForDisplayRetriever(address);
+                    DisplayFieldRecursively(innerField, innerRetriever, offset + innerField.Offset, baseName + field.Name + ".", depth + 1);
                 }
             }
         }

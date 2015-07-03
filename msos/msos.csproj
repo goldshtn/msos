@@ -100,11 +100,13 @@
     <Compile Include="DumpHeap.cs" />
     <Compile Include="DumpObject.cs" />
     <Compile Include="EEHeap.cs" />
+    <Compile Include="FieldValueForDisplayRetriever.cs" />
     <Compile Include="FReachableQueue.cs" />
     <Compile Include="GCRoot.cs" />
     <Compile Include="ICommand.cs" />
     <Compile Include="LM.cs" />
     <Compile Include="NumberFormatExtensions.cs" />
+    <Compile Include="ObjectExtensions.cs" />
     <Compile Include="ObjectSet.cs" />
     <Compile Include="ObjSize.cs" />
     <Compile Include="PrintException.cs" />
