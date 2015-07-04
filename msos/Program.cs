@@ -49,6 +49,11 @@ namespace msos
                 return ERROR_EXIT_CODE;
             }
 
+            if (target.ClrVersions.Count == 0)
+            {
+                ConsolePrinter.WriteError("There is no CLR loaded into the process.");
+                return ERROR_EXIT_CODE;
+            }
             foreach (var clrVersion in target.ClrVersions)
             {
                 ConsolePrinter.WriteInfo("Flavor: {0}, version: {1}", clrVersion.Flavor, clrVersion.Version);
@@ -66,9 +71,6 @@ namespace msos
             ConsolePrinter.WriteInfo("Using Data Access DLL at: " + dacLocation);
             var runtime = target.CreateRuntime(dacLocation);
 
-            // TODO If there is a current exception on the current thread, print it
-            // TODO Set the context to the first managed thread, or the one with the exception
-
             var context = new CommandExecutionContext(runtime);
             target.DefaultSymbolNotification = new SymbolNotification(context);
             var commandParser = new Parser(ps =>
@@ -76,6 +78,10 @@ namespace msos
                 ps.CaseSensitive = false;
                 ps.HelpWriter = Console.Out;
             });
+
+            var threadToSwitchTo = runtime.ThreadWithActiveExceptionOrFirstThread();
+            new SwitchThread() { ManagedThreadId = threadToSwitchTo.ManagedThreadId }.Execute(context);
+
             while (!context.ShouldQuit)
             {
                 Console.Write("{0}> ", context.CurrentManagedThreadId);
