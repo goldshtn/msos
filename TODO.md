@@ -7,3 +7,5 @@
 3. Deadlock analysis
 
 4. Native stack, thread, module support
+
+5. Live target support (with no suspend)
