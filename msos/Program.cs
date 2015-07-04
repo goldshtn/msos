@@ -96,7 +96,7 @@ namespace msos
                     continue;
 
                 var stopwatch = Stopwatch.StartNew();
-                (parseResult.Value as ICommand).Execute(context);
+                ((ICommand)parseResult.Value).Execute(context);
                 ConsolePrinter.WriteInfo("Elapsed: {0}ms", stopwatch.ElapsedMilliseconds);
             }
 
