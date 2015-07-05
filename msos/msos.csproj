@@ -106,6 +106,7 @@
     <Compile Include="GCRoot.cs" />
     <Compile Include="ICommand.cs" />
     <Compile Include="LM.cs" />
+    <Compile Include="NativeMethods.cs" />
     <Compile Include="NumberFormatExtensions.cs" />
     <Compile Include="ObjectExtensions.cs" />
     <Compile Include="ObjectSet.cs" />

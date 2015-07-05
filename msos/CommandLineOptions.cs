@@ -9,7 +9,13 @@ namespace msos
 {
     class CommandLineOptions
     {
-        [Option('z', Required = true, HelpText = "The dump file to open.")]
+        [Option('z', HelpText = "The dump file to open.")]
         public string DumpFile { get; set; }
+
+        [Option("pn", HelpText = "The process name to attach to. Fails if there are multiple processes with that name.")]
+        public string ProcessName { get; set; }
+
+        [Option("pid", HelpText = "The process id to attach to.")]
+        public int ProcessId { get; set; }
     }
 }
