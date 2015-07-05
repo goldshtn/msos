@@ -1,6 +1,8 @@
 # msos
 This project provides a command-line environment a-la WinDbg for executing SOS commands without having SOS available. It is based on the ClrMD library that is essentially a managed replacement for SOS.
 
+Build status: [![Build status](https://ci.appveyor.com/api/projects/status/gla95e3t81oodbvh?svg=true)](https://ci.appveyor.com/project/goldshtn/msos)
+
 You should use this project when you don't have SOS available, or when you want a quick alternative to firing up WinDbg and locating SOS. One such situation is when debugging dumps from Windows Phone devices; Microsoft does not make the Windows Phone CoreCLR SOS publicly available at present. What's more, some msos commands already offer more information than their SOS counterparts.
 
 To use msos, compile the project and run it from the command line with a dump file:
