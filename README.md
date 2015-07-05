@@ -9,6 +9,10 @@ To use msos, compile the project and run it from the command line with a dump fi
 
 ```msos -z myapp.dmp```
 
+...or a live target:
+
+```msos --pn myprocess.exe```
+
 Type ```help``` to get a list of currently supported commands. Note that some options might currently be unsupported, and are marked as such by the built-in help.
 
 Examples:
