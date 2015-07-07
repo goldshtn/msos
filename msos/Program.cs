@@ -39,6 +39,7 @@ namespace msos
         private CommandLineOptions _options;
         private DataTarget _target;
         private ClrRuntime _runtime;
+        private CommandExecutionContext _context = new CommandExecutionContext();
 
         private void Run(string[] args)
         {
@@ -76,11 +77,11 @@ namespace msos
 
         private void RunMainLoop()
         {
-            var context = new CommandExecutionContext(_runtime);
-            _target.DefaultSymbolNotification = new SymbolNotification(context);
+            _context.Runtime = _runtime;
+            _target.DefaultSymbolNotification = new SymbolNotification(_context);
 
             var threadToSwitchTo = _runtime.ThreadWithActiveExceptionOrFirstThread();
-            new SwitchThread() { ManagedThreadId = threadToSwitchTo.ManagedThreadId }.Execute(context);
+            new SwitchThread() { ManagedThreadId = threadToSwitchTo.ManagedThreadId }.Execute(_context);
 
             var commandParser = new Parser(ps =>
             {
@@ -88,9 +89,9 @@ namespace msos
                 ps.HelpWriter = Console.Out;
             });
 
-            while (!context.ShouldQuit)
+            while (!_context.ShouldQuit)
             {
-                Console.Write("{0}> ", context.CurrentManagedThreadId);
+                Console.Write("{0}> ", _context.CurrentManagedThreadId);
 
                 string input = Console.ReadLine();
                 string[] parts = input.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
@@ -102,7 +103,7 @@ namespace msos
                     continue;
 
                 var stopwatch = Stopwatch.StartNew();
-                ((ICommand)parseResult.Value).Execute(context);
+                ((ICommand)parseResult.Value).Execute(_context);
                 ConsolePrinter.WriteInfo("Elapsed: {0}ms", stopwatch.ElapsedMilliseconds);
             }
         }
@@ -112,6 +113,7 @@ namespace msos
             string dacLocation = _target.ClrVersions[0].TryDownloadDac();
             ConsolePrinter.WriteInfo("Using Data Access DLL at: " + dacLocation);
             _runtime = _target.CreateRuntime(dacLocation);
+            _context.DacLocation = dacLocation;
         }
 
         private void SetupSymPath()
@@ -205,6 +207,7 @@ namespace msos
             _target = DataTarget.AttachToProcess(pid, ATTACH_TIMEOUT, AttachFlag.Passive);
             ConsolePrinter.WriteInfo("Attached to process {0}, architecture {1}, {2} CLR versions detected.",
                 pid, _target.Architecture, _target.ClrVersions.Count);
+            _context.ProcessId = pid;
         }
 
         private void AttachToProcessByName()
@@ -230,6 +233,7 @@ namespace msos
             ConsolePrinter.WriteInfo("Opened dump file '{0}', architecture {1}, {2} CLR versions detected.",
                 _options.DumpFile, _target.Architecture, _target.ClrVersions.Count);
             Console.Title = "msos - " + _options.DumpFile;
+            _context.DumpFile = _options.DumpFile;
         }
 
         private void ParseCommandLineArguments(string[] args)

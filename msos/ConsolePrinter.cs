@@ -34,9 +34,14 @@ namespace msos
 
         public static void WriteCommandOutput(string format, params object[] args)
         {
+            WriteCommandOutput(String.Format(format, args));
+        }
+
+        public static void WriteCommandOutput(string value)
+        {
             using (new ConsoleColorChanger(ConsoleColor.Gray))
             {
-                Console.WriteLine(format, args);
+                Console.WriteLine(value);
             }
         }
 
