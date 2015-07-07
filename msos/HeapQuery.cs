@@ -8,11 +8,13 @@ using System.Threading.Tasks;
 
 namespace msos
 {
-    [Verb("!hq", HelpText = "TODO")]
+    [Verb("!hq", HelpText = "Runs a query over heap objects and prints the results. Examples: TODO")]
     class HeapQuery : ICommand
     {
+        // This is a collection because we want to capture anything provided after
+        // the initial !hq command. We then collect the parts back to a single string.
         [Value(0, Required = true)]
-        public string Query { get; set; }
+        public IEnumerable<string> Query { get; set; }
 
         private class QueryOutputWriter : TextWriter
         {
@@ -75,7 +77,7 @@ namespace msos
                 {
                     try
                     {
-                        runner.RunQuery(Query);
+                        runner.RunQuery(String.Join(" ", Query.ToArray()));
                     }
                     catch (RunFailedException ex)
                     {

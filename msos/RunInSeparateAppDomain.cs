@@ -70,7 +70,7 @@ internal class RunQuery : IRunQuery
 
     public object Run()
     {
-        return " + CompiledQueryPlaceholder + @";
+        return (" + CompiledQueryPlaceholder + @");
     }
 }
 ";
@@ -131,8 +131,10 @@ internal class RunQuery : IRunQuery
             object result = runQuery.Run();
             IEnumerable enumerable = result as IEnumerable;
             ulong rowCount = 0;
-            if (enumerable != null)
+            if (enumerable != null && !(result is string))
             {
+                // TODO Display in tabular form -- start by printing column names,
+                // followed by rows of the column values.
                 foreach (var obj in enumerable)
                 {
                     if (obj is ulong)
