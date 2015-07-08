@@ -111,7 +111,7 @@ namespace msos
                     if (input.EndsWith(" _"))
                     {
                         Console.Write(">    ");
-                        command += input.Substring(0, input.Length - 2);
+                        command += input.Substring(0, input.Length - 1);
                     }
                     else
                     {
