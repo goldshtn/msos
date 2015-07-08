@@ -46,6 +46,11 @@ namespace msos
             return from type in Heap.EnumerateTypes()
                    select Heap.GetDynamicClass(type.Name);
         }
+
+        public dynamic Object(ulong address)
+        {
+            return Heap.GetDynamicObject(address);
+        }
     }
 
     internal interface IRunQuery
@@ -111,6 +116,11 @@ internal class RunQuery : IRunQuery
     private IEnumerable<dynamic> AllClasses()
     {
         return _context.AllClasses();
+    }
+
+    private dynamic Object(ulong address)
+    {
+        return _context.Object(address);
     }
 
     public object Run()
