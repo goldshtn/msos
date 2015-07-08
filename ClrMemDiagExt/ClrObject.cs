@@ -414,6 +414,12 @@ namespace Microsoft.Diagnostics.RuntimeExt
                 return true;
             }
 
+            if (binder.Name == "__Fields")
+            {
+                result = (from f in m_type.Fields where f.Type != null select new { Name = f.Name, Type = f.Type.Name }).ToArray();
+                return true;
+            }
+
             ClrInstanceField field = null;
             foreach (var instanceField in m_type.Fields)
             {
