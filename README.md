@@ -5,13 +5,18 @@ Build status: [![Build status](https://ci.appveyor.com/api/projects/status/gla95
 
 You should use this project when you don't have SOS available, or when you want a quick alternative to firing up WinDbg and locating SOS. One such situation is when debugging dumps from Windows Phone devices; Microsoft does not make the Windows Phone CoreCLR SOS publicly available at present. What's more, some msos commands already offer more information than their SOS counterparts. Especially cool is the ```!hq``` command, which compiles an arbitrary dynamic query over heap objects and classes.
 
-To use msos, compile the project and run it from the command line with a dump file:
+To use msos, compile the project and run it from the command line with a dump file or a live target:
 
-```msos -z myapp.dmp```
+```
+msos -z myapp.dmp
+msos --pn myprocess.exe
+```
 
-...or a live target:
+You can pipe command output to a file, execute initial commands from a file, or specify commands using the ```-c``` switch:
 
-```msos --pn myprocess.exe```
+```
+msos --pn myprocess.exe -c "!dumpheap --stat; q" -o memstats.txt
+```
 
 Type ```help``` to get a list of currently supported commands. Note that some options might currently be unsupported, and are marked as such by the built-in help.
 
