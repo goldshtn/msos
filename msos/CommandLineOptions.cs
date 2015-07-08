@@ -17,5 +17,8 @@ namespace msos
 
         [Option("pid", HelpText = "The process id to attach to.")]
         public int ProcessId { get; set; }
+
+        [Option("diag", HelpText = "Display diagnostic information after executing each command.")]
+        public bool DisplayDiagnosticInformation { get; set; }
     }
 }

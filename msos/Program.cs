@@ -102,9 +102,10 @@ namespace msos
                 if (parseResult.Errors.Any())
                     continue;
 
-                var stopwatch = Stopwatch.StartNew();
-                ((ICommand)parseResult.Value).Execute(_context);
-                ConsolePrinter.WriteInfo("Elapsed: {0}ms", stopwatch.ElapsedMilliseconds);
+                using (new TimeAndMemory(_options.DisplayDiagnosticInformation))
+                {
+                    ((ICommand)parseResult.Value).Execute(_context);
+                }
             }
         }
 

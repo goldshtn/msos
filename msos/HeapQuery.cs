@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.Remoting;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -43,12 +44,18 @@ namespace msos
                     _context.WriteLine(_buffer.ToString());
                     _buffer.Clear();
                 }
+                RemotingServices.Disconnect(this);
                 base.Dispose(disposing);
             }
 
             public override Encoding Encoding
             {
                 get { return Encoding.UTF8; }
+            }
+
+            public override object InitializeLifetimeService()
+            {
+                return null;
             }
         }
 
