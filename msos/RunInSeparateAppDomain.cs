@@ -1,5 +1,6 @@
 ﻿using Microsoft.CSharp;
 using Microsoft.Diagnostics.Runtime;
+using Microsoft.Diagnostics.RuntimeExt;
 using System;
 using System.CodeDom.Compiler;
 using System.Collections;
@@ -20,6 +21,25 @@ namespace msos
     internal class RunQueryContext
     {
         public ClrHeap Heap { get; set; }
+
+        public IEnumerable<dynamic> ObjectsOfType(string typeName)
+        {
+            return from obj in Heap.EnumerateObjects()
+                   let type = Heap.GetObjectType(obj)
+                   where type != null && typeName == type.Name
+                   select Heap.GetDynamicObject(obj);
+        }
+
+        public IEnumerable<dynamic> AllObjects()
+        {
+            return from obj in Heap.EnumerateObjects()
+                   select Heap.GetDynamicObject(obj);
+        }
+
+        public dynamic Class(string typeName)
+        {
+            return Heap.GetDynamicClass(typeName);
+        }
     }
 
     internal interface IRunQuery
@@ -47,6 +67,8 @@ namespace msos
         const int AttachTimeout = 1000;
         const string CompiledQueryPlaceholder = "$$$QUERY$$$";
         const string CompiledQueryTemplate = @"
+using Microsoft.CSharp;
+using Microsoft.Diagnostics.Runtime;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -64,9 +86,19 @@ internal class RunQuery : IRunQuery
         _context = context;
     }
 
-    private IEnumerable<ulong> AllObjects()
+    private IEnumerable<dynamic> AllObjects()
     {
-        return _context.Heap.EnumerateObjects();
+        return _context.AllObjects();
+    }
+
+    private IEnumerable<dynamic> ObjectsOfType(string typeName)
+    {
+        return _context.ObjectsOfType(typeName);
+    }
+
+    private dynamic Class(string typeName)
+    {
+        return _context.Class(typeName);
     }
 
     public object Run()
@@ -106,6 +138,7 @@ internal class RunQuery : IRunQuery
             options.ReferencedAssemblies.Add(typeof(Enumerable).Assembly.Location);
             options.ReferencedAssemblies.Add(Assembly.GetExecutingAssembly().Location);
             options.ReferencedAssemblies.Add(typeof(ClrHeap).Assembly.Location);
+            options.ReferencedAssemblies.Add(typeof(Microsoft.CSharp.RuntimeBinder.RuntimeBinderException).Assembly.Location);
             options.CompilerOptions = "/optimize+";
             options.OutputAssembly = Path.Combine(
                 AppDomain.CurrentDomain.BaseDirectory,
