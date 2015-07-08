@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace msos
 {
-    [Verb("!hq", HelpText = "Runs a query over heap objects and prints the results. Examples: TODO")]
+    [Verb("!hq", HelpText = "Runs a query over heap objects and prints the results. Useful helpers include AllObjects(), ObjectsOfType(\"TypeName\"), AllClasses(), and Class(\"TypeName\"). Special properties on objects include __Type and __Size; special properties on classes include __Fields and __StaticFields.")]
     class HeapQuery : ICommand
     {
         // This is a collection because we want to capture anything provided after

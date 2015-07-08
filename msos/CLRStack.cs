@@ -10,10 +10,6 @@ namespace msos
     [Verb("!CLRStack", HelpText="Displays the managed call stack of the current thread.")]
     class CLRStack : ICommand
     {
-        // TODO Figure out how to implement these switches
-        [Option('p', HelpText = "Display parameter values. Not implemented.")]
-        public bool DisplayParameterValues { get; set; }
-
         [Option('a', HelpText = "Display parameter values and local variable values. Not implemented.")]
         public bool DisplayAllStackValues { get; set; }
 
@@ -26,7 +22,7 @@ namespace msos
                 return;
             }
 
-            thread.WriteCurrentStackTraceToContext(context);
+            thread.WriteCurrentStackTraceToContext(context, DisplayAllStackValues);
         }
     }
 }

@@ -62,7 +62,7 @@ namespace msos
             context.WriteLine("Inner exception:  {0}", innerException == null ? "<none>" : String.Format("{0:x16}", innerException.Address));
             context.WriteLine("HResult:          {0:x}", exception.HResult);
             context.WriteLine("Stack trace:");
-            ClrThreadExtensions.WriteStackTraceToContext(exception.StackTrace, context);
+            ClrThreadExtensions.WriteStackTraceToContext(null, exception.StackTrace, context, false);
         }
     }
 

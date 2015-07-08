@@ -15,13 +15,17 @@ namespace msos
         [Option("type", HelpText = "A regular expression specifying the types of objects to display.")]
         public string TypeRegex { get; set; }
 
-        [Option("mt", HelpText="A method table address specifying the objects to display.")]
+        [Option("mt", HelpText = "A method table address specifying the objects to display.")]
         public string MethodTable { get; set; }
 
         [Option("stat", HelpText="Display only type statistics and not individual objects.")]
         public bool StatisticsOnly { get; set; }
 
-        // TODO --min, --max
+        [Option("min", DefaultValue = -1, HelpText = "Display only objects whose size is greater than the value specified.")]
+        public long MinSize { get; set; }
+
+        [Option("max", DefaultValue = -1, HelpText = "Display only objects whose size is less than the value specified.")]
+        public long MaxSize { get; set; }
 
         struct TypeInfo
         {
@@ -49,6 +53,17 @@ namespace msos
                     // TODO Consider compiling the regex
                     match = Regex.IsMatch(type.Name, TypeRegex);
                 }
+            }
+
+            if (match && MinSize != -1)
+            {
+                type = type ?? _heap.GetObjectType(obj);
+                match = (long)type.GetSize(obj) >= MinSize;
+            }
+            if (match && MaxSize != -1)
+            {
+                type = type ?? _heap.GetObjectType(obj);
+                match = (long)type.GetSize(obj) <= MaxSize;
             }
 
             if (match && !String.IsNullOrEmpty(MethodTable))

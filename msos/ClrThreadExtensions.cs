@@ -44,28 +44,42 @@ namespace msos
             return "";
         }
 
-        public static void WriteCurrentStackTraceToContext(this ClrThread thread, CommandExecutionContext context)
+        public static void WriteCurrentStackTraceToContext(this ClrThread thread, CommandExecutionContext context, bool displayStackObjects)
         {
-            WriteStackTraceToContext(thread.StackTrace, context);
+            thread.WriteStackTraceToContext(thread.StackTrace, context, displayStackObjects);
         }
 
         public static void WriteCurrentExceptionStackTraceToContext(this ClrThread thread, CommandExecutionContext context)
         {
-            WriteStackTraceToContext(thread.CurrentException.StackTrace, context);
+            thread.WriteStackTraceToContext(thread.CurrentException.StackTrace, context, false);
         }
 
-        public static void WriteStackTraceToContext(IList<ClrStackFrame> stackTrace, CommandExecutionContext context)
+        public static void WriteStackTraceToContext(this ClrThread thread, IList<ClrStackFrame> stackTrace, CommandExecutionContext context, bool displayStackObjects)
         {
-            // TODO Display the unmanaged stack as well?
+            List<ClrRoot> stackObjects = null;
+            if (displayStackObjects)
+            {
+                stackObjects = thread.EnumerateStackObjects().ToList();
+            }
 
             context.WriteLine("{0,-20} {1,-20} {2}", "SP", "IP", "Function");
+            ulong prevFrameStackPointer = thread.StackBase;
             foreach (var frame in stackTrace)
             {
                 var sourceLocation = frame.GetFileAndLineNumberSafe();
-                context.WriteLine("{0,-20:X} {1,-20:X} {2} {3}",
+                context.WriteLine("{0,-20:X16} {1,-20:X16} {2} {3}",
                     frame.StackPointer, frame.InstructionPointer,
-                    frame.Method == null ? "<special>" : frame.Method.GetFullSignature(),
+                    frame.DisplayString,
                     sourceLocation == null ? "" : String.Format("[{0}:{1}]", sourceLocation.FilePath, sourceLocation.LineNumber));
+
+                if (!displayStackObjects)
+                    continue;
+
+                foreach (var localRoot in stackObjects.Where(r => r.Address > prevFrameStackPointer && r.Address <= frame.StackPointer))
+                {
+                    context.WriteLine("    {0:x16} = {1:x16} ({2})", localRoot.Address, localRoot.Object, localRoot.Type.Name);
+                }
+                prevFrameStackPointer = frame.StackPointer;
             }
         }
     }

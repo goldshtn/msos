@@ -944,7 +944,6 @@ namespace Microsoft.Diagnostics.RuntimeExt
 
         public MDTarget(string crashdump)
         {
-            // TODO: Complete member initialization
             m_target = DataTarget.LoadCrashDump(crashdump);
         }
 
