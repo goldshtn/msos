@@ -47,9 +47,14 @@ namespace msos
 
         public static void WriteError(string format, params object[] args)
         {
+            WriteError(String.Format(format, args));
+        }
+
+        public static void WriteError(string value)
+        {
             using (new ConsoleColorChanger(ConsoleColor.Red))
             {
-                Console.WriteLine(format, args);
+                Console.WriteLine(value);
             }
         }
 

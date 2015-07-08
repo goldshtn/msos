@@ -71,6 +71,7 @@ namespace msos
     {
         internal const string CompiledQueryAssemblyName = "msos_CompiledQuery";
         const int AttachTimeout = 1000;
+        const int TotalWidth = 100;
         const string CompiledQueryPlaceholder = "$$$QUERY$$$";
         const string CompiledQueryTemplate = @"
 using Microsoft.CSharp;
@@ -178,13 +179,21 @@ internal class RunQuery : IRunQuery
             ulong rowCount = 0;
             if (enumerable != null && !(result is string))
             {
-                // TODO Display in tabular form -- start by printing column names,
-                // followed by rows of the column values.
+                bool first = true;
                 foreach (var obj in enumerable)
                 {
                     if (obj is ulong)
                     {
                         _writer.WriteLine(((ulong)obj).ToString("x16"));
+                    }
+                    else if (obj.IsAnonymousType())
+                    {
+                        if (first)
+                        {
+                            PrintHeader(obj);
+                            first = false;
+                        }
+                        PrintContents(obj);
                     }
                     else
                     {
@@ -199,6 +208,26 @@ internal class RunQuery : IRunQuery
                 ++rowCount;
             }
             _writer.WriteLine("Rows: {0}", rowCount);
+        }
+
+        private void PrintContents(object obj)
+        {
+            int width = TotalWidth / obj.GetType().GetProperties().Length;
+            foreach (var prop in obj.GetType().GetProperties())
+            {
+                _writer.Write("{0,-" + width + "}  ", prop.GetValue(obj).ToString().TrimEndToLength(width));
+            }
+            _writer.WriteLine();
+        }
+
+        private void PrintHeader(object obj)
+        {
+            int width = TotalWidth / obj.GetType().GetProperties().Length;
+            foreach (var prop in obj.GetType().GetProperties())
+            {
+                _writer.Write("{0,-" + width +"}  ", prop.Name.TrimEndToLength(width));
+            }
+            _writer.WriteLine();
         }
 
         public void Dispose()

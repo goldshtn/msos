@@ -39,6 +39,11 @@ namespace msos
             ConsolePrinter.WriteError(format, args);
         }
 
+        public void WriteError(string value)
+        {
+            ConsolePrinter.WriteError(value);
+        }
+
         public void WriteWarning(string format, params object[] args)
         {
             ConsolePrinter.WriteWarning(format, args);

@@ -82,17 +82,17 @@ namespace Microsoft.Diagnostics.RuntimeExt
         {
             if (binder.Name == "__Fields")
             {
-                result = (from field in m_type.Fields select new { Name = field.Name, Type = field.Type.Name }).ToArray();
+                result = (from field in m_type.Fields where field.Type != null select new { Name = field.Name, Type = field.Type.Name }).ToArray();
                 return true;
             }
             if (binder.Name == "__StaticFields")
             {
-                result = (from field in m_type.StaticFields select new { Name = field.Name, Type = field.Type.Name }).ToArray();
+                result = (from field in m_type.StaticFields where field.Type != null select new { Name = field.Name, Type = field.Type.Name }).ToArray();
                 return true;
             }
             if (binder.Name == "__ThreadStaticFields")
             {
-                result = (from field in m_type.ThreadStaticFields select new { Name = field.Name, Type = field.Type.Name }).ToArray();
+                result = (from field in m_type.ThreadStaticFields where field.Type != null select new { Name = field.Name, Type = field.Type.Name }).ToArray();
                 return true;
             }
             if (binder.Name == "__Name")

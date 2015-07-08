@@ -15,5 +15,14 @@ namespace msos
 
             return @object.ToString();
         }
+
+        public static bool IsAnonymousType(this object obj)
+        {
+            if (obj == null)
+                return false;
+
+            string typeName = obj.GetType().Name;
+            return typeName.StartsWith("<>") && typeName.Contains("AnonymousType");
+        }
     }
 }
