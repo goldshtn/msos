@@ -63,7 +63,7 @@ namespace msos
             }
 
             context.WriteLine("{0,-20} {1,-20} {2}", "SP", "IP", "Function");
-            ulong prevFrameStackPointer = thread.StackBase;
+            ulong prevFrameStackPointer = displayStackObjects ? thread.StackBase : 0;
             foreach (var frame in stackTrace)
             {
                 var sourceLocation = frame.GetFileAndLineNumberSafe();
