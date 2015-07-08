@@ -1,0 +1,3 @@
+!hq AllClasses().Take(10)
+!hq (from obj in AllObjects() group obj by obj.__Type into g let size = g.Sum(o => (long)o.__Size) let count = g.Count() orderby size descending select new { Type = g.Key, Count = count, Size = size }).Take(10)
+q

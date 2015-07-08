@@ -12,6 +12,7 @@ namespace msos
         private Stopwatch _sw;
         private long _heapSizeStart;
         private bool _diagnosticModeOn;
+        private IPrinter _printer;
 
         private static void DoFullCollect()
         {
@@ -20,9 +21,10 @@ namespace msos
             GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced);
         }
 
-        public TimeAndMemory(bool diagnosticModeOn)
+        public TimeAndMemory(bool diagnosticModeOn, IPrinter printer)
         {
             _diagnosticModeOn = diagnosticModeOn;
+            _printer = printer;
             if (!_diagnosticModeOn)
                 return;
 
@@ -39,7 +41,7 @@ namespace msos
             _sw.Stop();
             DoFullCollect();
             long heapSizeEnd = GC.GetTotalMemory(false);
-            ConsolePrinter.WriteInfo("Time: {0} ms, Memory start: {1}, Memory end: {2}, Memory delta: {3}{4}",
+            _printer.WriteInfo("Time: {0} ms, Memory start: {1}, Memory end: {2}, Memory delta: {3}{4}",
                 _sw.ElapsedMilliseconds,
                 ((ulong)_heapSizeStart).ToMemoryUnits(),
                 ((ulong)heapSizeEnd).ToMemoryUnits(), 

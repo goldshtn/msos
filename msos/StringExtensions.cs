@@ -21,7 +21,7 @@ namespace msos
         {
             if (str.Length > length - 3)
             {
-                return "..." + str.Substring(0, length - 3);
+                return str.Substring(0, length - 3) + "...";
             }
             return str;
         }

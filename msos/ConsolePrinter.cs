@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace msos
 {
-    class ConsolePrinter
+    class ConsolePrinter : PrinterBase
     {
         class ConsoleColorChanger : IDisposable
         {
@@ -24,20 +24,15 @@ namespace msos
             }
         }
 
-        public static void WriteInfo(string format, params object[] args)
+        public override void WriteInfo(string value)
         {
             using (new ConsoleColorChanger(ConsoleColor.Green))
             {
-                Console.WriteLine(format, args);
+                Console.WriteLine(value);
             }
         }
 
-        public static void WriteCommandOutput(string format, params object[] args)
-        {
-            WriteCommandOutput(String.Format(format, args));
-        }
-
-        public static void WriteCommandOutput(string value)
+        public override void WriteCommandOutput(string value)
         {
             using (new ConsoleColorChanger(ConsoleColor.Gray))
             {
@@ -45,12 +40,7 @@ namespace msos
             }
         }
 
-        public static void WriteError(string format, params object[] args)
-        {
-            WriteError(String.Format(format, args));
-        }
-
-        public static void WriteError(string value)
+        public override void WriteError(string value)
         {
             using (new ConsoleColorChanger(ConsoleColor.Red))
             {
@@ -58,11 +48,11 @@ namespace msos
             }
         }
 
-        public static void WriteWarning(string format, object[] args)
+        public override void WriteWarning(string value)
         {
             using (new ConsoleColorChanger(ConsoleColor.DarkYellow))
             {
-                Console.WriteLine(format, args);
+                Console.WriteLine(value);
             }
         }
     }
