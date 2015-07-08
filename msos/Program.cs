@@ -104,8 +104,23 @@ namespace msos
             {
                 Console.Write("{0}> ", _context.CurrentManagedThreadId);
 
-                string input = Console.ReadLine();
-                ExecuteOneCommand(input);
+                string command = "";
+                while (true)
+                {
+                    string input = Console.ReadLine();
+                    if (input.EndsWith(" _"))
+                    {
+                        Console.Write(">    ");
+                        command += input.Substring(0, input.Length - 2);
+                    }
+                    else
+                    {
+                        command += input;
+                        break;
+                    }
+                }
+
+                ExecuteOneCommand(command);
             }
         }
 
