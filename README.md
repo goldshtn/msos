@@ -1,4 +1,5 @@
-# msos
+### msos
+
 This project provides a command-line environment a-la WinDbg for executing SOS commands without having SOS available. It is based on the ClrMD library that is essentially a managed replacement for SOS.
 
 Build status: [![Build status](https://ci.appveyor.com/api/projects/status/gla95e3t81oodbvh?svg=true)](https://ci.appveyor.com/project/goldshtn/msos)
@@ -12,13 +13,9 @@ msos -z myapp.dmp
 msos --pn myprocess.exe
 ```
 
-You can pipe command output to a file, execute initial commands from a file, or specify commands using the ```-c``` switch:
-
-```
-msos --pn myprocess.exe -c "!dumpheap --stat; q" -o memstats.txt
-```
-
 Type ```help``` to get a list of currently supported commands. Note that some options might currently be unsupported, and are marked as such by the built-in help.
+
+> [Head on to the Wiki](https://github.com/goldshtn/msos/wiki) to get started and to review the full documentation.
 
 Examples:
 
