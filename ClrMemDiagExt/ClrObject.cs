@@ -353,6 +353,22 @@ namespace Microsoft.Diagnostics.RuntimeExt
             throw new InvalidOperationException("Object does not have a length associated with it.");
         }
 
+        public IEnumerable<dynamic> GetItems()
+        {
+            if (m_type == null || (!m_type.IsArray && !IsList()))
+                throw new InvalidOperationException("Can only call GetItems on an array or a System.Collections.Generic.List object.");
+
+            dynamic list = this;
+            int length = GetLength();
+            dynamic[] items = new dynamic[length];
+            for (int i = 0; i < length; ++i)
+            {
+                items[i] = list[i];
+            }
+
+            return items;
+        }
+
         public ClrType GetDictionaryKeyType()
         {
             dynamic entries = ((dynamic)this).entries;
