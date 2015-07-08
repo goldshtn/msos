@@ -3,7 +3,7 @@ This project provides a command-line environment a-la WinDbg for executing SOS c
 
 Build status: [![Build status](https://ci.appveyor.com/api/projects/status/gla95e3t81oodbvh?svg=true)](https://ci.appveyor.com/project/goldshtn/msos)
 
-You should use this project when you don't have SOS available, or when you want a quick alternative to firing up WinDbg and locating SOS. One such situation is when debugging dumps from Windows Phone devices; Microsoft does not make the Windows Phone CoreCLR SOS publicly available at present. What's more, some msos commands already offer more information than their SOS counterparts.
+You should use this project when you don't have SOS available, or when you want a quick alternative to firing up WinDbg and locating SOS. One such situation is when debugging dumps from Windows Phone devices; Microsoft does not make the Windows Phone CoreCLR SOS publicly available at present. What's more, some msos commands already offer more information than their SOS counterparts. Especially cool is the ```!hq``` command, which compiles an arbitrary dynamic query over heap objects and classes.
 
 To use msos, compile the project and run it from the command line with a dump file:
 
@@ -24,6 +24,29 @@ MT                   Count      TotalSize  Class Name
 000000006e21565c     14751      1046116    System.String
 Total 14751 objects
 Elapsed: 121ms
+
+1> !hq from o in ObjectsOfType("System.IO.StreamReader") select new { SR = o.GetValue(), CP = o.encoding.m_codePage }
+SR                                                  CP
+33307512                                            437
+Rows: 1
+Time: 604 ms, Memory start: 124.930kb, Memory end: 157.840kb, Memory delta: +32.910kb
+
+1> !hq Class("System.String").__Fields
+Name                                                Type
+m_stringLength                                      System.Int32
+m_firstChar                                         System.Char
+Rows: 2
+Time: 530 ms, Memory start: 124.145kb, Memory end: 157.254kb, Memory delta: +33.109kb
+
+1> !hq from s in ObjectsOfType("System.String") where s.__Size > 100 select new { Str = (string)s, Size = s.__Size }
+Str                                                 Size
+...C:\Temp\VSDebugging\bin\Debug\VSDebugging.exe.C  118
+C:\Temp\VSDebugging\bin\Debug\VSDebugging.exe       104
+C:\Windows\Microsoft.NET\Framework\v4.0.30319\      106
+...C:\Windows\Microsoft.NET\Framework\v4.0.30319\c  148
+...System\CurrentControlSet\Control\Nls\RegionMapp  114
+Rows: 5
+Time: 697 ms, Memory start: 125.262kb, Memory end: 160.242kb, Memory delta: +34.980kb
 
 0> !ThreadPool
 Total threads:   24
