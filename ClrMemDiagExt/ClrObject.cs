@@ -51,9 +51,12 @@ namespace Microsoft.Diagnostics.RuntimeExt
         public override string ToString()
         {
             if (IsNull())
-                return "{null}";
+                return "<null>";
 
-            return string.Format(@"[{0:X} {1}]", m_addr, m_type.Name);
+            if (m_type.IsString)
+                return m_type.GetValue(m_addr).ToString();
+
+            return string.Format(@"[{0:x16} {1}]", m_addr, m_type.Name);
         }
 
         public bool IsNull()
@@ -412,20 +415,21 @@ namespace Microsoft.Diagnostics.RuntimeExt
             }
 
             ClrInstanceField field = null;
-            if (binder.IgnoreCase)
+            foreach (var instanceField in m_type.Fields)
             {
-                foreach (var inst in m_type.Fields)
+                // Auto-generated properties have this ugly <> thing around their fields that you can't put
+                // in a C# expression. Clean them up to make them accessible by their property name.
+                var cleanFieldName = instanceField.Name;
+                if (cleanFieldName.StartsWith("<") && cleanFieldName.EndsWith(">k__BackingField"))
                 {
-                    if (inst.Name.Equals(binder.Name, StringComparison.CurrentCultureIgnoreCase))
-                    {
-                        field = inst;
-                        break;
-                    }
+                    cleanFieldName = cleanFieldName.Substring(
+                        1, cleanFieldName.Length - (1 + ">k__BackingField".Length));
                 }
-            }
-            else
-            {
-                field = m_type.GetFieldByName(binder.Name);
+                if (cleanFieldName == binder.Name)
+                {
+                    field = instanceField;
+                    break;
+                }
             }
 
             if (field == null)
@@ -475,7 +479,6 @@ namespace Microsoft.Diagnostics.RuntimeExt
                 return true;
             }
         }
-
 
         private bool IsStringDict()
         {

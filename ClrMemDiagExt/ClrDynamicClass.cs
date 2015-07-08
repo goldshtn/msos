@@ -95,6 +95,11 @@ namespace Microsoft.Diagnostics.RuntimeExt
                 result = (from field in m_type.ThreadStaticFields select new { Name = field.Name, Type = field.Type.Name }).ToArray();
                 return true;
             }
+            if (binder.Name == "__Name")
+            {
+                result = m_type.Name;
+                return true;
+            }
 
             if (GetStaticField(m_heap, m_type, binder, out result))
                 return true;
@@ -125,6 +130,11 @@ namespace Microsoft.Diagnostics.RuntimeExt
             }
 
             return success;
+        }
+
+        public override string ToString()
+        {
+            return m_type.Name;
         }
     }
 }

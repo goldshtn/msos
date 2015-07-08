@@ -40,6 +40,12 @@ namespace msos
         {
             return Heap.GetDynamicClass(typeName);
         }
+
+        public IEnumerable<dynamic> AllClasses()
+        {
+            return from type in Heap.EnumerateTypes()
+                   select Heap.GetDynamicClass(type.Name);
+        }
     }
 
     internal interface IRunQuery
@@ -99,6 +105,11 @@ internal class RunQuery : IRunQuery
     private dynamic Class(string typeName)
     {
         return _context.Class(typeName);
+    }
+
+    private IEnumerable<dynamic> AllClasses()
+    {
+        return _context.AllClasses();
     }
 
     public object Run()
