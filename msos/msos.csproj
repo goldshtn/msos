@@ -81,6 +81,7 @@
     <Compile Include="ConsolePrinter.cs" />
     <Compile Include="DB.cs" />
     <Compile Include="DumpArray.cs" />
+    <Compile Include="DumpCollection.cs" />
     <Compile Include="DumpHeap.cs" />
     <Compile Include="DumpObject.cs" />
     <Compile Include="EEHeap.cs" />

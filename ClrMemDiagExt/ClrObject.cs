@@ -260,12 +260,12 @@ namespace Microsoft.Diagnostics.RuntimeExt
             return false;
         }
 
-        private bool IsDictionary()
+        public bool IsDictionary()
         {
             return !m_type.IsArray && m_type.Name.StartsWith("System.Collections.Generic.Dictionary<") && m_type.Name.EndsWith(">");
         }
 
-        private bool IsList()
+        public bool IsList()
         {
             return !m_type.IsArray && m_type.Name.StartsWith("System.Collections.Generic.List<") && m_type.Name.EndsWith(">");
         }
