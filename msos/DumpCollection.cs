@@ -18,21 +18,11 @@ namespace msos
         public void Execute(CommandExecutionContext context)
         {
             ulong objPtr;
-            if (!ulong.TryParse(ObjectAddress, NumberStyles.HexNumber, null, out objPtr))
-            {
-                context.WriteError("The specified object address format is invalid.");
+            if (!CommandHelpers.ParseAndVerifyValidObjectAddress(context, ObjectAddress, out objPtr))
                 return;
-            }
 
-            var heap = context.Runtime.GetHeap();
-            var type = heap.GetObjectType(objPtr);
-            if (type == null)
-            {
-                context.WriteError("The specified address does not point to a valid object.");
-                return;
-            }
-            
-            var dynamicObj = heap.GetDynamicObject(objPtr);
+            var type = context.Heap.GetObjectType(objPtr);
+            var dynamicObj = context.Heap.GetDynamicObject(objPtr);
             context.WriteLine("Type:   {0}", type.Name);
             if (type.IsArray || dynamicObj.IsList())
             {

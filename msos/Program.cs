@@ -86,6 +86,7 @@ namespace msos
         private void RunMainLoop()
         {
             _context.Runtime = _runtime;
+            _context.Heap = _runtime.GetHeap();
             _target.DefaultSymbolNotification = new SymbolNotification(_context);
 
             var threadToSwitchTo = _runtime.ThreadWithActiveExceptionOrFirstThread();

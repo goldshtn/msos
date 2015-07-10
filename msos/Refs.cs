@@ -8,7 +8,9 @@ using System.Threading.Tasks;
 
 namespace msos
 {
-    [Verb("!refs", HelpText = "Displays all objects that have a reference to and from the specified object.")]
+    [Verb("!refs", HelpText =
+        "Display all objects that have a reference to and from the specified object. " +
+        "Requires a heap index, which you can build using !bhi.")]
     class Refs : ICommand
     {
         [Value(0, Required = true)]
@@ -16,37 +18,26 @@ namespace msos
 
         public void Execute(CommandExecutionContext context)
         {
-            if (context.HeapIndex == null)
-            {
-                context.WriteError("This command requires a heap index. Build one with !bhi or load one with !lhi.");
+            if (!CommandHelpers.VerifyHasHeapIndex(context))
                 return;
-            }
 
             ulong objPtr;
-            if (!ulong.TryParse(ObjectAddress, NumberStyles.HexNumber, null, out objPtr))
-            {
-                context.WriteError("The specified object address format is invalid.");
+            if (!CommandHelpers.ParseAndVerifyValidObjectAddress(context, ObjectAddress, out objPtr))
                 return;
-            }
-            
-            var heap = context.Runtime.GetHeap();
-            var type = heap.GetObjectType(objPtr);
-            if (type == null || type.IsFree || String.IsNullOrEmpty(type.Name))
-            {
-                context.WriteError("The specified address does not point to a valid object.");
-                return;
-            }
+
+            var type = context.Heap.GetObjectType(objPtr);
 
             context.WriteLine("Object {0:x16} ({1}) is referenced by the following objects:", objPtr, type.Name);
             foreach (var referencingObj in context.HeapIndex.FindRefs(objPtr))
             {
-                context.WriteLine("  {0:x16} ({1})", referencingObj, heap.GetObjectType(referencingObj).Name);
+                context.WriteLine("  {0:x16} ({1})", referencingObj, context.Heap.GetObjectType(referencingObj).Name);
             }
             
+
             context.WriteLine("Object {0:x16} ({1}) references the following objects:", objPtr, type.Name);
             type.EnumerateRefsOfObject(objPtr, (child, _) =>
             {
-                var childType = heap.GetObjectType(child);
+                var childType = context.Heap.GetObjectType(child);
                 if (childType == null || String.IsNullOrEmpty(childType.Name))
                     return;
 

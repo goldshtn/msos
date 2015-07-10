@@ -17,28 +17,12 @@ namespace msos
         public void Execute(CommandExecutionContext context)
         {
             ulong objPtr;
-            if (!ulong.TryParse(ObjectAddress, NumberStyles.HexNumber, null, out objPtr))
-            {
-                context.WriteError("The specified object address format is invalid.");
+            if (!CommandHelpers.ParseAndVerifyValidObjectAddress(context, ObjectAddress, out objPtr))
                 return;
-            }
-
-            var heap = context.Runtime.GetHeap();
-            var type = heap.GetObjectType(objPtr);
-            if (type == null || String.IsNullOrEmpty(type.Name))
-            {
-                context.WriteError("The specified address does not contain a valid object.");
-                return;
-            }
-            if (type.IsFree)
-            {
-                context.WriteError("The specified address points to a free object.");
-                return;
-            }
 
             var toGoThrough = new Stack<ulong>();
             toGoThrough.Push(objPtr);
-            var seen = new ObjectSet(heap);
+            var seen = new ObjectSet(context.Heap);
 
             ulong count = 0, size = 0;
             while (toGoThrough.Count > 0)
@@ -49,7 +33,7 @@ namespace msos
 
                 seen.Add(obj);
 
-                type = heap.GetObjectType(obj);
+                var type = context.Heap.GetObjectType(obj);
                 if (type == null || type.IsFree || String.IsNullOrEmpty(type.Name))
                     continue;
 

@@ -16,7 +16,7 @@ namespace msos
         public int ProcessId { get; set; }
         public string DacLocation { get; set; }
         public HeapIndex HeapIndex { get; set; }
-
+        public ClrHeap Heap { get; set; }
         public IPrinter Printer { get; set; }
 
         public ClrThread CurrentThread
