@@ -25,7 +25,20 @@ namespace msos
             if (!CommandHelpers.ParseAndVerifyValidObjectAddress(context, ObjectAddress, out objPtr))
                 return;
 
-            // TODO
+            foreach (var path in context.HeapIndex.FindPaths(objPtr))
+            {
+                context.WriteLine("{0:x16} -> {1:x16} {2}", path.Root.Address, path.Root.Object, path.Root.Name);
+                foreach (var obj in path.Chain)
+                {
+                    context.WriteLine("        -> {0:x16} {1}", obj, context.Heap.GetObjectType(obj).Name);
+                }
+            }
+
+            // TODO Store the paths and print only the shortest path leading to a certain root,
+            // based on an option provided by the user. Also allow to pick whether we want a specific
+            // root, only locals, only statics, etc.
+            // Maybe even allow prioritization by specific types (when there is a choice of multiple
+            // referencing chunks, prefer specific object types to be followed first).
         }
     }
 }

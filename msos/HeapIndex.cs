@@ -141,40 +141,65 @@ namespace msos
             _context.WriteLine("{0} took {1} ms", description, sw.ElapsedMilliseconds);
         }
 
-        private void FindRootPath(ulong currentObj, ObjectSet visited, Stack<ulong> path)
+        public class RootPath
         {
-            foreach (ulong referencingObj in FindRefs(currentObj))
+            public ClrRoot Root;
+            public ulong[] Chain;
+        }
+
+        public class RootPathFinder
+        {
+            private HeapIndex _index;
+            private ObjectSet _visited;
+            private ulong _targetObject;
+            private List<RootPath> _paths = new List<RootPath>();
+
+            public RootPathFinder(HeapIndex index, ulong targetObject)
             {
-                if (visited.Contains(referencingObj))
-                    continue;
+                _index = index;
+                _targetObject = targetObject;
+                _visited = new ObjectSet(_index._heap);
 
-                visited.Add(referencingObj);
-
-                path.Push(referencingObj);
-                if (_directlyRooted.Contains(referencingObj))
-                {
-                    // TODO Store the paths and print only the shortest path leading to a certain root,
-                    // based on an option provided by the user. Also allow to pick whether we want a specific
-                    // root, only locals, only statics, etc.
-                    // Maybe even allow prioritization by specific types (when there is a choice of multiple
-                    // referencing chunks, prefer specific object types to be followed first).
-
-                    _context.WriteLine("Root path:");
-                    foreach (var root in _allRoots.Where(r => r.Object == referencingObj))
-                    {
-                        _context.WriteLine("  {0:x16} {1} {2:x16}", root.Address, root.Name, root.Object);
-                    }
-                    foreach (var ptr in path)
-                    {
-                        _context.WriteLine("  -> {0:x16} ({1})", ptr, _heap.GetObjectType(ptr).Name);
-                    }
-                }
-                else
-                {
-                    FindRootPath(referencingObj, visited, path);
-                }
-                path.Pop();
+                FindPaths(targetObject, new Stack<ulong>());
             }
+
+            public IEnumerable<RootPath> Paths { get { return _paths; } }
+
+            private void FindPaths(ulong current, Stack<ulong> path)
+            {
+                // TODO Filtering, stop after N paths, don't add paths to specific roots, etc.
+                
+                foreach (ulong referencingObj in _index.FindRefs(current))
+                {
+                    if (_visited.Contains(referencingObj))
+                        continue;
+
+                    _visited.Add(referencingObj);
+
+                    path.Push(referencingObj);
+                    if (_index._directlyRooted.Contains(referencingObj))
+                    {
+                        var chain = new List<ulong>(path);
+                        chain.Add(_targetObject);
+                        ulong[] chainArray = chain.ToArray();
+
+                        foreach (var root in _index._allRoots.Where(r => r.Object == referencingObj))
+                        {
+                            _paths.Add(new RootPath { Root = root, Chain = chainArray });
+                        }
+                    }
+                    else
+                    {
+                        FindPaths(referencingObj, path);
+                    }
+                    path.Pop();
+                }
+            }
+        }
+
+        public IEnumerable<RootPath> FindPaths(ulong targetObj)
+        {
+            return new RootPathFinder(this, targetObj).Paths;
         }
 
         public IEnumerable<ulong> FindRefs(ulong targetObj)
