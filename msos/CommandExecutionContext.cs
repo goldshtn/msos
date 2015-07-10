@@ -15,6 +15,7 @@ namespace msos
         public string DumpFile { get; set; }
         public int ProcessId { get; set; }
         public string DacLocation { get; set; }
+        public HeapIndex HeapIndex { get; set; }
 
         public IPrinter Printer { get; set; }
 
