@@ -177,7 +177,7 @@ namespace msos
             }
         }
 
-        private HashSet<ulong> FindRefs(ulong targetObj)
+        public IEnumerable<ulong> FindRefs(ulong targetObj)
         {
             var result = new HashSet<ulong>();
 
