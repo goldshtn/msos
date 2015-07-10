@@ -27,12 +27,12 @@ namespace msos
 
             var type = context.Heap.GetObjectType(objPtr);
 
+            context.WriteLine("Note: unrooted (dead) objects will not have any referencing objects displayed.");
             context.WriteLine("Object {0:x16} ({1}) is referenced by the following objects:", objPtr, type.Name);
             foreach (var referencingObj in context.HeapIndex.FindRefs(objPtr))
             {
                 context.WriteLine("  {0:x16} ({1})", referencingObj, context.Heap.GetObjectType(referencingObj).Name);
             }
-            
 
             context.WriteLine("Object {0:x16} ({1}) references the following objects:", objPtr, type.Name);
             type.EnumerateRefsOfObject(objPtr, (child, _) =>

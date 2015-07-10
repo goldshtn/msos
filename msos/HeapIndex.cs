@@ -102,6 +102,8 @@ namespace msos
             // keep in mind that roots can also contain references to objects in the chunk -- we don't store this
             // information again because it's very easy to obtain by enumerating the roots. This decision can be
             // changed if root enumeration turns out to be slow when there are many roots.
+            // Note that only live objects are being enumerated. For dead objects, it's not interesting to ask who
+            // has a reference to the object -- because the referencing object is also dead.
             Measure(BuildChunkIndex, "Building chunk index");
 
             DisplayStatistics();
@@ -147,59 +149,161 @@ namespace msos
             public ulong[] Chain;
         }
 
-        public class RootPathFinder
+        abstract class RootPathFinder
         {
-            private HeapIndex _index;
-            private ObjectSet _visited;
-            private ulong _targetObject;
+            public bool OnlyOnePathPerRoot { get; set; }
+            public int MaxResults { get; set; }
+
+            protected HeapIndex Index { get; private set; }
+            protected ObjectSet Visited { get; private set; }
+            protected ulong TargetObject { get; private set; }
+            protected bool Stop { get; private set; }
+            
             private List<RootPath> _paths = new List<RootPath>();
-
-            public RootPathFinder(HeapIndex index, ulong targetObject)
-            {
-                _index = index;
-                _targetObject = targetObject;
-                _visited = new ObjectSet(_index._heap);
-
-                FindPaths(targetObject, new Stack<ulong>());
-            }
+            private Dictionary<ulong, HashSet<ClrRoot>> _rootsSeenReferencingObject = new Dictionary<ulong, HashSet<ClrRoot>>();
 
             public IEnumerable<RootPath> Paths { get { return _paths; } }
 
-            private void FindPaths(ulong current, Stack<ulong> path)
+            protected RootPathFinder(HeapIndex index, ulong targetObject)
             {
-                // TODO Filtering, stop after N paths, don't add paths to specific roots, etc.
-                
-                foreach (ulong referencingObj in _index.FindRefs(current))
+                Index = index;
+                TargetObject = targetObject;
+                Visited = new ObjectSet(Index._heap);
+            }
+
+            protected void AddPath(RootPath path)
+            {
+                _paths.Add(path);
+            }
+
+            public abstract void FindPaths();
+
+            protected void AddPathIfRootReached(ulong obj, IEnumerable<ulong> path)
+            {
+                if (Index._directlyRooted.Contains(obj))
                 {
-                    if (_visited.Contains(referencingObj))
-                        continue;
-
-                    _visited.Add(referencingObj);
-
-                    path.Push(referencingObj);
-                    if (_index._directlyRooted.Contains(referencingObj))
+                    ulong[] chainArray = path.ToArray();
+                    foreach (var root in Index._allRoots.Where(r => r.Object == obj))
                     {
-                        var chain = new List<ulong>(path);
-                        chain.Add(_targetObject);
-                        ulong[] chainArray = chain.ToArray();
-
-                        foreach (var root in _index._allRoots.Where(r => r.Object == referencingObj))
+                        HashSet<ClrRoot> seenRoots;
+                        if (!_rootsSeenReferencingObject.TryGetValue(obj, out seenRoots))
                         {
-                            _paths.Add(new RootPath { Root = root, Chain = chainArray });
+                            seenRoots = new HashSet<ClrRoot>();
+                            _rootsSeenReferencingObject.Add(obj, seenRoots);
+                        }
+
+                        // Only accept one local root per object. There can be literally thousands of
+                        // local variables pointing to each object, and it's unnecessary garbage to display
+                        // them all.
+                        // TODO Consider further restricting the number of different local roots that
+                        //      can lead to an object, because even with these restrictions it's potentially
+                        //      way too many roots.
+                        if (OnlyOnePathPerRoot &&
+                            (seenRoots.Contains(root) || (root.Kind == GCRootKind.LocalVar &&
+                                                          seenRoots.Any(r => r.Object == obj)))
+                            )
+                        {
+                            continue;
+                        }
+
+                        seenRoots.Add(root);
+
+                        AddPath(new RootPath { Root = root, Chain = chainArray });
+                        
+                        if (_paths.Count >= MaxResults)
+                        {
+                            Stop = true;
+                            break;
                         }
                     }
-                    else
-                    {
-                        FindPaths(referencingObj, path);
-                    }
+                }
+            }
+        }
+
+        class DepthFirstRootPathFinder : RootPathFinder
+        {
+            public DepthFirstRootPathFinder(HeapIndex index, ulong targetObject)
+                : base(index, targetObject)
+            {
+            }
+
+            public override void FindPaths()
+            {
+                var path = new Stack<ulong>();
+                path.Push(TargetObject);
+                FindPaths(TargetObject, path);
+            }
+
+            private void FindPaths(ulong current, Stack<ulong> path)
+            {
+                if (Stop)
+                    return;
+
+                if (Visited.Contains(current))
+                    return;
+
+                Visited.Add(current);
+
+                AddPathIfRootReached(current, path);
+
+                foreach (ulong referencingObj in Index.FindRefs(current))
+                {
+                    path.Push(referencingObj);
+                    FindPaths(referencingObj, path);
                     path.Pop();
+                }
+            }
+        }
+
+        class BreadthFirstRootPathFinder : RootPathFinder
+        {
+            // TODO Once we find a path of length N, consider only further paths of length up to N+m1
+            // if they are leading to the same root. Can be even more restrictive and disallow any further
+            // paths to be more than length N+m2, regardless of the root they reach (this can save some
+            // time on the heap walking).
+
+            public BreadthFirstRootPathFinder(HeapIndex index, ulong targetObject)
+                : base(index, targetObject)
+            {
+            }
+
+            public override void FindPaths()
+            {
+                var evalQueue = new Queue<ulong[]>();
+                evalQueue.Enqueue(new ulong[] { TargetObject });
+                while (evalQueue.Count > 0)
+                {
+                    if (Stop)
+                        break;
+
+                    var chain = evalQueue.Dequeue();
+                    var current = chain[0];
+
+                    if (Visited.Contains(current))
+                        continue;
+
+                    Visited.Add(current);
+
+                    AddPathIfRootReached(current, chain);
+
+                    foreach (var referencingObj in Index.FindRefs(current))
+                    {
+                        var newChain = new ulong[chain.Length + 1];
+                        newChain[0] = referencingObj;
+                        Array.Copy(chain, 0, newChain, 1, chain.Length);
+                        evalQueue.Enqueue(newChain);
+                    }
                 }
             }
         }
 
         public IEnumerable<RootPath> FindPaths(ulong targetObj)
         {
-            return new RootPathFinder(this, targetObj).Paths;
+            var pathFinder = new BreadthFirstRootPathFinder(this, targetObj);
+            pathFinder.OnlyOnePathPerRoot = true; // TODO Make configurable
+            pathFinder.MaxResults = 10;           // TODO Make configurable
+            pathFinder.FindPaths();
+            return pathFinder.Paths;
         }
 
         public IEnumerable<ulong> FindRefs(ulong targetObj)

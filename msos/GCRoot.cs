@@ -154,7 +154,7 @@ namespace msos
                     foreach (var root in roots)
                     {
                         _visitedRoots.Add(root);
-                        _context.WriteLine("{0:X16} -> {1:X16} {2}", root.Address, root.Object, root.Name);
+                        _context.WriteLine("{0:X16} -> {1:X16} {2}", root.Address, root.Object, root.BetterToString());
                     }
                 }
             }
