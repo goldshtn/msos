@@ -31,6 +31,12 @@ namespace msos
 
         public void Execute(CommandExecutionContext context)
         {
+            if (!InMemoryOnly && String.IsNullOrEmpty(HeapIndexFileName))
+            {
+                context.WriteError("You must either request an in-memory index (--nofile), or a file name to store it (-f).");
+                return;
+            }
+
             context.HeapIndex = new HeapIndex(context);
             context.HeapIndex.Build(InMemoryOnly ? null : HeapIndexFileName, !EnumerateRootsFast);
         }
@@ -358,11 +364,11 @@ namespace msos
             }
         }
 
-        public IEnumerable<RootPath> FindPaths(ulong targetObj)
+        public IEnumerable<RootPath> FindPaths(ulong targetObj, int maxResults, int maxLocalRoots)
         {
             var pathFinder = new BreadthFirstRootPathFinder(this, targetObj);
-            pathFinder.MaxResults = 10;            // TODO Make configurable
-            pathFinder.MaxLocalRoots = 5; // TODO Make configurable
+            pathFinder.MaxResults = maxResults;
+            pathFinder.MaxLocalRoots = maxLocalRoots;
             pathFinder.FindPaths();
             return pathFinder.Paths;
         }
@@ -403,11 +409,11 @@ namespace msos
 
         private void DisplayStatistics()
         {
-            _context.WriteLine("Total chunks: {0}, Chunk size: {1}", _chunkIdToFirstNonFreeObjectInChunk.Count, ChunkSize);
+            _context.WriteLine("Total chunks: {0}, Chunk size: {1}", _chunkIdToFirstNonFreeObjectInChunk.Count, ((ulong)ChunkSize).ToMemoryUnits());
 
             ulong totalHeapBytes = (ulong)_heap.Segments.Sum(s => (long)(s.End - s.Start));
-            _context.WriteLine("Memory covered by all segments: {0} bytes", totalHeapBytes);
-            _context.WriteLine("Memory covered by all chunks:   {0} bytes", _chunkIdToFirstNonFreeObjectInChunk.Count * ChunkSize);
+            _context.WriteLine("Memory covered by all segments: {0}", totalHeapBytes.ToMemoryUnits());
+            _context.WriteLine("Memory covered by all chunks:   {0}", ((ulong)(_chunkIdToFirstNonFreeObjectInChunk.Count * ChunkSize)).ToMemoryUnits());
         }
 
         private int ChunkIdForObject(ulong objAddress)

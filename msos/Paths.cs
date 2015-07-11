@@ -16,6 +16,12 @@ namespace msos
         [Value(0, Required = true)]
         public string ObjectAddress { get; set; }
 
+        [Option("max", DefaultValue = 5, HelpText = "The maximum number of different paths to display.")]
+        public int MaxResults { get; set; }
+
+        [Option("maxLocalRoots", DefaultValue = 2, HelpText = "The maximum number of different paths from local variable roots to display.")]
+        public int MaxLocalRoots { get; set; }
+
         public void Execute(CommandExecutionContext context)
         {
             if (!CommandHelpers.VerifyHasHeapIndex(context))
@@ -26,7 +32,7 @@ namespace msos
                 return;
 
             int pathsDisplayed = 0;
-            foreach (var path in context.HeapIndex.FindPaths(objPtr))
+            foreach (var path in context.HeapIndex.FindPaths(objPtr, MaxResults, MaxLocalRoots))
             {
                 context.WriteLine("{0:x16} -> {1:x16} {2}", path.Root.Address, path.Root.Object, path.Root.DisplayText);
                 foreach (var obj in path.Chain)
