@@ -70,20 +70,6 @@ namespace msos
             _heap = context.Runtime.GetHeap();
         }
 
-        public void Load(string indexFileName)
-        {
-            using (var file = File.OpenRead(indexFileName))
-            {
-                BinaryFormatter formatter = new BinaryFormatter();
-                Indexes indexes = (Indexes)formatter.Deserialize(file);
-                _chunkIdToFirstNonFreeObjectInChunk = indexes.ChunkIdToFirstNonFreeObjectInChunk;
-                _startOfChunkToChunkId = indexes.StartOfChunkToChunkId;
-                _chunkToReferencingChunks = indexes.ChunkToReferencingChunks;
-                _directlyRooted = indexes.DirectlyRooted;
-                _allRoots = indexes.AllRoots;
-            }
-        }
-
         public void Build(string indexFileName)
         {
             // TODO Enumerating all roots with statics can be slow, so make it configurable
@@ -120,7 +106,7 @@ namespace msos
             public List<ulong> ChunkIdToFirstNonFreeObjectInChunk;
             public Dictionary<ulong, int> StartOfChunkToChunkId;
             public Dictionary<int, int[]> ChunkToReferencingChunks;
-            public HashSet<ulong> DirectlyRooted;
+            public ulong[] DirectlyRooted;
             public List<SimplifiedRoot> AllRoots;
         }
 
@@ -141,20 +127,34 @@ namespace msos
             }
         }
 
+        public void Load(string indexFileName)
+        {
+            using (var file = File.OpenRead(indexFileName))
+            {
+                var serializer = new NetSerializer.Serializer(new Type[] { typeof(Indexes) });
+                Indexes indexes = (Indexes)serializer.Deserialize(file);
+                _chunkIdToFirstNonFreeObjectInChunk = indexes.ChunkIdToFirstNonFreeObjectInChunk;
+                _startOfChunkToChunkId = indexes.StartOfChunkToChunkId;
+                _chunkToReferencingChunks = indexes.ChunkToReferencingChunks;
+                _directlyRooted = new HashSet<ulong>(indexes.DirectlyRooted);
+                _allRoots = indexes.AllRoots;
+            }
+        }
+
         private void Save(string indexFileName)
         {
             // TODO Consider compressing the index on disk.
 
             using (var file = File.OpenWrite(indexFileName))
             {
-                BinaryFormatter formatter = new BinaryFormatter();
+                var serializer = new NetSerializer.Serializer(new Type[] { typeof(Indexes) });
                 var indexes = new Indexes();
                 indexes.ChunkIdToFirstNonFreeObjectInChunk = _chunkIdToFirstNonFreeObjectInChunk;
                 indexes.StartOfChunkToChunkId = _startOfChunkToChunkId;
                 indexes.ChunkToReferencingChunks = _chunkToReferencingChunks;
-                indexes.DirectlyRooted = _directlyRooted;
+                indexes.DirectlyRooted = _directlyRooted.ToArray();
                 indexes.AllRoots = _allRoots;
-                formatter.Serialize(file, indexes);
+                serializer.Serialize(file, indexes);
             }
             _context.WriteLine("Wrote index file of size {0}",
                 ((ulong)new FileInfo(indexFileName).Length).ToMemoryUnits());
