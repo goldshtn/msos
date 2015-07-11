@@ -42,8 +42,10 @@ namespace msos
                 return;
             }
 
+            // If the index fails to build, clear it so that other commands know we don't have an index.
             context.HeapIndex = new HeapIndex(context);
-            context.HeapIndex.Build(ChunkSize, InMemoryOnly ? null : HeapIndexFileName, !EnumerateRootsFast);
+            if (!context.HeapIndex.Build(ChunkSize, InMemoryOnly ? null : HeapIndexFileName, !EnumerateRootsFast))
+                context.HeapIndex = null;
         }
     }
 
