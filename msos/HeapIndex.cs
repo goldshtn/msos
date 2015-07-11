@@ -151,7 +151,7 @@ namespace msos
 
         abstract class RootPathFinder
         {
-            public bool OnlyOnePathPerRoot { get; set; }
+            public int MaxLocalRoots { get; set; }
             public int MaxResults { get; set; }
 
             protected HeapIndex Index { get; private set; }
@@ -161,6 +161,7 @@ namespace msos
             
             private List<RootPath> _paths = new List<RootPath>();
             private Dictionary<ulong, HashSet<ClrRoot>> _rootsSeenReferencingObject = new Dictionary<ulong, HashSet<ClrRoot>>();
+            private int _localRootsSeen = 0;
 
             public IEnumerable<RootPath> Paths { get { return _paths; } }
 
@@ -192,21 +193,25 @@ namespace msos
                             _rootsSeenReferencingObject.Add(obj, seenRoots);
                         }
 
+                        // Limit the total number of local roots displayed. There could be thousands
+                        // of different local variables leading to our target object through a variety
+                        // of other objects. After seeing a few of those, the value of the information
+                        // deteriorates.
+                        if (root.Kind == GCRootKind.LocalVar && _localRootsSeen >= MaxLocalRoots)
+                            continue;
+
                         // Only accept one local root per object. There can be literally thousands of
                         // local variables pointing to each object, and it's unnecessary garbage to display
-                        // them all.
-                        // TODO Consider further restricting the number of different local roots that
-                        //      can lead to an object, because even with these restrictions it's potentially
-                        //      way too many roots.
-                        if (OnlyOnePathPerRoot &&
-                            (seenRoots.Contains(root) || (root.Kind == GCRootKind.LocalVar &&
-                                                          seenRoots.Any(r => r.Object == obj)))
-                            )
+                        // them all. Also, obviously don't accept the same root more than once.
+                        if (seenRoots.Contains(root) ||
+                            (root.Kind == GCRootKind.LocalVar && seenRoots.Any(r => r.Object == obj)))
                         {
                             continue;
                         }
 
                         seenRoots.Add(root);
+                        if (root.Kind == GCRootKind.LocalVar)
+                            ++_localRootsSeen;
 
                         AddPath(new RootPath { Root = root, Chain = chainArray });
                         
@@ -300,8 +305,8 @@ namespace msos
         public IEnumerable<RootPath> FindPaths(ulong targetObj)
         {
             var pathFinder = new BreadthFirstRootPathFinder(this, targetObj);
-            pathFinder.OnlyOnePathPerRoot = true; // TODO Make configurable
-            pathFinder.MaxResults = 10;           // TODO Make configurable
+            pathFinder.MaxResults = 10;            // TODO Make configurable
+            pathFinder.MaxLocalRoots = 5; // TODO Make configurable
             pathFinder.FindPaths();
             return pathFinder.Paths;
         }

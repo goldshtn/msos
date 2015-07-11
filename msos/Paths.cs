@@ -25,6 +25,7 @@ namespace msos
             if (!CommandHelpers.ParseAndVerifyValidObjectAddress(context, ObjectAddress, out objPtr))
                 return;
 
+            int pathsDisplayed = 0;
             foreach (var path in context.HeapIndex.FindPaths(objPtr))
             {
                 context.WriteLine("{0:x16} -> {1:x16} {2}", path.Root.Address, path.Root.Object, path.Root.BetterToString());
@@ -32,7 +33,10 @@ namespace msos
                 {
                     context.WriteLine("        -> {0:x16} {1}", obj, context.Heap.GetObjectType(obj).Name);
                 }
+                context.WriteLine("");
+                ++pathsDisplayed;
             }
+            context.WriteLine("Total paths displayed: {0}", pathsDisplayed);
 
             // TODO Store the paths and print only the shortest path leading to a certain root,
             // based on an option provided by the user. Also allow to pick whether we want a specific
@@ -40,8 +44,6 @@ namespace msos
             
             // TODO Maybe even allow prioritization by specific types (when there is a choice of multiple
             // referencing chunks, prefer specific object types to be followed first).
-            
-            // TODO Filtering, stop after N paths, don't add paths to specific roots, etc.
         }
     }
 }
