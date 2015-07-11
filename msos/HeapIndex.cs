@@ -215,6 +215,7 @@ namespace msos
         {
             public int MaxLocalRoots { get; set; }
             public int MaxResults { get; set; }
+            public int MaxDepth { get; set; }
 
             protected HeapIndex Index { get; private set; }
             protected ObjectSet Visited { get; private set; }
@@ -277,6 +278,8 @@ namespace msos
 
                         AddPath(new RootPath { Root = root, Chain = chainArray });
                         
+                        // If the total number of paths displayed exceed the limit, stop completely.
+                        // Subclasses should stop calling us once we set Stop=true.
                         if (_paths.Count >= MaxResults)
                         {
                             Stop = true;
@@ -303,7 +306,7 @@ namespace msos
 
             private void FindPaths(ulong current, Stack<ulong> path)
             {
-                if (Stop)
+                if (Stop || path.Count > MaxDepth)
                     return;
 
                 if (Visited.Contains(current))
@@ -324,11 +327,6 @@ namespace msos
 
         class BreadthFirstRootPathFinder : RootPathFinder
         {
-            // TODO Once we find a path of length N, consider only further paths of length up to N+m1
-            // if they are leading to the same root. Can be even more restrictive and disallow any further
-            // paths to be more than length N+m2, regardless of the root they reach (this can save some
-            // time on the heap walking).
-
             public BreadthFirstRootPathFinder(HeapIndex index, ulong targetObject)
                 : base(index, targetObject)
             {
@@ -344,6 +342,9 @@ namespace msos
                         break;
 
                     var chain = evalQueue.Dequeue();
+                    if (chain.Length > MaxDepth)
+                        continue;
+
                     var current = chain[0];
 
                     if (Visited.Contains(current))
@@ -364,11 +365,12 @@ namespace msos
             }
         }
 
-        public IEnumerable<RootPath> FindPaths(ulong targetObj, int maxResults, int maxLocalRoots)
+        public IEnumerable<RootPath> FindPaths(ulong targetObj, int maxResults, int maxLocalRoots, int maxDepth)
         {
             var pathFinder = new BreadthFirstRootPathFinder(this, targetObj);
             pathFinder.MaxResults = maxResults;
             pathFinder.MaxLocalRoots = maxLocalRoots;
+            pathFinder.MaxDepth = maxDepth;
             pathFinder.FindPaths();
             return pathFinder.Paths;
         }

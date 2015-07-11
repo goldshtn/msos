@@ -16,11 +16,18 @@ namespace msos
         [Value(0, Required = true)]
         public string ObjectAddress { get; set; }
 
-        [Option("max", DefaultValue = 5, HelpText = "The maximum number of different paths to display.")]
+        [Option("maxPaths", DefaultValue = 5, HelpText = "The maximum number of different paths to display.")]
         public int MaxResults { get; set; }
 
-        [Option("maxLocalRoots", DefaultValue = 2, HelpText = "The maximum number of different paths from local variable roots to display.")]
+        [Option("maxLocalRoots", DefaultValue = 2, HelpText =
+            "The maximum number of different paths from local variable roots to display. " + 
+            "Specify 0 to avoid seeing any local roots at all.")]
         public int MaxLocalRoots { get; set; }
+
+        [Option("maxDepth", DefaultValue = 20, HelpText =
+            "The maximum depth of an allowed root path. Set to smaller values if you are getting " + 
+            "lots of irrelevant results, or overly long reference chains.")]
+        public int MaxDepth { get; set; }
 
         public void Execute(CommandExecutionContext context)
         {
@@ -32,7 +39,7 @@ namespace msos
                 return;
 
             int pathsDisplayed = 0;
-            foreach (var path in context.HeapIndex.FindPaths(objPtr, MaxResults, MaxLocalRoots))
+            foreach (var path in context.HeapIndex.FindPaths(objPtr, MaxResults, MaxLocalRoots, MaxDepth))
             {
                 context.WriteLine("{0:x16} -> {1:x16} {2}", path.Root.Address, path.Root.Object, path.Root.DisplayText);
                 foreach (var obj in path.Chain)
@@ -43,13 +50,11 @@ namespace msos
                 ++pathsDisplayed;
             }
             context.WriteLine("Total paths displayed: {0}", pathsDisplayed);
-
-            // TODO Store the paths and print only the shortest path leading to a certain root,
-            // based on an option provided by the user. Also allow to pick whether we want a specific
-            // root, only locals, only statics, etc.
-            
-            // TODO Maybe even allow prioritization by specific types (when there is a choice of multiple
-            // referencing chunks, prefer specific object types to be followed first).
+            if (pathsDisplayed == 0)
+            {
+                context.WriteLine("Number of paths may be affected by maximum depth setting. " + 
+                    "If you are not seeing enough results, consider increasing --maxDepth.");
+            }
         }
     }
 }
