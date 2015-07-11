@@ -29,6 +29,11 @@ namespace msos
             "the precise name of a static variable rooting your objects.")]
         public bool EnumerateRootsFast { get; set; }
 
+        [Option("chunkSize", DefaultValue = 1024, HelpText =
+            "The chunk size to use when segmenting the heap. The heap index stores reference information " +
+            "at the chunk level. A smaller chunk size means a larger index but faster command response times.")]
+        public int ChunkSize { get; set; }
+
         public void Execute(CommandExecutionContext context)
         {
             if (!InMemoryOnly && String.IsNullOrEmpty(HeapIndexFileName))
@@ -38,7 +43,7 @@ namespace msos
             }
 
             context.HeapIndex = new HeapIndex(context);
-            context.HeapIndex.Build(InMemoryOnly ? null : HeapIndexFileName, !EnumerateRootsFast);
+            context.HeapIndex.Build(ChunkSize, InMemoryOnly ? null : HeapIndexFileName, !EnumerateRootsFast);
         }
     }
 
@@ -66,8 +71,7 @@ namespace msos
 
     class HeapIndex
     {
-        const int ChunkSize = 1024;
-
+        private int _chunkSize;
         private List<ulong> _chunkIdToFirstNonFreeObjectInChunk = new List<ulong>();
         private Dictionary<ulong, int> _startOfChunkToChunkId = new Dictionary<ulong, int>();
         private Dictionary<int, HashSet<int>> _tempChunkToReferencingChunks = new Dictionary<int, HashSet<int>>();
@@ -89,8 +93,15 @@ namespace msos
             _heap = context.Runtime.GetHeap();
         }
 
-        public void Build(string indexFileName, bool enumerateAllRoots = true)
+        public bool Build(int chunkSize, string indexFileName, bool enumerateAllRoots)
         {
+            if (chunkSize < 256 || chunkSize > 1048576 || chunkSize % 16 != 0)
+            {
+                _context.WriteError("Chunk size must be between 256 bytes and 1MB, and must be a multiple of 16.");
+                return false;
+            }
+
+            _chunkSize = chunkSize;
             _staticRootsEnumerated = enumerateAllRoots;
             Measure(() =>
             {
@@ -125,6 +136,8 @@ namespace msos
                     "If you plan to perform further analysis in another session, it is recommended that you store " +
                     "the index to disk and later load it using the !lhi command.");
             }
+
+            return true;
         }
 
         [Serializable]
@@ -136,6 +149,7 @@ namespace msos
             public ulong[] DirectlyRooted;
             public List<SimplifiedRoot> AllRoots;
             public bool StaticRootsEnumerated;
+            public int ChunkSize;
         }
 
         [Serializable]
@@ -168,6 +182,7 @@ namespace msos
                 _directlyRooted = new HashSet<ulong>(indexes.DirectlyRooted);
                 _staticRootsEnumerated = indexes.StaticRootsEnumerated;
                 _allRoots = indexes.AllRoots;
+                _chunkSize = indexes.ChunkSize;
             }
 
             if (!_staticRootsEnumerated)
@@ -192,6 +207,7 @@ namespace msos
                 indexes.DirectlyRooted = _directlyRooted.ToArray();
                 indexes.AllRoots = _allRoots;
                 indexes.StaticRootsEnumerated = _staticRootsEnumerated;
+                indexes.ChunkSize = _chunkSize;
                 serializer.Serialize(compressor, indexes);
             }
             _context.WriteLine("Wrote index file of size {0}",
@@ -390,7 +406,7 @@ namespace msos
             {
                 ulong firstObj = _chunkIdToFirstNonFreeObjectInChunk[chunkId];
                 for (ulong current = firstObj;
-                    current != 0 && current < firstObj + (ChunkSize - firstObj % ChunkSize);
+                    current != 0 && current < firstObj + ((ulong)_chunkSize - firstObj % (ulong)_chunkSize);
                     current = _heap.NextObject(current))
                 {
                     var type = _heap.GetObjectType(current);
@@ -411,11 +427,11 @@ namespace msos
 
         private void DisplayStatistics()
         {
-            _context.WriteLine("Total chunks: {0}, Chunk size: {1}", _chunkIdToFirstNonFreeObjectInChunk.Count, ((ulong)ChunkSize).ToMemoryUnits());
+            _context.WriteLine("Total chunks: {0}, Chunk size: {1}", _chunkIdToFirstNonFreeObjectInChunk.Count, ((ulong)_chunkSize).ToMemoryUnits());
 
             ulong totalHeapBytes = (ulong)_heap.Segments.Sum(s => (long)(s.End - s.Start));
             _context.WriteLine("Memory covered by all segments: {0}", totalHeapBytes.ToMemoryUnits());
-            _context.WriteLine("Memory covered by all chunks:   {0}", ((ulong)(_chunkIdToFirstNonFreeObjectInChunk.Count * ChunkSize)).ToMemoryUnits());
+            _context.WriteLine("Memory covered by all chunks:   {0}", ((ulong)(_chunkIdToFirstNonFreeObjectInChunk.Count * _chunkSize)).ToMemoryUnits());
         }
 
         private int ChunkIdForObject(ulong objAddress)
@@ -527,7 +543,7 @@ namespace msos
                     _startOfChunkToChunkId.Add(startOfChunk, _lastChunkId);
                     ++_lastChunkId;
 
-                    ulong nextChunkStart = startOfChunk + ChunkSize;
+                    ulong nextChunkStart = startOfChunk + (ulong)_chunkSize;
 
                     for (;
                         nextObject != 0 && (nextObject < nextChunkStart || _heap.GetObjectType(nextObject).IsFree);
@@ -536,9 +552,9 @@ namespace msos
             }
         }
 
-        private static ulong StartOfChunk(ulong address)
+        private ulong StartOfChunk(ulong address)
         {
-            return address - (address % ChunkSize);
+            return address - (address % (ulong)_chunkSize);
         }
     }
 }
