@@ -41,6 +41,11 @@ namespace msos
                 context.WriteError("You must either request an in-memory index (--nofile), or a file name to store it (-f).");
                 return;
             }
+            if (InMemoryOnly && !String.IsNullOrEmpty(HeapIndexFileName))
+            {
+                context.WriteError("The --nofile and -f options are incompatible.");
+                return;
+            }
 
             // If the index fails to build, clear it so that other commands know we don't have an index.
             context.HeapIndex = new HeapIndex(context);
