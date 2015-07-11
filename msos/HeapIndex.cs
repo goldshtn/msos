@@ -50,18 +50,16 @@ namespace msos
     {
         const int ChunkSize = 1024;
 
-        // Serialized object sizes and (de)serialization time can be driven down by using:
-        //  - ulong[] for _chunkIdToFirstNonFreeObjectInChunk, it's all sequential chunk ids anyway
-        //  - int[] instead of HashSet<int> in _chunkToReferencingChunk -- construct with HashSet but store with array
-        private Dictionary<int, ulong> _chunkIdToFirstNonFreeObjectInChunk = new Dictionary<int, ulong>();
+        private List<ulong> _chunkIdToFirstNonFreeObjectInChunk = new List<ulong>();
         private Dictionary<ulong, int> _startOfChunkToChunkId = new Dictionary<ulong, int>();
-        private Dictionary<int, HashSet<int>> _chunkToReferencingChunks = new Dictionary<int, HashSet<int>>();
+        private Dictionary<int, HashSet<int>> _tempChunkToReferencingChunks = new Dictionary<int, HashSet<int>>();
+        private Dictionary<int, int[]> _chunkToReferencingChunks = new Dictionary<int, int[]>();
         
         private int _objectsWithMissingChunkIds = 0;
         private int _lastChunkId = 0;
         
         private HashSet<ulong> _directlyRooted = new HashSet<ulong>();
-        private List<ClrRoot> _allRoots;
+        private List<SimplifiedRoot> _allRoots;
 
         private CommandExecutionContext _context;
         private ClrHeap _heap;
@@ -70,27 +68,32 @@ namespace msos
         {
             _context = context;
             _heap = context.Runtime.GetHeap();
-            _allRoots = new List<ClrRoot>(_heap.EnumerateRoots(enumerateStatics: true));
         }
 
         public void Load(string indexFileName)
         {
-            Measure(() =>
+            using (var file = File.OpenRead(indexFileName))
             {
-                using (var file = File.OpenRead(indexFileName))
-                {
-                    BinaryFormatter formatter = new BinaryFormatter();
-                    Indexes indexes = (Indexes)formatter.Deserialize(file);
-                    _chunkIdToFirstNonFreeObjectInChunk = indexes.ChunkIdToFirstNonFreeObjectInChunk;
-                    _startOfChunkToChunkId = indexes.StartOfChunkToChunkId;
-                    _chunkToReferencingChunks = indexes.ChunkToReferencingChunks;
-                    _directlyRooted = indexes.DirectlyRooted;
-                }
-            }, "Loading index from disk");
+                BinaryFormatter formatter = new BinaryFormatter();
+                Indexes indexes = (Indexes)formatter.Deserialize(file);
+                _chunkIdToFirstNonFreeObjectInChunk = indexes.ChunkIdToFirstNonFreeObjectInChunk;
+                _startOfChunkToChunkId = indexes.StartOfChunkToChunkId;
+                _chunkToReferencingChunks = indexes.ChunkToReferencingChunks;
+                _directlyRooted = indexes.DirectlyRooted;
+                _allRoots = indexes.AllRoots;
+            }
         }
 
         public void Build(string indexFileName)
         {
+            // TODO Enumerating all roots with statics can be slow, so make it configurable
+            //      when building the index (as a parameter to !bhi).
+            Measure(() =>
+            {
+                _allRoots = (from root in _heap.EnumerateRoots(enumerateStatics: true)
+                             select new SimplifiedRoot(root)).ToList();
+            }, "Enumerating roots");
+
             // Build an index of N-byte chunks in all heap segments. The index is from chunk-id (int?) to
             // the first non-free object in the chunk (not to start of the chunk, which could be in the middle
             // of an object). If a chunk is completely empty or doesn't contain the start of any object, it
@@ -114,14 +117,34 @@ namespace msos
         [Serializable]
         class Indexes
         {
-            public Dictionary<int, ulong> ChunkIdToFirstNonFreeObjectInChunk;
+            public List<ulong> ChunkIdToFirstNonFreeObjectInChunk;
             public Dictionary<ulong, int> StartOfChunkToChunkId;
-            public Dictionary<int, HashSet<int>> ChunkToReferencingChunks;
+            public Dictionary<int, int[]> ChunkToReferencingChunks;
             public HashSet<ulong> DirectlyRooted;
+            public List<SimplifiedRoot> AllRoots;
+        }
+
+        [Serializable]
+        public class SimplifiedRoot
+        {
+            public ulong Address;
+            public ulong Object;
+            public GCRootKind Kind;
+            public string DisplayText;
+
+            public SimplifiedRoot(ClrRoot root)
+            {
+                Address = root.Address;
+                Object = root.Object;
+                Kind = root.Kind;
+                DisplayText = root.BetterToString();
+            }
         }
 
         private void Save(string indexFileName)
         {
+            // TODO Consider compressing the index on disk.
+
             using (var file = File.OpenWrite(indexFileName))
             {
                 BinaryFormatter formatter = new BinaryFormatter();
@@ -130,6 +153,7 @@ namespace msos
                 indexes.StartOfChunkToChunkId = _startOfChunkToChunkId;
                 indexes.ChunkToReferencingChunks = _chunkToReferencingChunks;
                 indexes.DirectlyRooted = _directlyRooted;
+                indexes.AllRoots = _allRoots;
                 formatter.Serialize(file, indexes);
             }
             _context.WriteLine("Wrote index file of size {0}",
@@ -145,7 +169,7 @@ namespace msos
 
         public class RootPath
         {
-            public ClrRoot Root;
+            public SimplifiedRoot Root;
             public ulong[] Chain;
         }
 
@@ -160,7 +184,7 @@ namespace msos
             protected bool Stop { get; private set; }
             
             private List<RootPath> _paths = new List<RootPath>();
-            private Dictionary<ulong, HashSet<ClrRoot>> _rootsSeenReferencingObject = new Dictionary<ulong, HashSet<ClrRoot>>();
+            private Dictionary<ulong, HashSet<SimplifiedRoot>> _rootsSeenReferencingObject = new Dictionary<ulong, HashSet<SimplifiedRoot>>();
             private int _localRootsSeen = 0;
 
             public IEnumerable<RootPath> Paths { get { return _paths; } }
@@ -186,10 +210,10 @@ namespace msos
                     ulong[] chainArray = path.ToArray();
                     foreach (var root in Index._allRoots.Where(r => r.Object == obj))
                     {
-                        HashSet<ClrRoot> seenRoots;
+                        HashSet<SimplifiedRoot> seenRoots;
                         if (!_rootsSeenReferencingObject.TryGetValue(obj, out seenRoots))
                         {
-                            seenRoots = new HashSet<ClrRoot>();
+                            seenRoots = new HashSet<SimplifiedRoot>();
                             _rootsSeenReferencingObject.Add(obj, seenRoots);
                         }
 
@@ -316,7 +340,7 @@ namespace msos
             var result = new HashSet<ulong>();
 
             int targetChunk = _startOfChunkToChunkId[StartOfChunk(targetObj)];
-            HashSet<int> referencingChunks;
+            int[] referencingChunks;
             if (!_chunkToReferencingChunks.TryGetValue(targetChunk, out referencingChunks))
             {
                 return result;
@@ -380,7 +404,7 @@ namespace msos
                     var type = _heap.GetObjectType(current);
                     if (type != null && !type.IsFree)
                     {
-                        _chunkIdToFirstNonFreeObjectInChunk.Add(chunkId, current);
+                        _chunkIdToFirstNonFreeObjectInChunk.Add(current);
                         break;
                     }
                 }
@@ -420,10 +444,10 @@ namespace msos
                     int childChunk = ChunkIdForObject(child);
                     int parentChunk = ChunkIdForObject(parent);
                     HashSet<int> referencingChunks;
-                    if (!_chunkToReferencingChunks.TryGetValue(childChunk, out referencingChunks))
+                    if (!_tempChunkToReferencingChunks.TryGetValue(childChunk, out referencingChunks))
                     {
                         referencingChunks = new HashSet<int>();
-                        _chunkToReferencingChunks.Add(childChunk, referencingChunks);
+                        _tempChunkToReferencingChunks.Add(childChunk, referencingChunks);
                     }
                     referencingChunks.Add(parentChunk);
 
@@ -435,12 +459,19 @@ namespace msos
             }
 
             _context.WriteLine("Average referencing chunks per chunk: {0:N}",
-                (from list in _chunkToReferencingChunks.Values select list.Count).Average());
+                (from list in _tempChunkToReferencingChunks.Values select list.Count).Average());
             _context.WriteLine("Max referencing chunks per chunk:     {0}",
-                (from list in _chunkToReferencingChunks.Values select list.Count).Max());
+                (from list in _tempChunkToReferencingChunks.Values select list.Count).Max());
             _context.WriteLine("Min referencing chunks per chunk:     {0}",
-                (from list in _chunkToReferencingChunks.Values select list.Count).Min());
+                (from list in _tempChunkToReferencingChunks.Values select list.Count).Min());
             _context.WriteLine("Objects with missing chunk ids:       {0}", _objectsWithMissingChunkIds);
+
+            // Convert to a more compact representation for in-memory use and serialization.
+            foreach (var kvp in _tempChunkToReferencingChunks)
+            {
+                _chunkToReferencingChunks.Add(kvp.Key, kvp.Value.ToArray());
+            }
+            _tempChunkToReferencingChunks.Clear();
         }
 
         private void BuildChunks()
@@ -452,7 +483,7 @@ namespace msos
                 {
                     ulong startOfChunk = StartOfChunk(nextObject);
 
-                    _chunkIdToFirstNonFreeObjectInChunk.Add(_lastChunkId, nextObject);
+                    _chunkIdToFirstNonFreeObjectInChunk.Add(nextObject);
                     _startOfChunkToChunkId.Add(startOfChunk, _lastChunkId);
                     ++_lastChunkId;
 

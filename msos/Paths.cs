@@ -28,7 +28,7 @@ namespace msos
             int pathsDisplayed = 0;
             foreach (var path in context.HeapIndex.FindPaths(objPtr))
             {
-                context.WriteLine("{0:x16} -> {1:x16} {2}", path.Root.Address, path.Root.Object, path.Root.BetterToString());
+                context.WriteLine("{0:x16} -> {1:x16} {2}", path.Root.Address, path.Root.Object, path.Root.DisplayText);
                 foreach (var obj in path.Chain)
                 {
                     context.WriteLine("        -> {0:x16} {1}", obj, context.Heap.GetObjectType(obj).Name);
