@@ -58,6 +58,9 @@
     <Reference Include="CommandLine">
       <HintPath>..\packages\CommandLineParser.2.0.9-alpha\lib\net45\CommandLine.dll</HintPath>
     </Reference>
+    <Reference Include="ICSharpCode.SharpZipLib">
+      <HintPath>..\packages\SharpZipLib.0.86.0\lib\20\ICSharpCode.SharpZipLib.dll</HintPath>
+    </Reference>
     <Reference Include="Microsoft.Diagnostics.Runtime">
       <HintPath>..\packages\Microsoft.Diagnostics.Runtime.0.8.27-beta\lib\net40\Microsoft.Diagnostics.Runtime.dll</HintPath>
     </Reference>

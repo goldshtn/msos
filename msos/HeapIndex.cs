@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
@@ -11,16 +12,27 @@ using System.Threading.Tasks;
 
 namespace msos
 {
-    [Verb("!bhi", HelpText = "Builds a heap index that can be used for efficient object queries and stores it to the specified file.")]
+    [Verb("!bhi", HelpText =
+        "Builds a heap index that can be used for efficient object queries and stores it to the specified file. " +
+        "Use the --nofile switch to store the index in memory only, if you do not plan to reuse it.")]
     class BuildHeapIndex : ICommand
     {
-        [Value(0, Required = true)]
+        [Option('f', HelpText = "The file name in which to store the index. Load later with !lhi.")]
         public string HeapIndexFileName { get; set; }
+
+        [Option("nofile", DefaultValue = false, HelpText = "Store the index in memory only.")]
+        public bool InMemoryOnly { get; set; }
+
+        [Option("fast", DefaultValue = false, HelpText = 
+            "In large dumps, enumerating all the static roots in detail can take time. " +
+            "Use this switch to make root enumeration faster at the expense of not knowing "+
+            "the precise name of a static variable rooting your objects.")]
+        public bool EnumerateRootsFast { get; set; }
 
         public void Execute(CommandExecutionContext context)
         {
             context.HeapIndex = new HeapIndex(context);
-            context.HeapIndex.Build(HeapIndexFileName);
+            context.HeapIndex.Build(InMemoryOnly ? null : HeapIndexFileName, !EnumerateRootsFast);
         }
     }
 
@@ -36,7 +48,7 @@ namespace msos
     [Verb("!lhi", HelpText = "Loads a heap index from the specified file.")]
     class LoadHeapIndex : ICommand
     {
-        [Value(0, Required = true)]
+        [Option('f', Required = true, HelpText = "The file name from which to load the index.")]
         public string HeapIndexFileName { get; set; }
 
         public void Execute(CommandExecutionContext context)
@@ -60,6 +72,7 @@ namespace msos
         
         private HashSet<ulong> _directlyRooted = new HashSet<ulong>();
         private List<SimplifiedRoot> _allRoots;
+        private bool _staticRootsEnumerated;
 
         private CommandExecutionContext _context;
         private ClrHeap _heap;
@@ -70,13 +83,12 @@ namespace msos
             _heap = context.Runtime.GetHeap();
         }
 
-        public void Build(string indexFileName)
+        public void Build(string indexFileName, bool enumerateAllRoots = true)
         {
-            // TODO Enumerating all roots with statics can be slow, so make it configurable
-            //      when building the index (as a parameter to !bhi).
+            _staticRootsEnumerated = enumerateAllRoots;
             Measure(() =>
             {
-                _allRoots = (from root in _heap.EnumerateRoots(enumerateStatics: true)
+                _allRoots = (from root in _heap.EnumerateRoots(enumerateStatics: enumerateAllRoots)
                              select new SimplifiedRoot(root)).ToList();
             }, "Enumerating roots");
 
@@ -97,7 +109,16 @@ namespace msos
 
             DisplayStatistics();
 
-            Measure(() => Save(indexFileName), "Saving index to disk");
+            if (!String.IsNullOrEmpty(indexFileName))
+            {
+                Measure(() => Save(indexFileName), "Saving index to disk");
+            }
+            else
+            {
+                _context.WriteWarning("You did not specify a file name, so the index will be stored only in memory. " +
+                    "If you plan to perform further analysis in another session, it is recommended that you store " +
+                    "the index to disk and later load it using the !lhi command.");
+            }
         }
 
         [Serializable]
@@ -108,6 +129,7 @@ namespace msos
             public Dictionary<int, int[]> ChunkToReferencingChunks;
             public ulong[] DirectlyRooted;
             public List<SimplifiedRoot> AllRoots;
+            public bool StaticRootsEnumerated;
         }
 
         [Serializable]
@@ -130,22 +152,31 @@ namespace msos
         public void Load(string indexFileName)
         {
             using (var file = File.OpenRead(indexFileName))
+            using (var decompressor = new ICSharpCode.SharpZipLib.BZip2.BZip2InputStream(file))
             {
                 var serializer = new NetSerializer.Serializer(new Type[] { typeof(Indexes) });
-                Indexes indexes = (Indexes)serializer.Deserialize(file);
+                Indexes indexes = (Indexes)serializer.Deserialize(decompressor);
                 _chunkIdToFirstNonFreeObjectInChunk = indexes.ChunkIdToFirstNonFreeObjectInChunk;
                 _startOfChunkToChunkId = indexes.StartOfChunkToChunkId;
                 _chunkToReferencingChunks = indexes.ChunkToReferencingChunks;
                 _directlyRooted = new HashSet<ulong>(indexes.DirectlyRooted);
+                _staticRootsEnumerated = indexes.StaticRootsEnumerated;
                 _allRoots = indexes.AllRoots;
+            }
+
+            if (!_staticRootsEnumerated)
+            {
+                _context.WriteWarning("This heap index does not have detailed static root information. " +
+                    "As a result, you will not see the names of static variables referencing your objects, " +
+                    "only their addresses. Recreate the index without the --fast switch to get full " +
+                    "information. This may be slower.");
             }
         }
 
         private void Save(string indexFileName)
         {
-            // TODO Consider compressing the index on disk.
-
-            using (var file = File.OpenWrite(indexFileName))
+            using (var file = File.Create(indexFileName))
+            using (var compressor = new ICSharpCode.SharpZipLib.BZip2.BZip2OutputStream(file))
             {
                 var serializer = new NetSerializer.Serializer(new Type[] { typeof(Indexes) });
                 var indexes = new Indexes();
@@ -154,7 +185,8 @@ namespace msos
                 indexes.ChunkToReferencingChunks = _chunkToReferencingChunks;
                 indexes.DirectlyRooted = _directlyRooted.ToArray();
                 indexes.AllRoots = _allRoots;
-                serializer.Serialize(file, indexes);
+                indexes.StaticRootsEnumerated = _staticRootsEnumerated;
+                serializer.Serialize(compressor, indexes);
             }
             _context.WriteLine("Wrote index file of size {0}",
                 ((ulong)new FileInfo(indexFileName).Length).ToMemoryUnits());
