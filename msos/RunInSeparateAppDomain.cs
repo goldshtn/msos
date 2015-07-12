@@ -123,6 +123,11 @@ internal class RunQuery : IRunQuery
         return _context.Object(address);
     }
 
+    private IEnumerable<dynamic> ObjectEn(ulong address)
+    {
+        yield return Object(address);
+    }
+
     public object Run()
     {
         return (" + CompiledQueryPlaceholder + @");

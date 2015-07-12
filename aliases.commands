@@ -15,3 +15,22 @@ where !s._rawXml.IsNull() select new { _
   Key = s._configKey, ConfigPath = s._definitionConfigPath, _
   File = s._filename, Line = s._lineNumber, Xml = s._rawXml _
 }
+
+.newalias httpruntimes !hq --json from o in ObjectsOfType("System.Web.HttpRuntime") _
+where !(bool)o._beforeFirstRequest select new { _
+  Address = o.__Address, _
+  FirstRequestTime = o._firstRequestStartTime.dateData, _
+  UserId = o._wpUserId, _
+  DebuggingEnabled = o._debuggingEnabled, _
+  ActiveRequestCount = o._activeRequestCount, _
+  Path = o._appDomainAppPath _
+}
+
+.newalias httprequest !hq --json from hr in ObjectEn(0x$1) _
+select new { _
+  Request = hr._httpMethod + " " + hr._url.m_String, _
+  ContentType = hr._contentType, _
+  ContentLength = hr._contentLength, _
+  Target = hr._path._virtualPath, _
+  Response = hr._context._response, _
+}
