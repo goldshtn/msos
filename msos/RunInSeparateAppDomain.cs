@@ -154,7 +154,7 @@ internal class RunQuery : IRunQuery
             _writer = writer;
         }
 
-        public void RunQuery(string query)
+        public void RunQuery(string outputFormat, string query)
         {
             var options = new CompilerParameters();
             options.ReferencedAssemblies.Add(typeof(Enumerable).Assembly.Location);
@@ -185,6 +185,21 @@ internal class RunQuery : IRunQuery
                 compiledQueryType, new RunQueryContext { Heap = _heap });
             
             object result = runQuery.Run();
+
+            IObjectPrinter printer = null;
+            switch (outputFormat)
+            {
+                case HeapQuery.TabularOutputFormat:
+                    printer = new TabularObjectPrinter(_writer);
+                    break;
+                case HeapQuery.JsonOutputFormat:
+                    printer = new JsonObjectPrinter(_writer);
+                    break;
+                default:
+                    throw new NotSupportedException(String.Format(
+                        "The output format '{0}' is not supported", outputFormat));
+            }
+
             IEnumerable enumerable = result as IEnumerable;
             ulong rowCount = 0;
             if (enumerable != null && !(result is string))
@@ -200,10 +215,10 @@ internal class RunQuery : IRunQuery
                     {
                         if (first)
                         {
-                            PrintHeader(obj);
+                            printer.PrintHeader(obj);
                             first = false;
                         }
-                        PrintContents(obj);
+                        printer.PrintContents(obj);
                     }
                     else
                     {
@@ -220,42 +235,92 @@ internal class RunQuery : IRunQuery
             _writer.WriteLine("Rows: {0}", rowCount);
         }
 
-        private void PrintContents(object obj)
+        interface IObjectPrinter
         {
-            var props = obj.GetType().GetProperties();
-            int width = TotalWidth / props.Length;
-            for (int i = 0; i < props.Length; ++i)
-            {
-                // Do not restrict the width of the last property.
-                if (i == props.Length - 1)
-                {
-                    _writer.Write(props[i].GetValue(obj).ToString());
-                }
-                else
-                {
-                    _writer.Write("{0,-" + width + "}  ", props[i].GetValue(obj).ToString().TrimEndToLength(width));
-                }
-            }
-            _writer.WriteLine();
+            void PrintHeader(object obj);
+            void PrintContents(object obj);
         }
 
-        private void PrintHeader(object obj)
+        abstract class ObjectPrinterBase : IObjectPrinter
         {
-            var props = obj.GetType().GetProperties();
-            int width = TotalWidth / props.Length;
-            for (int i = 0; i < props.Length; ++i)
+            protected TextWriter Output { get; private set; }
+
+            protected ObjectPrinterBase(TextWriter output)
             {
-                // Do not restrict the width of the last property.
-                if (i == props.Length - 1)
-                {
-                    _writer.Write(props[i].Name.TrimEndToLength(width));
-                }
-                else
-                {
-                    _writer.Write("{0,-" + width + "}  ", props[i].Name.TrimEndToLength(width));
-                }
+                Output = output;
             }
-            _writer.WriteLine();
+
+            public abstract void PrintHeader(object obj);
+            public abstract void PrintContents(object obj);
+        }
+
+        class TabularObjectPrinter : ObjectPrinterBase
+        {
+            public TabularObjectPrinter(TextWriter output)
+                : base(output)
+            {
+            }
+
+            public override void PrintHeader(object obj)
+            {
+                var props = obj.GetType().GetProperties();
+                int width = TotalWidth / props.Length;
+                for (int i = 0; i < props.Length; ++i)
+                {
+                    // Do not restrict the width of the last property.
+                    if (i == props.Length - 1)
+                    {
+                        Output.Write(props[i].Name.TrimEndToLength(width));
+                    }
+                    else
+                    {
+                        Output.Write("{0,-" + width + "}  ", props[i].Name.TrimEndToLength(width));
+                    }
+                }
+                Output.WriteLine();
+            }
+
+            public override void PrintContents(object obj)
+            {
+                var props = obj.GetType().GetProperties();
+                int width = TotalWidth / props.Length;
+                for (int i = 0; i < props.Length; ++i)
+                {
+                    // Do not restrict the width of the last property.
+                    if (i == props.Length - 1)
+                    {
+                        Output.Write(props[i].GetValue(obj).ToString());
+                    }
+                    else
+                    {
+                        Output.Write("{0,-" + width + "}  ", props[i].GetValue(obj).ToString().TrimEndToLength(width));
+                    }
+                }
+                Output.WriteLine();
+            }
+        }
+
+        class JsonObjectPrinter : ObjectPrinterBase
+        {
+            public JsonObjectPrinter(TextWriter output)
+                : base(output)
+            {
+            }
+
+            public override void PrintHeader(object obj)
+            {
+            }
+
+            public override void PrintContents(object obj)
+            {
+                Output.WriteLine("{");
+                var props = obj.GetType().GetProperties();
+                foreach (var prop in props)
+                {
+                    Output.WriteLine("  {0} = {1}", prop.Name, prop.GetValue(obj).ToString());
+                }
+                Output.WriteLine("}");
+            }
         }
 
         public void Dispose()

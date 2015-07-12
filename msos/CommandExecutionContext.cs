@@ -62,9 +62,9 @@ namespace msos
             // going on with the !hq command, where the query could contain -- and - symbols and it
             // crashes the parser. So, we give these two commands special treatment here, with the
             // hope there will be a more decent solution in the future.
-            if (parts[0] == "!hq")
+            if (parts[0] == "!hq" && parts.Length >= 2)
             {
-                commandToExecute = new HeapQuery() { Query = parts.Skip(1) };
+                commandToExecute = new HeapQuery() { OutputFormat = parts[1], Query = parts.Skip(2) };
             }
             else if (parts[0] == ".newalias" && parts.Length >= 2)
             {

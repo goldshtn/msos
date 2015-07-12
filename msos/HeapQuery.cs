@@ -12,9 +12,18 @@ namespace msos
     [Verb("!hq", HelpText = "Runs a query over heap objects and prints the results. Useful helpers include AllObjects(), ObjectsOfType(\"TypeName\"), AllClasses(), and Class(\"TypeName\"). Special properties on objects include __Type and __Size; special properties on classes include __Fields and __StaticFields.")]
     class HeapQuery : ICommand
     {
-        // This is a collection because we want to capture anything provided after
-        // the initial !hq command. We then collect the parts back to a single string.
-        [Value(0, Required = true)]
+        public const string TabularOutputFormat = "tabular";
+        public const string JsonOutputFormat = "json";
+
+        private static string[] OutputFormats = { "--" + TabularOutputFormat, "--" + JsonOutputFormat };
+
+        // This is done in a round-about way (instead of using [Option]) because we are parsing the arguments
+        // manually at this point. The CommandLineParser isn't flexible enough. See comment in
+        // CommandExecutionContext.ExecuteOneCommand for an explanation.
+        [Value(0, Required = true, HelpText = "The output format.")]
+        public string OutputFormat { get; set; }
+
+        [Value(1, Required = true)]
         public IEnumerable<string> Query { get; set; }
 
         private class QueryOutputWriter : TextWriter
@@ -61,6 +70,13 @@ namespace msos
 
         public void Execute(CommandExecutionContext context)
         {
+            if (!OutputFormats.Contains(OutputFormat))
+            {
+                context.WriteError("Unknown output format '{0}'. Output format must be one of the following: {1}",
+                    OutputFormat, String.Join(", ", OutputFormats));
+                return;
+            }
+
             AppDomain appDomain = AppDomain.CreateDomain("RunQueryAppDomain");
 
             using (QueryOutputWriter writer = new QueryOutputWriter(context))
@@ -84,7 +100,7 @@ namespace msos
                 {
                     try
                     {
-                        runner.RunQuery(String.Join(" ", Query.ToArray()));
+                        runner.RunQuery(OutputFormat.Substring(2), String.Join(" ", Query.ToArray()));
                     }
                     catch (Exception ex)
                     {

@@ -1,4 +1,4 @@
-.newalias httprequests !hq from hc in ObjectsOfType("System.Web.HttpContext") _
+.newalias httprequests !hq --tabular from hc in ObjectsOfType("System.Web.HttpContext") _
 let elapsed = new TimeSpan(DateTime.Now.Ticks - (long)hc._utcTimestamp.dateData) _
 let timeout = new TimeSpan((long)hc._timeout._ticks) _
 select new { _
@@ -10,7 +10,7 @@ select new { _
   VirtualPath = hc._request._filePath._virtualPath _
 }
 
-.newalias configs !hq from s in ObjectsOfType("System.Configuration.SectionXmlInfo") _
+.newalias configs !hq --json from s in ObjectsOfType("System.Configuration.SectionXmlInfo") _
 where !s._rawXml.IsNull() select new { _
   Key = s._configKey, ConfigPath = s._definitionConfigPath, _
   File = s._filename, Line = s._lineNumber, Xml = s._rawXml _
