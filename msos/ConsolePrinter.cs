@@ -55,5 +55,10 @@ namespace msos
                 Console.WriteLine(value);
             }
         }
+
+        public override void ClearScreen()
+        {
+            Console.Clear();
+        }
     }
 }

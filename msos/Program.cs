@@ -19,14 +19,6 @@ namespace msos
         const int ATTACH_TIMEOUT = 5000;
         const int WIN32_ACCESS_DENIED = 5;
 
-        private static Type[] GetAllCommandTypes()
-        {
-            return (from type in Assembly.GetExecutingAssembly().GetTypes()
-                    where typeof(ICommand).IsAssignableFrom(type)
-                    select type
-                    ).ToArray();
-        }
-
         private void Bail(string format, params object[] args)
         {
             _context.WriteError(format, args);
@@ -48,11 +40,14 @@ namespace msos
         private DataTarget _target;
         private ClrRuntime _runtime;
         private CommandExecutionContext _context = new CommandExecutionContext();
-        private Parser _commandParser;
-        private Type[] _allCommandTypes;
 
         private void Run(string[] args)
         {
+            const int ConsoleBufferSize = 4096;
+            Console.SetIn(new StreamReader(
+                Console.OpenStandardInput(bufferSize: ConsoleBufferSize), Console.InputEncoding, false, ConsoleBufferSize)
+                );
+
             ParseCommandLineArguments(args);
 
             if (!String.IsNullOrEmpty(_options.DumpFile))
@@ -92,13 +87,6 @@ namespace msos
             var threadToSwitchTo = _runtime.ThreadWithActiveExceptionOrFirstThread();
             new SwitchThread() { ManagedThreadId = threadToSwitchTo.ManagedThreadId }.Execute(_context);
 
-            _commandParser = new Parser(ps =>
-            {
-                ps.CaseSensitive = false;
-                ps.HelpWriter = Console.Out;
-            });
-            _allCommandTypes = GetAllCommandTypes();
-
             ExecuteInitialCommand();
 
             while (!_context.ShouldQuit)
@@ -121,18 +109,31 @@ namespace msos
                     }
                 }
 
-                ExecuteOneCommand(command);
+                _context.ExecuteOneCommand(command, _options.DisplayDiagnosticInformation);
             }
         }
 
         private void ExecuteInitialCommand()
         {
-            string[] commands = null;
+            List<string> commands = null;
             if (!String.IsNullOrEmpty(_options.InputFileName))
             {
+                commands = new List<string>();
                 try
                 {
-                    commands = File.ReadAllLines(_options.InputFileName);
+                    string command = "";
+                    foreach (string line in File.ReadLines(_options.InputFileName))
+                    {
+                        if (line.EndsWith(" _"))
+                        {
+                            command += line.Substring(0, line.Length - 1);
+                        }
+                        else
+                        {
+                            commands.Add(command + line);
+                            command = "";
+                        }
+                    }
                 }
                 catch (IOException ex)
                 {
@@ -141,7 +142,7 @@ namespace msos
             }
             else if (!String.IsNullOrEmpty(_options.InitialCommand))
             {
-                commands = _options.InitialCommand.Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
+                commands = _options.InitialCommand.Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries).ToList();
             }
 
             if (commands == null)
@@ -150,26 +151,7 @@ namespace msos
             foreach (var command in commands)
             {
                 _context.WriteInfo("> {0}", command);
-                ExecuteOneCommand(command);
-            }
-        }
-        
-        private void ExecuteOneCommand(string command)
-        {
-            string[] parts = command.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-            if (parts.Length == 0)
-                return;
-
-            if (parts[0] == "#")
-                return; // Lines starting with # are comments
-
-            var parseResult = _commandParser.ParseArguments(parts, _allCommandTypes);
-            if (parseResult.Errors.Any())
-                return;
-
-            using (new TimeAndMemory(_options.DisplayDiagnosticInformation, _context.Printer))
-            {
-                ((ICommand)parseResult.Value).Execute(_context);
+                _context.ExecuteOneCommand(command, _options.DisplayDiagnosticInformation);
             }
         }
 
@@ -307,12 +289,13 @@ namespace msos
             Console.BackgroundColor = ConsoleColor.Black;
             _context.Printer = new ConsolePrinter();
 
-            var options = Parser.Default.ParseArguments<CommandLineOptions>(args);
-            if (options.Errors.Any())
+            var parseResult = Parser.Default.ParseArguments<CommandLineOptions>(args);
+            var parsed = parseResult as Parsed<CommandLineOptions>;
+            if (parsed == null)
             {
                 Bail();
             }
-            _options = options.Value;
+            _options = parsed.Value;
 
             if (!String.IsNullOrEmpty(_options.OutputFileName))
             {

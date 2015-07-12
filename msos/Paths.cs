@@ -16,15 +16,15 @@ namespace msos
         [Value(0, Required = true)]
         public string ObjectAddress { get; set; }
 
-        [Option("maxPaths", DefaultValue = 5, HelpText = "The maximum number of different paths to display.")]
+        [Option("maxPaths", Default = 5, HelpText = "The maximum number of different paths to display.")]
         public int MaxResults { get; set; }
 
-        [Option("maxLocalRoots", DefaultValue = 2, HelpText =
+        [Option("maxLocalRoots", Default = 2, HelpText =
             "The maximum number of different paths from local variable roots to display. " + 
             "Specify 0 to avoid seeing any local roots at all.")]
         public int MaxLocalRoots { get; set; }
 
-        [Option("maxDepth", DefaultValue = 20, HelpText =
+        [Option("maxDepth", Default = 20, HelpText =
             "The maximum depth of an allowed root path. Set to smaller values if you are getting " + 
             "lots of irrelevant results, or overly long reference chains.")]
         public int MaxDepth { get; set; }

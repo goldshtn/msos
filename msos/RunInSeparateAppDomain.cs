@@ -222,20 +222,38 @@ internal class RunQuery : IRunQuery
 
         private void PrintContents(object obj)
         {
-            int width = TotalWidth / obj.GetType().GetProperties().Length;
-            foreach (var prop in obj.GetType().GetProperties())
+            var props = obj.GetType().GetProperties();
+            int width = TotalWidth / props.Length;
+            for (int i = 0; i < props.Length; ++i)
             {
-                _writer.Write("{0,-" + width + "}  ", prop.GetValue(obj).ToString().TrimEndToLength(width));
+                // Do not restrict the width of the last property.
+                if (i == props.Length - 1)
+                {
+                    _writer.Write(props[i].GetValue(obj).ToString());
+                }
+                else
+                {
+                    _writer.Write("{0,-" + width + "}  ", props[i].GetValue(obj).ToString().TrimEndToLength(width));
+                }
             }
             _writer.WriteLine();
         }
 
         private void PrintHeader(object obj)
         {
-            int width = TotalWidth / obj.GetType().GetProperties().Length;
-            foreach (var prop in obj.GetType().GetProperties())
+            var props = obj.GetType().GetProperties();
+            int width = TotalWidth / props.Length;
+            for (int i = 0; i < props.Length; ++i)
             {
-                _writer.Write("{0,-" + width +"}  ", prop.Name.TrimEndToLength(width));
+                // Do not restrict the width of the last property.
+                if (i == props.Length - 1)
+                {
+                    _writer.Write(props[i].Name.TrimEndToLength(width));
+                }
+                else
+                {
+                    _writer.Write("{0,-" + width + "}  ", props[i].Name.TrimEndToLength(width));
+                }
             }
             _writer.WriteLine();
         }

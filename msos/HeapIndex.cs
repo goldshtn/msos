@@ -20,16 +20,16 @@ namespace msos
         [Option('f', HelpText = "The file name in which to store the index. Load later with !lhi.")]
         public string HeapIndexFileName { get; set; }
 
-        [Option("nofile", DefaultValue = false, HelpText = "Store the index in memory only.")]
+        [Option("nofile", Default = false, HelpText = "Store the index in memory only.")]
         public bool InMemoryOnly { get; set; }
 
-        [Option("fast", DefaultValue = false, HelpText = 
+        [Option("fast", Default = false, HelpText = 
             "In large dumps, enumerating all the static roots in detail can take time. " +
             "Use this switch to make root enumeration faster at the expense of not knowing "+
             "the precise name of a static variable rooting your objects.")]
         public bool EnumerateRootsFast { get; set; }
 
-        [Option("chunkSize", DefaultValue = 1024, HelpText =
+        [Option("chunkSize", Default = 1024, HelpText =
             "The chunk size to use when segmenting the heap. The heap index stores reference information " +
             "at the chunk level. A smaller chunk size means a larger index but faster command response times.")]
         public int ChunkSize { get; set; }

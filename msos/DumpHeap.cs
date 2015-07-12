@@ -21,10 +21,10 @@ namespace msos
         [Option("stat", HelpText="Display only type statistics and not individual objects.")]
         public bool StatisticsOnly { get; set; }
 
-        [Option("min", DefaultValue = -1, HelpText = "Display only objects whose size is greater than the value specified.")]
+        [Option("min", Default = -1, HelpText = "Display only objects whose size is greater than the value specified.")]
         public long MinSize { get; set; }
 
-        [Option("max", DefaultValue = -1, HelpText = "Display only objects whose size is less than the value specified.")]
+        [Option("max", Default = -1, HelpText = "Display only objects whose size is less than the value specified.")]
         public long MaxSize { get; set; }
 
         struct TypeInfo

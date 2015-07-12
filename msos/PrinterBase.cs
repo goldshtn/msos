@@ -34,6 +34,10 @@ namespace msos
         public abstract void WriteError(string value);
         public abstract void WriteWarning(string value);
 
+        public virtual void ClearScreen()
+        {
+        }
+
         public virtual void Dispose()
         {
         }

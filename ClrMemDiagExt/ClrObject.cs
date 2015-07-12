@@ -430,6 +430,12 @@ namespace Microsoft.Diagnostics.RuntimeExt
                 return true;
             }
 
+            if (binder.Name == "__Address")
+            {
+                result = String.Format("{0:x16}", m_addr);
+                return true;
+            }
+
             if (binder.Name == "__Fields")
             {
                 result = (from f in m_type.Fields where f.Type != null select new { Name = f.Name, Type = f.Type.Name }).ToArray();

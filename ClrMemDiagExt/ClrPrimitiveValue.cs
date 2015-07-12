@@ -26,7 +26,7 @@ namespace Microsoft.Diagnostics.RuntimeExt
             if (binder.Type == typeof(string))
                 result = m_value.ToString();
             else
-                result = m_value;
+                result = Convert.ChangeType(m_value, binder.Type);
 
             return true;
         }
@@ -34,6 +34,11 @@ namespace Microsoft.Diagnostics.RuntimeExt
         public object GetValue()
         {
             return m_value;
+        }
+
+        public ClrElementType GetElementType()
+        {
+            return m_type;
         }
 
         public override string ToString()

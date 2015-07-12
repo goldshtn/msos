@@ -14,10 +14,10 @@ namespace msos
         [Value(0, Required = true)]
         public string Address { get; set; }
 
-        [Option('l', HelpText="The number of bytes to display.", DefaultValue = 128)]
+        [Option('l', HelpText="The number of bytes to display.", Default = 128)]
         public int Length { get; set; }
 
-        [Option('c', HelpText = "The number of columns in each row.", DefaultValue = 16)]
+        [Option('c', HelpText = "The number of columns in each row.", Default = 16)]
         public int Columns { get; set; }
 
         public void Execute(CommandExecutionContext context)
