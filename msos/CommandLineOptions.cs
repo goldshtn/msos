@@ -29,5 +29,9 @@ namespace msos
 
         [Option('i', HelpText = "Read commands from the specified file and execute them immediately after connecting to the target.")]
         public string InputFileName { get; set; }
+
+        [Option("clrVersion", Default = 0,
+            HelpText = "The ordinal number of the CLR version to interact with, if there are multiple CLRs loaded into the target.")]
+        public int ClrVersion { get; set; }
     }
 }

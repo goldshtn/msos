@@ -176,13 +176,20 @@ namespace msos
             {
                 Bail("There is no CLR loaded into the process.");
             }
-            foreach (var clrVersion in _target.ClrVersions)
+            for (int i = 0; i < _target.ClrVersions.Count; ++i)
             {
-                _context.WriteInfo("Flavor: {0}, version: {1}", clrVersion.Flavor, clrVersion.Version);
+                var clrVersion = _target.ClrVersions[i];
+                _context.WriteInfo("#{0} Flavor: {1}, Version: {2}", i, clrVersion.Flavor, clrVersion.Version);
+            }
+            if (_options.ClrVersion < 0 || _options.ClrVersion >= _target.ClrVersions.Count)
+            {
+                Bail("The ordinal number of the CLR to interact with is not valid. {0} specified, valid values are 0-{1}.",
+                    _options.ClrVersion, _target.ClrVersions.Count - 1);
             }
             if (_target.ClrVersions.Count > 1)
             {
-                _context.WriteInfo("The rest of this session will interact with the first CLR version.");
+                _context.WriteInfo("The rest of this session will interact with CLR version #{0} ({1}). Change using --clrVersion.",
+                    _options.ClrVersion, _target.ClrVersions[_options.ClrVersion].Version);
             }
         }
 
