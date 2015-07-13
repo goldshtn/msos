@@ -87,6 +87,12 @@ namespace msos
     {
         public void Execute(CommandExecutionContext context)
         {
+            if (context.Aliases.Count == 0)
+            {
+                context.WriteLine("There are no aliases. Use .newalias to define some.");
+                return;
+            }
+
             context.WriteLine("{0,-20} {1}", "Name", "Command");
             foreach (var aliasAndCommand in context.Aliases)
             {
