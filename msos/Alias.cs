@@ -72,6 +72,16 @@ namespace msos
         }
     }
 
+    [Verb(".clearalias", HelpText = "Removes all registered aliases.")]
+    class RemoveAllAliases : ICommand
+    {
+        public void Execute(CommandExecutionContext context)
+        {
+            context.Aliases.Clear();
+        }
+    }
+
+
     [Verb(".listalias", HelpText = "Lists all the aliases.")]
     class ListAliases : ICommand
     {
