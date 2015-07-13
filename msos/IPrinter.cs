@@ -8,6 +8,7 @@ namespace msos
 {
     interface IPrinter : IDisposable
     {
+        uint RowsPerPage { get; set; }
         void WriteInfo(string format, params object[] args);
         void WriteInfo(string value);
         void WriteCommandOutput(string format, params object[] args);
@@ -17,5 +18,6 @@ namespace msos
         void WriteWarning(string format, object[] args);
         void WriteWarning(string value);
         void ClearScreen();
+        void CommandEnded();
     }
 }

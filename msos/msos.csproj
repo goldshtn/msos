@@ -116,6 +116,7 @@
     <Compile Include="ObjectExtensions.cs" />
     <Compile Include="ObjectSet.cs" />
     <Compile Include="ObjSize.cs" />
+    <Compile Include="PageSize.cs" />
     <Compile Include="Paths.cs" />
     <Compile Include="PrinterBase.cs" />
     <Compile Include="PrintException.cs" />

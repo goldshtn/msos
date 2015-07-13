@@ -8,6 +8,8 @@ namespace msos
 {
     abstract class PrinterBase : IPrinter
     {
+        public uint RowsPerPage { get; set; }
+
         public void WriteInfo(string format, params object[] args)
         {
             WriteInfo(String.Format(format, args));
@@ -39,6 +41,10 @@ namespace msos
         }
 
         public virtual void Dispose()
+        {
+        }
+
+        public virtual void CommandEnded()
         {
         }
     }

@@ -8,6 +8,8 @@ namespace msos
 {
     class ConsolePrinter : PrinterBase
     {
+        private uint _rowsPrinted = 0;
+
         class ConsoleColorChanger : IDisposable
         {
             private ConsoleColor _oldColor;
@@ -36,6 +38,15 @@ namespace msos
         {
             using (new ConsoleColorChanger(ConsoleColor.Gray))
             {
+                // If paging is enabled, stop after a certain number of lines
+                // and wait for user confirmation before proceeding.
+                ++_rowsPrinted;
+                if (RowsPerPage != 0 && _rowsPrinted >= RowsPerPage)
+                {
+                    Console.WriteLine("--- Press any key for more ---");
+                    Console.ReadKey(intercept: true);
+                    _rowsPrinted = 0;
+                }
                 Console.WriteLine(value);
             }
         }
@@ -59,6 +70,11 @@ namespace msos
         public override void ClearScreen()
         {
             Console.Clear();
+        }
+
+        public override void CommandEnded()
+        {
+            _rowsPrinted = 0;
         }
     }
 }
