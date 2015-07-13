@@ -4,6 +4,8 @@
     <ExcludeAssemblies>
       Microsoft.Diagnostics.Runtime
     </ExcludeAssemblies>
+    <PreloadOrder>
+      msdia120
+    </PreloadOrder>
   </Costura>
-  
 </Weavers>
