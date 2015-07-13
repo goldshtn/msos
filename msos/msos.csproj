@@ -143,9 +143,13 @@
       <Name>ClrMemDiagExt</Name>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup Condition="'$(Platform)' == 'x86'">
+      <EmbeddedResource Include="costura32\msdia120.dll" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(Platform)' == 'x64'">
+      <EmbeddedResource Include="costura64\msdia120.dll" />
+  </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="costura32\msdia120.dll" />
-    <EmbeddedResource Include="costura64\msdia120.dll" />
     <Content Include="FodyWeavers.xml" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
