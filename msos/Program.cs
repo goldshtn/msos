@@ -115,10 +115,9 @@ namespace msos
 
         private void ExecuteInitialCommand()
         {
-            List<string> commands = null;
             if (!String.IsNullOrEmpty(_options.InputFileName))
             {
-                commands = new List<string>();
+                List<string> commands = new List<string>();
                 try
                 {
                     string command = "";
@@ -139,19 +138,17 @@ namespace msos
                 {
                     Bail("Error reading from initial command file: {0}", ex.Message);
                 }
+
+                foreach (var command in commands)
+                {
+                    _context.WriteInfo("> {0}", command);
+                    _context.ExecuteOneCommand(command, _options.DisplayDiagnosticInformation);
+                }
             }
             else if (!String.IsNullOrEmpty(_options.InitialCommand))
             {
-                commands = _options.InitialCommand.Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries).ToList();
-            }
-
-            if (commands == null)
-                return;
-
-            foreach (var command in commands)
-            {
-                _context.WriteInfo("> {0}", command);
-                _context.ExecuteOneCommand(command, _options.DisplayDiagnosticInformation);
+                _context.WriteInfo("> {0}", _options.InitialCommand);
+                _context.ExecuteCommand(_options.InitialCommand, _options.DisplayDiagnosticInformation);
             }
         }
 

@@ -52,7 +52,7 @@ namespace msos
                 aliasCommand = aliasCommand.Replace("$" + index, paramValue);
             }
             context.WriteInfo("Alias '{0}' expanded to '{1}'", AliasName, aliasCommand);
-            context.ExecuteOneCommand(aliasCommand);
+            context.ExecuteCommand(aliasCommand);
         }
     }
 

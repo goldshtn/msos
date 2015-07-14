@@ -46,6 +46,15 @@ namespace msos
             }
         }
 
+        public void ExecuteCommand(string inputCommand, bool displayDiagnosticInformation = false)
+        {
+            var commands = inputCommand.Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
+            foreach (var command in commands)
+            {
+                ExecuteOneCommand(command, displayDiagnosticInformation);
+            }
+        }
+
         public void ExecuteOneCommand(string command, bool displayDiagnosticInformation = false)
         {
             string[] parts = command.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
