@@ -25,7 +25,9 @@ namespace msos
 
         private Parser _commandParser;
         private Type[] _allCommandTypes;
+        
         private List<string> _temporaryAliases = new List<string>();
+        private const int WarnThresholdCountOfTemporaryAliases = 100;
 
         public CommandExecutionContext()
         {
@@ -94,9 +96,9 @@ namespace msos
             {
                 commandToExecute.Execute(this);
             }
-            if (HyperlinkOutput)
+            if (HyperlinkOutput && _temporaryAliases.Count > WarnThresholdCountOfTemporaryAliases)
             {
-                WriteInfo("Hyperlinks are enabled. You currently have {0} temporary aliases. " +
+                WriteWarning("Hyperlinks are enabled. You currently have {0} temporary aliases. " +
                     "Use .clearalias --temporary to clear them.", _temporaryAliases.Count);
             }
             Printer.CommandEnded();
