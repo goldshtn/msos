@@ -70,6 +70,14 @@ namespace msos
             }
         }
 
+        public override void WriteLink(string value)
+        {
+            using (new ConsoleColorChanger(ConsoleColor.Blue))
+            {
+                Console.Write(value);
+            }
+        }
+
         public override void ClearScreen()
         {
             Console.Clear();

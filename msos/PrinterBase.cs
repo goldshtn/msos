@@ -35,6 +35,11 @@ namespace msos
         public abstract void WriteCommandOutput(string value);
         public abstract void WriteError(string value);
         public abstract void WriteWarning(string value);
+        
+        public virtual void WriteLink(string value)
+        {
+            WriteInfo(value);
+        }
 
         public virtual void ClearScreen()
         {

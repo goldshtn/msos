@@ -161,7 +161,8 @@ namespace msos
             if (HyperlinkOutput)
             {
                 string alias = AddTemporaryAlias(command);
-                Write("{0} [{1}]", text, alias);
+                Write(text + " ");
+                Printer.WriteLink(String.Format("[{0}]", alias));
             }
             else
             {

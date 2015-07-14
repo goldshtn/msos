@@ -17,6 +17,7 @@ namespace msos
         void WriteError(string value);
         void WriteWarning(string format, object[] args);
         void WriteWarning(string value);
+        void WriteLink(string value);
         void ClearScreen();
         void CommandEnded();
     }
