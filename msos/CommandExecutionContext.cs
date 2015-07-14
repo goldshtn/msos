@@ -97,7 +97,7 @@ namespace msos
             if (HyperlinkOutput)
             {
                 WriteInfo("Hyperlinks are enabled. You currently have {0} temporary aliases. " +
-                    "Use .rmalias --temporary to clear them.", _temporaryAliases.Count);
+                    "Use .clearalias --temporary to clear them.", _temporaryAliases.Count);
             }
             Printer.CommandEnded();
         }
