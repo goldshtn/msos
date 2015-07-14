@@ -89,7 +89,6 @@
     <Compile Include="ClrRootExtensions.cs" />
     <Compile Include="ClrRuntimeExtensions.cs" />
     <Compile Include="CLRStack.cs" />
-    <Compile Include="ClrStackFrameExtensions.cs" />
     <Compile Include="ClrThreadExtensions.cs" />
     <Compile Include="CommandExecutionContext.cs" />
     <Compile Include="CommandHelpers.cs" />
@@ -127,6 +126,7 @@
     <Compile Include="RunInSeparateAppDomain.cs" />
     <Compile Include="StringExtensions.cs" />
     <Compile Include="SwitchThread.cs" />
+    <Compile Include="SymbolCache.cs" />
     <Compile Include="SymbolNotification.cs" />
     <Compile Include="SyncBlk.cs" />
     <Compile Include="ThreadPool.cs" />

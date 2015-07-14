@@ -22,6 +22,7 @@ namespace msos
         public IPrinter Printer { get; set; }
         public IDictionary<string, string> Aliases { get; private set; }
         public bool HyperlinkOutput { get; set; }
+        public SymbolCache SymbolCache { get; private set; }
 
         private Parser _commandParser;
         private Type[] _allCommandTypes;
@@ -31,6 +32,7 @@ namespace msos
 
         public CommandExecutionContext()
         {
+            SymbolCache = new SymbolCache();
             Aliases = new Dictionary<string, string>();
             _commandParser = new Parser(ps =>
             {

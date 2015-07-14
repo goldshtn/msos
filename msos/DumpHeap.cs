@@ -119,6 +119,9 @@ namespace msos
                     continue;
 
                 var type = _heap.GetObjectType(obj);
+                if (type == null || String.IsNullOrEmpty(type.Name))
+                    continue;
+
                 var size = type.GetSize(obj);
 
                 if (!StatisticsOnly)

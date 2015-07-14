@@ -9,6 +9,7 @@ namespace msos
     class SymbolNotification : ISymbolNotification
     {
         private CommandExecutionContext _context;
+        private HashSet<string> _errorsAlreadyDisplayed = new HashSet<string>();
 
         public SymbolNotification(CommandExecutionContext context)
         {
@@ -17,6 +18,7 @@ namespace msos
 
         public void DecompressionComplete(string localPath)
         {
+            _context.WriteLine("Extracted symbol file to {0}", localPath);
         }
 
         public void DownloadComplete(string localPath, bool requiresDecompression)
@@ -30,15 +32,21 @@ namespace msos
 
         public void FoundSymbolInCache(string localPath)
         {
+            _context.WriteLine("Symbol file {0} found in symbol cache", localPath);
         }
 
         public void FoundSymbolOnPath(string url)
         {
+            _context.WriteLine("Symbol file {0} found on symbol path", url);
         }
 
         public void ProbeFailed(string url)
         {
-            _context.WriteWarning("Cannot find symbol file {0}", url);
+            if (!_errorsAlreadyDisplayed.Contains(url))
+            {
+                _context.WriteWarning("Cannot find symbol file {0}", url);
+                _errorsAlreadyDisplayed.Add(url);
+            }
         }
     }
 }

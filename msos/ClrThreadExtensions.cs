@@ -66,7 +66,7 @@ namespace msos
             ulong prevFrameStackPointer = displayStackObjects ? thread.StackBase : 0;
             foreach (var frame in stackTrace)
             {
-                var sourceLocation = frame.GetFileAndLineNumberSafe();
+                var sourceLocation = context.SymbolCache.GetFileAndLineNumberSafe(frame);
                 context.WriteLine("{0,-20:X16} {1,-20:X16} {2} {3}",
                     frame.StackPointer, frame.InstructionPointer,
                     frame.DisplayString,
