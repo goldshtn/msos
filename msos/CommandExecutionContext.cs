@@ -94,6 +94,11 @@ namespace msos
             {
                 commandToExecute.Execute(this);
             }
+            if (HyperlinkOutput)
+            {
+                WriteInfo("Hyperlinks are enabled. You currently have {0} temporary aliases. " +
+                    "Use .rmalias --temporary to clear them.", _temporaryAliases.Count);
+            }
             Printer.CommandEnded();
         }
 
@@ -124,6 +129,11 @@ namespace msos
         public void WriteLine(string value)
         {
             Printer.WriteCommandOutput(value + Environment.NewLine);
+        }
+
+        public void WriteLine()
+        {
+            Printer.WriteCommandOutput(Environment.NewLine);
         }
 
         public void WriteError(string format, params object[] args)

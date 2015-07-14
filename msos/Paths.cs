@@ -49,7 +49,7 @@ namespace msos
                     context.WriteLink(objHex, "!do " + objHex);
                     context.WriteLine(" {0}", context.Heap.GetObjectType(obj).Name);
                 }
-                context.WriteLine("");
+                context.WriteLine();
                 ++pathsDisplayed;
             }
             context.WriteLine("Total paths displayed: {0}", pathsDisplayed);

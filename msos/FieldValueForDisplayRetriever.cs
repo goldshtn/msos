@@ -25,6 +25,9 @@ namespace msos
 
         public string GetFieldValue(ClrInstanceField field, bool inner = false)
         {
+            if (field.ElementType == ClrElementType.Object)
+                return String.Format("{0:x16}", (ulong)field.GetValue(_objPtr, inner));
+
             if (field.HasSimpleValue)
                 return field.GetValue(_objPtr, inner).ToStringOrNull();
 
@@ -59,6 +62,9 @@ namespace msos
 
         public string GetFieldValue(ClrThreadStaticField field, bool inner = false)
         {
+            if (field.ElementType == ClrElementType.Object)
+                return String.Format("{0:x16}", (ulong)field.GetValue(_appDomain, _thread));
+
             if (field.HasSimpleValue)
                 return field.GetValue(_appDomain, _thread).ToStringOrNull();
 
@@ -89,6 +95,9 @@ namespace msos
 
         public string GetFieldValue(ClrStaticField field, bool inner = false)
         {
+            if (field.ElementType == ClrElementType.Object)
+                return String.Format("{0:x16}", (ulong)field.GetValue(_appDomain));
+
             if (field.HasSimpleValue)
                 return field.GetValue(_appDomain).ToStringOrNull();
 

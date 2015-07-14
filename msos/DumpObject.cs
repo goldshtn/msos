@@ -102,7 +102,13 @@ namespace msos
         {
             bool inner = depth > 0;
             var address = retriever.GetFieldAddress(field, inner);
-            _context.WriteLine(retriever.GetDisplayString(field, offset, baseName, inner));
+            
+            _context.Write(retriever.GetDisplayString(field, offset, baseName, inner));
+            if (field.ElementType == ClrElementType.Object)
+            {
+                _context.WriteLink("", String.Format("!do {0}", retriever.GetFieldValue(field, inner)));
+            }
+            _context.WriteLine();
 
             if (!NoRecurse && field.ElementType == ClrElementType.Struct)
             {

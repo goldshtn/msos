@@ -154,16 +154,20 @@ namespace msos
                     foreach (var root in roots)
                     {
                         _visitedRoots.Add(root);
-                        _context.WriteLine("{0:X16} -> {1:X16} {2}", root.Address, root.Object, root.BetterToString());
+                        _context.WriteLine("{0:x16} -> {1:x16} {2}", root.Address, root.Object, root.BetterToString());
                     }
                 }
             }
 
             for (var node = path; node != null; node = node.Next)
             {
-                _context.WriteLine("\t-> {0:X16} {1}", node.Object, node.Type.Name);
+                _context.WriteLink(
+                    String.Format("    -> {0:x16} {1}", node.Object, node.Type.Name),
+                    String.Format("!do {0:x16}", node.Object)
+                    );
+                _context.WriteLine();
             }
-            _context.WriteLine("");
+            _context.WriteLine();
         }
 
         // An object may be pointed to by multiple roots. Construct a dictionary that says,

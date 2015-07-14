@@ -24,7 +24,7 @@ namespace msos
                     thread.SpecialDescription(), (thread.CurrentException != null ? thread.CurrentException.Type.Name : "").TrimStartToLength(30));
                 context.WriteLink("", String.Format("~ {0}; {1}",
                     thread.ManagedThreadId, thread.CurrentException != null ? "!pe" : "!clrstack"));
-                context.WriteLine("");
+                context.WriteLine();
             }
         }
     }
