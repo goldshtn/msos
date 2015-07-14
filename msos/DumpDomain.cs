@@ -22,10 +22,10 @@ namespace msos
                 appDomains = appDomains.Where(ad => ad.Id == Id);
             }
 
-            context.WriteLine("{0,-4} {1,-40} {2,-8} {3}", "Id", "Name", "# Modules", "Application Base");
+            context.WriteLine("{0,-4} {1,-40} {2,-10} {3}", "Id", "Name", "# Modules", "Application Base");
             foreach (var appDomain in appDomains)
             {
-                context.WriteLine("{0,-4} {1,-40} {2,-8} {3}",
+                context.WriteLine("{0,-4} {1,-40} {2,-10} {3}",
                     appDomain.Id, appDomain.Name.TrimEndToLength(40),
                     appDomain.Modules.Count, appDomain.ApplicationBase);
 
