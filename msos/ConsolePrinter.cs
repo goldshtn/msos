@@ -30,7 +30,7 @@ namespace msos
         {
             using (new ConsoleColorChanger(ConsoleColor.Green))
             {
-                Console.WriteLine(value);
+                Console.Write(value);
             }
         }
 
@@ -38,16 +38,19 @@ namespace msos
         {
             using (new ConsoleColorChanger(ConsoleColor.Gray))
             {
-                // If paging is enabled, stop after a certain number of lines
-                // and wait for user confirmation before proceeding.
-                ++_rowsPrinted;
-                if (RowsPerPage != 0 && _rowsPrinted >= RowsPerPage)
+                if (value.EndsWith(Environment.NewLine))
                 {
-                    Console.WriteLine("--- Press any key for more ---");
-                    Console.ReadKey(intercept: true);
-                    _rowsPrinted = 0;
+                    // If paging is enabled, stop after a certain number of lines
+                    // and wait for user confirmation before proceeding.
+                    ++_rowsPrinted;
+                    if (RowsPerPage != 0 && _rowsPrinted >= RowsPerPage)
+                    {
+                        Console.WriteLine("--- Press any key for more ---");
+                        Console.ReadKey(intercept: true);
+                        _rowsPrinted = 0;
+                    }
                 }
-                Console.WriteLine(value);
+                Console.Write(value);
             }
         }
 
@@ -55,7 +58,7 @@ namespace msos
         {
             using (new ConsoleColorChanger(ConsoleColor.Red))
             {
-                Console.WriteLine(value);
+                Console.Write(value);
             }
         }
 
@@ -63,7 +66,7 @@ namespace msos
         {
             using (new ConsoleColorChanger(ConsoleColor.DarkYellow))
             {
-                Console.WriteLine(value);
+                Console.Write(value);
             }
         }
 

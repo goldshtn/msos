@@ -75,9 +75,19 @@ namespace msos
     [Verb(".clearalias", HelpText = "Removes all registered aliases.")]
     class RemoveAllAliases : ICommand
     {
+        [Option("temporary", HelpText = "Remove only temporary aliases created by hyperlink output.")]
+        public bool TemporaryOnly { get; set; }
+
         public void Execute(CommandExecutionContext context)
         {
-            context.Aliases.Clear();
+            if (TemporaryOnly)
+            {
+                context.RemoveTemporaryAliases();
+            }
+            else
+            {
+                context.Aliases.Clear();
+            }
         }
     }
 

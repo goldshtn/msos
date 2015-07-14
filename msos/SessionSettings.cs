@@ -7,8 +7,31 @@ using System.Threading.Tasks;
 
 namespace msos
 {
-    [Verb(".paging", HelpText = "Configures paging for command output.")]
-    class PageSize : ICommand
+    [Verb(".hyperlinks", HelpText = "Configures hyperlink options in command output.")]
+    class HyperlinkSettings : ICommand
+    {
+        [Option("enable", SetName = "enable", HelpText = "Enables hyperlink output.")]
+        public bool Enable { get; set; }
+
+        [Option("disable", SetName = "disable", HelpText = "Disables hyperlink output.")]
+        public bool Disable { get; set; }
+
+        public void Execute(CommandExecutionContext context)
+        {
+            if (Enable)
+            {
+                context.HyperlinkOutput = true;
+            }
+            if (Disable)
+            {
+                context.HyperlinkOutput = false;
+            }
+        }
+    }
+
+
+    [Verb(".paging", HelpText = "Configures command output paging.")]
+    class PagingSettings : ICommand
     {
         [Option("disable", HelpText = "Disable paging.")]
         public bool Disable { get; set; }

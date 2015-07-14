@@ -31,7 +31,9 @@ namespace msos
             context.WriteLine("Object {0:x16} ({1}) is referenced by the following objects:", objPtr, type.Name);
             foreach (var referencingObj in context.HeapIndex.FindRefs(objPtr))
             {
-                context.WriteLine("  {0:x16} ({1})", referencingObj, context.Heap.GetObjectType(referencingObj).Name);
+                string refHex = String.Format("{0:x16}", referencingObj);
+                context.WriteLink(refHex, "!do " + refHex);
+                context.WriteLine(" ({0})", context.Heap.GetObjectType(referencingObj).Name);
             }
 
             context.WriteLine("Object {0:x16} ({1}) references the following objects:", objPtr, type.Name);
@@ -41,7 +43,9 @@ namespace msos
                 if (childType == null || String.IsNullOrEmpty(childType.Name))
                     return;
 
-                context.WriteLine("  {0:x16} ({1})", child, childType.Name);
+                string refHex = String.Format("{0:x16}", child);
+                context.WriteLink(refHex, "!do " + refHex);
+                context.WriteLine(" ({0})", childType.Name);
             });
         }
     }

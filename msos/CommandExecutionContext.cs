@@ -21,9 +21,11 @@ namespace msos
         public ClrHeap Heap { get; set; }
         public IPrinter Printer { get; set; }
         public IDictionary<string, string> Aliases { get; private set; }
+        public bool HyperlinkOutput { get; set; }
 
         private Parser _commandParser;
         private Type[] _allCommandTypes;
+        private List<string> _temporaryAliases = new List<string>();
 
         public CommandExecutionContext()
         {
@@ -86,49 +88,89 @@ namespace msos
             Printer.CommandEnded();
         }
 
-        public void WriteLine(string format, params object[] args)
+        public void RemoveTemporaryAliases()
+        {
+            foreach (var alias in _temporaryAliases)
+            {
+                Aliases.Remove(alias);
+            }
+            _temporaryAliases.Clear();
+        }
+
+        public void Write(string format, params object[] args)
         {
             Printer.WriteCommandOutput(format, args);
         }
 
-        public void WriteLine(string value)
+        public void Write(string value)
         {
             Printer.WriteCommandOutput(value);
         }
 
+        public void WriteLine(string format, params object[] args)
+        {
+            Printer.WriteCommandOutput(format + Environment.NewLine, args);
+        }
+
+        public void WriteLine(string value)
+        {
+            Printer.WriteCommandOutput(value + Environment.NewLine);
+        }
+
         public void WriteError(string format, params object[] args)
         {
-            Printer.WriteError(format, args);
+            Printer.WriteError(format + Environment.NewLine, args);
         }
 
         public void WriteError(string value)
         {
-            Printer.WriteError(value);
+            Printer.WriteError(value + Environment.NewLine);
         }
 
         public void WriteWarning(string format, params object[] args)
         {
-            Printer.WriteWarning(format, args);
+            Printer.WriteWarning(format + Environment.NewLine, args);
         }
 
         public void WriteWarning(string value)
         {
-            Printer.WriteWarning(value);
+            Printer.WriteWarning(value + Environment.NewLine);
         }
 
         public void WriteInfo(string format, params object[] args)
         {
-            Printer.WriteInfo(format, args);
+            Printer.WriteInfo(format + Environment.NewLine, args);
         }
 
         public void WriteInfo(string value)
         {
-            Printer.WriteInfo(value);
+            Printer.WriteInfo(value + Environment.NewLine);
+        }
+
+        public void WriteLink(string text, string command)
+        {
+            if (HyperlinkOutput)
+            {
+                string alias = AddTemporaryAlias(command);
+                Write("{0} [{1}]", text, alias);
+            }
+            else
+            {
+                Write(text);
+            }
         }
 
         public void Dispose()
         {
             Printer.Dispose();
+        }
+
+        private string AddTemporaryAlias(string command)
+        {
+            string alias = String.Format("a{0}", _temporaryAliases.Count);
+            Aliases.Add(alias, command);
+            _temporaryAliases.Add(alias);
+            return alias;
         }
 
         private static Type[] GetAllCommandTypes()

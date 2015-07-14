@@ -54,7 +54,7 @@ namespace msos
 
             _printer.WriteInfo(
                 "Time: {0:N} ms, CPU time: {1:N} ms ({2:N}%)" + Environment.NewLine +
-                "Memory start: {3}, Memory end: {4}, Memory delta: {5}{6}",
+                "Memory start: {3}, Memory end: {4}, Memory delta: {5}{6}" + Environment.NewLine,
                 wallClockElapsed, cpuElapsed, 100.0*cpuElapsed/wallClockElapsed,
                 ((ulong)_heapSizeStart).ToMemoryUnits(),
                 ((ulong)heapSizeEnd).ToMemoryUnits(), 
@@ -65,14 +65,10 @@ namespace msos
         private static ulong GetCpuTimeTicks()
         {
             FileTime creationTime, exitTime, kernelTime, userTime;
-            if (!GetProcessTimes((IntPtr)(-1), out creationTime, out exitTime, out kernelTime, out userTime))
+            if (!NativeMethods.GetProcessTimes((IntPtr)(-1), out creationTime, out exitTime, out kernelTime, out userTime))
                 return 0;
 
             return (((ulong)userTime.dwHighDateTime) << 32) + (ulong)userTime.dwLowDateTime;
         }
-
-        [DllImport("kernel32.dll")]
-        private static extern bool GetProcessTimes(IntPtr hProcess, out FileTime lpCreationTime,
-            out FileTime lpExitTime, out FileTime lpKernelTime, out FileTime lpUserTime);
     }
 }
