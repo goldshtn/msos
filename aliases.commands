@@ -10,7 +10,13 @@ select new { _
   VirtualPath = hc._request._filePath._virtualPath _
 }
 
-.newalias configs !hq --json from s in ObjectsOfType("System.Configuration.SectionXmlInfo") _
+# This is an example of a helper function that you can use in all subsequent queries
+.define IEnumerable<dynamic> NonEmptyXmlSections() _
+{ _
+  return ObjectsOfType("System.Configuration.SectionXmlInfo").Where(s => !s._rawXml.IsNull()); _
+}
+
+.newalias configs !hq --json from s in NonEmptyXmlSections() _
 where !s._rawXml.IsNull() select new { _
   Key = s._configKey, ConfigPath = s._definitionConfigPath, _
   File = s._filename, Line = s._lineNumber, Xml = s._rawXml _
