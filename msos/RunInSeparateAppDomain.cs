@@ -51,6 +51,12 @@ namespace msos
         {
             return Heap.GetDynamicObject(address);
         }
+
+        public IEnumerable<dynamic> SubgraphOf(ulong address)
+        {
+            return from kvp in Heap.SubgraphOf(address)
+                   select Heap.GetDynamicObject(kvp.Key);
+        }
     }
 
     internal interface IRunQuery
@@ -127,6 +133,11 @@ internal class RunQuery : IRunQuery
     private IEnumerable<dynamic> ObjectEn(ulong address)
     {
         yield return Object(address);
+    }
+
+    private IEnumerable<dynamic> SubgraphOf(ulong address)
+    {
+        return _context.SubgraphOf(address);
     }
 
     public object Run()

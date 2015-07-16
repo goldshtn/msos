@@ -86,6 +86,7 @@
     <Compile Include="ClearScreen.cs" />
     <Compile Include="ClrExceptionExtensions.cs" />
     <Compile Include="ClrFieldExtensions.cs" />
+    <Compile Include="ClrHeapExtensions.cs" />
     <Compile Include="ClrRootExtensions.cs" />
     <Compile Include="ClrRuntimeExtensions.cs" />
     <Compile Include="CLRStack.cs" />

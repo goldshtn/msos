@@ -40,3 +40,8 @@ select new { _
   Target = hr._path._virtualPath, _
   Response = hr._context._response, _
 }
+
+.define ulong ObjSize(ulong address) _
+{ _
+  return (ulong)SubgraphOf(address).Sum(o => (long)o.__Size); _
+}
