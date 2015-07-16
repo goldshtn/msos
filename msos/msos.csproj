@@ -95,6 +95,7 @@
     <Compile Include="CommandLineOptions.cs" />
     <Compile Include="ConsolePrinter.cs" />
     <Compile Include="DB.cs" />
+    <Compile Include="Define.cs" />
     <Compile Include="DumpArray.cs" />
     <Compile Include="DumpCollection.cs" />
     <Compile Include="DumpDomain.cs" />

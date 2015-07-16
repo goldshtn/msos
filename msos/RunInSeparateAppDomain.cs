@@ -78,6 +78,7 @@ namespace msos
         const int AttachTimeout = 1000;
         const int TotalWidth = 100;
         const string CompiledQueryPlaceholder = "$$$QUERY$$$";
+        const string HelperDefinesPlaceholder = "$$$DEFINES$$$";
         const string CompiledQueryTemplate = @"
 using Microsoft.CSharp;
 using Microsoft.Diagnostics.Runtime;
@@ -132,6 +133,8 @@ internal class RunQuery : IRunQuery
     {
         return (" + CompiledQueryPlaceholder + @");
     }
+
+    " + HelperDefinesPlaceholder + @"
 }
 ";
 
@@ -159,7 +162,7 @@ internal class RunQuery : IRunQuery
             _writer = writer;
         }
 
-        public void RunQuery(string outputFormat, string query)
+        public void RunQuery(string outputFormat, string query, List<string> defines)
         {
             var options = new CompilerParameters();
             options.ReferencedAssemblies.Add(typeof(Enumerable).Assembly.Location);
@@ -172,6 +175,8 @@ internal class RunQuery : IRunQuery
                 CompiledQueryAssemblyName) + ".dll";
 
             string source = CompiledQueryTemplate.Replace(CompiledQueryPlaceholder, query);
+            source = source.Replace(HelperDefinesPlaceholder,
+                String.Join(Environment.NewLine + Environment.NewLine, defines.ToArray()));
 
             var compiler = new CSharpCodeProvider();
             CompilerResults results = compiler.CompileAssemblyFromSource(options, source);

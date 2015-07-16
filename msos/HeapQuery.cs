@@ -100,7 +100,7 @@ namespace msos
                 {
                     try
                     {
-                        runner.RunQuery(OutputFormat.Substring(2), String.Join(" ", Query.ToArray()));
+                        runner.RunQuery(OutputFormat.Substring(2), String.Join(" ", Query.ToArray()), context.Defines);
                     }
                     catch (Exception ex)
                     {
