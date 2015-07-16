@@ -1,6 +1,7 @@
 ﻿using CommandLine;
 using Microsoft.Diagnostics.Runtime;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -388,9 +389,80 @@ namespace msos
             }
         }
 
-        public IEnumerable<RootPath> FindPaths(ulong targetObj, int maxResults, int maxLocalRoots, int maxDepth)
+        class ParallelBreadthFirstRootPathFinder : RootPathFinder
         {
-            var pathFinder = new BreadthFirstRootPathFinder(this, targetObj);
+            public ParallelBreadthFirstRootPathFinder(HeapIndex index, ulong targetObject)
+                : base(index, targetObject)
+            {
+            }
+
+            public override void FindPaths()
+            {
+                var evalQueue = new ConcurrentQueue<ulong[]>();
+                evalQueue.Enqueue(new ulong[] { TargetObject });
+                while (evalQueue.Count > 0)
+                {
+                    if (Stop)
+                        break;
+
+                    // Level-synchronized BFS: process each frontier in parallel
+                    Parallel.ForEach(evalQueue, chain =>
+                    {
+                        if (chain.Length > MaxDepth)
+                            return;
+
+                        var current = chain[0];
+
+                        // TODO Check if it's necessary to reduce synchronization around 'Visited'
+                        lock (Visited)
+                        {
+                            if (Visited.Contains(current))
+                                return;
+
+                            Visited.Add(current);
+                        }
+
+                        lock (this)
+                        {
+                            AddPathIfRootReached(current, chain);
+                        }
+
+                        // Turns out ClrMD's heap operations are not thread-safe because the underlying
+                        // memory data reader is not thread-safe (WAT?!?). So we have to lock here around
+                        // the heap index operations, and that slows everything down to a crawl because
+                        // there are some large objects where EnumerateRefsOfObject takes >1000ms.
+                        // Throw in one or two of those, and the parallel version runs much slower than
+                        // the sequential one.
+                        // TODO See if this can be improved, filed an issue on https://github.com/Microsoft/dotnetsamples/issues/21
+                        List<ulong> refs;
+                        lock (Index)
+                        {
+                            refs = Index.FindRefs(current).ToList();
+                        }
+
+                        Parallel.ForEach(refs, referencingObj =>
+                        {
+                            var newChain = new ulong[chain.Length + 1];
+                            newChain[0] = referencingObj;
+                            Array.Copy(chain, 0, newChain, 1, chain.Length);
+                            evalQueue.Enqueue(newChain);
+                        });
+                    });
+                }
+            }
+        }
+
+        public IEnumerable<RootPath> FindPaths(ulong targetObj, int maxResults, int maxLocalRoots, int maxDepth, bool runInParallel)
+        {
+            RootPathFinder pathFinder;
+            if (runInParallel)
+            {
+                pathFinder = new ParallelBreadthFirstRootPathFinder(this, targetObj);
+            }
+            else
+            {
+                pathFinder = new BreadthFirstRootPathFinder(this, targetObj);
+            }
             pathFinder.MaxResults = maxResults;
             pathFinder.MaxLocalRoots = maxLocalRoots;
             pathFinder.MaxDepth = maxDepth;

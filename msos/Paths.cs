@@ -29,6 +29,11 @@ namespace msos
             "lots of irrelevant results, or overly long reference chains.")]
         public int MaxDepth { get; set; }
 
+        [Option("parallel", HelpText =
+            "Parallelize the index search. This feature is experimental and will not necessarily " +
+            "have better performance.")]
+        public bool RunInParallel { get; set; }
+
         public void Execute(CommandExecutionContext context)
         {
             if (!CommandHelpers.VerifyHasHeapIndex(context))
@@ -39,7 +44,7 @@ namespace msos
                 return;
 
             int pathsDisplayed = 0;
-            foreach (var path in context.HeapIndex.FindPaths(objPtr, MaxResults, MaxLocalRoots, MaxDepth))
+            foreach (var path in context.HeapIndex.FindPaths(objPtr, MaxResults, MaxLocalRoots, MaxDepth, RunInParallel))
             {
                 context.WriteLine("{0:x16} -> {1:x16} {2}", path.Root.Address, path.Root.Object, path.Root.DisplayText);
                 foreach (var obj in path.Chain)
