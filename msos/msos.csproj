@@ -100,6 +100,7 @@
     <Compile Include="DumpDomain.cs" />
     <Compile Include="DumpHeap.cs" />
     <Compile Include="DumpObject.cs" />
+    <Compile Include="DumpStackObjects.cs" />
     <Compile Include="EEHeap.cs" />
     <Compile Include="FieldValueForDisplayRetriever.cs" />
     <Compile Include="FilePrinter.cs" />
