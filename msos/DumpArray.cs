@@ -52,7 +52,17 @@ namespace msos
                 if (type.ArrayComponentType.IsValueClass)
                 {
                     value = type.GetArrayElementAddress(objPtr, i);
-                    context.Write("{0:x16}", value ?? "<null>");
+                    if (value != null)
+                    {
+                        context.WriteLink(
+                            String.Format("{0:x16}", value),
+                            String.Format("!do {0:x16} --type {1}", value, type.ArrayComponentType.Name)
+                            );
+                    }
+                    else
+                    {
+                        context.Write("<null>");
+                    }
                 }
                 else
                 {

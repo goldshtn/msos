@@ -21,6 +21,11 @@ namespace msos
         [Option("norecurse", HelpText = "Do not display the fields of embedded value types recursively.")]
         public bool NoRecurse { get; set; }
 
+        [Option("type", HelpText =
+            "The exact type name of the object at the specified address. Required for " +
+            "value types, which do not have embedded type information.")]
+        public string TypeName { get; set; }
+
         private CommandExecutionContext _context;
 
         public void Execute(CommandExecutionContext context)
@@ -34,40 +39,60 @@ namespace msos
                 return;
             }
 
-            var heap = context.Runtime.GetHeap();
-            var type = heap.GetObjectType(objPtr);
-            if (type == null || String.IsNullOrEmpty(type.Name))
+            ClrType type;
+            if (!String.IsNullOrEmpty(TypeName))
             {
-                context.WriteError("The specified address is not an object.");
-                return;
+                type = context.Heap.GetTypeByName(TypeName);
+                if (type == null)
+                {
+                    context.WriteError("There is no type named '{0}'.", TypeName);
+                    return;
+                }
+            }
+            else
+            {
+                type = context.Heap.GetObjectType(objPtr);
+                if (type == null || String.IsNullOrEmpty(type.Name))
+                {
+                    context.WriteError("The specified address is not an object.");
+                    return;
+                }
             }
 
-            ulong mt;
-            if (!context.Runtime.ReadPointer(objPtr, out mt))
+            ulong mt = 0;
+            if (type.IsObjectReference && !context.Runtime.ReadPointer(objPtr, out mt))
             {
-                context.WriteError("Unable to retrieve MT for object.");
-                return;
+                context.WriteWarning("Unable to retrieve MT for object.");
             }
 
             var size = type.GetSize(objPtr);
 
             context.WriteLine("Name:     {0}", type.Name);
-            context.WriteLine("MT:       {0:x16}", mt);
+            if (mt != 0)
+            {
+                context.WriteLine("MT:       {0:x16}", mt);
+            }
             context.WriteLine("Size:     {0}(0x{1:x}) bytes", size, size);
+            if (type.IsArray)
+            {
+                context.WriteLine("Array:    size {0}, element type {1}",
+                    type.GetArrayLength(objPtr),
+                    type.ArrayComponentType != null ? type.ArrayComponentType.Name : "<unknown");
+            }
             context.WriteLine("Assembly: {0}", type.Module.FileName);
             if (type.HasSimpleValue)
             {
                 context.WriteLine("Value:    {0}", type.GetValue(objPtr));
             }
 
-            if (!NoFields)
+            if (!NoFields && type.Fields.Count > 0)
             {
                 context.WriteLine("Fields:");
                 context.WriteLine("{0,-8} {1,-20} {2,-3} {3,-10} {4,-20} {5}",
                     "Offset", "Type", "VT", "Attr", "Value", "Name");
                 foreach (var field in type.Fields)
                 {
-                    DisplayFieldRecursively(field, new InstanceFieldValueForDisplayRetriever(objPtr), field.Offset);
+                    DisplayFieldRecursively(field, new InstanceFieldValueForDisplayRetriever(objPtr), field.Offset, depth: type.IsValueClass ? 1 : 0);
                 }
                 foreach (var field in type.ThreadStaticFields)
                 {
@@ -107,6 +132,11 @@ namespace msos
             if (field.ElementType == ClrElementType.Object)
             {
                 _context.WriteLink("", String.Format("!do {0}", retriever.GetFieldValue(field, inner)));
+            }
+            if (NoRecurse && field.ElementType == ClrElementType.Struct)
+            {
+                _context.WriteLink("", String.Format("!do {0:x16} --type {1}",
+                    address, field.Type.Name));
             }
             _context.WriteLine();
 

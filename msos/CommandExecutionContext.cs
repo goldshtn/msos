@@ -36,6 +36,7 @@ namespace msos
             SymbolCache = new SymbolCache();
             Aliases = new Dictionary<string, string>();
             Defines = new List<string>();
+            HyperlinkOutput = true;
             _commandParser = new Parser(ps =>
             {
                 ps.CaseSensitive = false;
