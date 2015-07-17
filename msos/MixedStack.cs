@@ -16,6 +16,12 @@ namespace msos
     {
         public void Execute(CommandExecutionContext context)
         {
+            if (String.IsNullOrEmpty(context.DumpFile))
+            {
+                context.WriteError("Displaying the mixed call stack is supported only for dump files.");
+                return;
+            }
+
             context.WriteLine("{0,-10} {1,-20} {2}", "Type", "IP", "Function");
             using (var target = DataTarget.LoadCrashDump(context.DumpFile, CrashDumpReader.DbgEng))
             {
