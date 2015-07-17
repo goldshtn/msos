@@ -188,6 +188,16 @@ namespace msos
             }
         }
 
+        public DataTarget CreateDbgEngTarget()
+        {
+            if (String.IsNullOrEmpty(DumpFile))
+                return null; // Currently attach with DbgEng is not supported
+
+            var target = DataTarget.LoadCrashDump(DumpFile, CrashDumpReader.DbgEng);
+            target.AppendSymbolPath(SymbolPath);
+            return target;
+        }
+
         public void Dispose()
         {
             Printer.Dispose();

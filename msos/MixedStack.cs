@@ -23,9 +23,8 @@ namespace msos
             }
 
             context.WriteLine("{0,-10} {1,-20} {2}", "Type", "IP", "Function");
-            using (var target = DataTarget.LoadCrashDump(context.DumpFile, CrashDumpReader.DbgEng))
+            using (var target = context.CreateDbgEngTarget())
             {
-                target.AppendSymbolPath(context.SymbolPath);
                 var stackTracer = new UnifiedStackTrace(target.DebuggerInterface, context);
                 var stackTrace = stackTracer.GetStackTrace(
                     (from thr in stackTracer.Threads
