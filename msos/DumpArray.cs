@@ -41,8 +41,9 @@ namespace msos
             var length = type.GetArrayLength(objPtr);
             context.WriteLine("Name:  {0}", type.Name);
             context.WriteLine("Size:  {0}(0x{1:x}) bytes", size, size);
-            context.WriteLine("Array: Number of elements {0}, Type {1}",
-                length, type.ArrayComponentType.Name);
+            context.WriteLine("Array: Number of elements {0}, Type {1} {2}",
+                length, type.ArrayComponentType.Name,
+                type.ArrayComponentType.IsValueClass ? "(value type)" : "(reference type)");
 
             for (int i = 0; i < length; ++i)
             {
