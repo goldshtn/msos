@@ -5,6 +5,7 @@ using System;
 using System.CodeDom.Compiler;
 using System.Collections;
 using System.Collections.Generic;
+using System.Dynamic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -56,6 +57,19 @@ namespace msos
         {
             return from kvp in Heap.SubgraphOf(address)
                    select Heap.GetDynamicObject(kvp.Key);
+        }
+
+        public IEnumerable<object> Dump(ulong address)
+        {
+            var type = Heap.GetObjectType(address);
+            if (type == null || type.IsFree || String.IsNullOrEmpty(type.Name))
+                yield break;
+
+            foreach (var field in type.Fields)
+            {
+                var fieldTypeName = field.Type != null ? field.Type.Name : "<unknown>";
+                yield return new { Name = field.Name, Type = fieldTypeName, Value = field.GetValue(address) };
+            }
         }
     }
 
@@ -138,6 +152,11 @@ internal class RunQuery : IRunQuery
     private IEnumerable<dynamic> SubgraphOf(ulong address)
     {
         return _context.SubgraphOf(address);
+    }
+
+    private IEnumerable<object> Dump(ulong address)
+    {
+        return _context.Dump(address);
     }
 
     public object Run()
@@ -273,6 +292,19 @@ internal class RunQuery : IRunQuery
 
             public abstract void PrintHeader(object obj);
             public abstract void PrintContents(object obj);
+
+            protected string RenderProperty(PropertyInfo prop, object obj)
+            {
+                object propVal = prop.GetValue(obj);
+                if (propVal is ulong)
+                {
+                    return String.Format("{0:x16}", propVal);
+                }
+                else
+                {
+                    return propVal.ToStringOrNull();
+                }
+            }
         }
 
         class TabularObjectPrinter : ObjectPrinterBase
@@ -310,11 +342,11 @@ internal class RunQuery : IRunQuery
                     // Do not restrict the width of the last property.
                     if (i == props.Length - 1)
                     {
-                        Output.Write(props[i].GetValue(obj).ToString());
+                        Output.Write(RenderProperty(props[i], obj));
                     }
                     else
                     {
-                        Output.Write("{0,-" + width + "}  ", props[i].GetValue(obj).ToString().TrimEndToLength(width));
+                        Output.Write("{0,-" + width + "}  ", RenderProperty(props[i], obj).TrimEndToLength(width));
                     }
                 }
                 Output.WriteLine();
@@ -338,7 +370,7 @@ internal class RunQuery : IRunQuery
                 var props = obj.GetType().GetProperties();
                 foreach (var prop in props)
                 {
-                    Output.WriteLine("  {0} = {1}", prop.Name, prop.GetValue(obj).ToString());
+                    Output.WriteLine("  {0} = {1}", prop.Name, RenderProperty(prop, obj));
                 }
                 Output.WriteLine("}");
             }
