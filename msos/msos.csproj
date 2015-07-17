@@ -113,6 +113,7 @@
     <Compile Include="ICommand.cs" />
     <Compile Include="IPrinter.cs" />
     <Compile Include="LM.cs" />
+    <Compile Include="MixedStack.cs" />
     <Compile Include="NativeMethods.cs" />
     <Compile Include="NumberFormatExtensions.cs" />
     <Compile Include="ObjectExtensions.cs" />
@@ -148,9 +149,15 @@
   </ItemGroup>
   <ItemGroup Condition="'$(Platform)' == 'x86'">
     <EmbeddedResource Include="costura32\msdia120.dll" />
+	<EmbeddedResource Include="costura32\dbgeng.dll" />
+    <EmbeddedResource Include="costura32\dbghelp.dll" />
+    <EmbeddedResource Include="costura32\symsrv.dll" />
   </ItemGroup>
   <ItemGroup Condition="'$(Platform)' == 'x64'">
     <EmbeddedResource Include="costura64\msdia120.dll" />
+	<EmbeddedResource Include="costura64\dbgeng.dll" />
+    <EmbeddedResource Include="costura64\dbghelp.dll" />
+    <EmbeddedResource Include="costura64\symsrv.dll" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="FodyWeavers.xml" />

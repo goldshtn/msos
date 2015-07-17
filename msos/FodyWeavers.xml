@@ -5,6 +5,9 @@
       Microsoft.Diagnostics.Runtime
     </ExcludeAssemblies>
     <PreloadOrder>
+      dbghelp
+      dbgeng
+      symsrv
       msdia120
     </PreloadOrder>
   </Costura>

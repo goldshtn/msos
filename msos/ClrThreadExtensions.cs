@@ -70,7 +70,7 @@ namespace msos
                 context.WriteLine("{0,-20:X16} {1,-20:X16} {2} {3}",
                     frame.StackPointer, frame.InstructionPointer,
                     frame.DisplayString,
-                    sourceLocation == null ? "" : String.Format("[{0}:{1}]", sourceLocation.FilePath, sourceLocation.LineNumber));
+                    sourceLocation == null ? "" : String.Format("[{0}:{1},{2}]", sourceLocation.FilePath, sourceLocation.LineNumber, sourceLocation.ColStart));
 
                 if (!displayStackObjects)
                     continue;

@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -165,6 +166,7 @@ namespace msos
             string symPath = Environment.GetEnvironmentVariable("_NT_SYMBOL_PATH");
             _context.WriteInfo("Symbol path: " + symPath);
             _target.AppendSymbolPath(symPath);
+            _context.SymbolPath = symPath;
         }
 
         private void VerifyCLRVersion()

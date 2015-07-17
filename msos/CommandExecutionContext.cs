@@ -24,6 +24,7 @@ namespace msos
         public bool HyperlinkOutput { get; set; }
         public SymbolCache SymbolCache { get; private set; }
         public List<string> Defines { get; private set; }
+        public string SymbolPath { get; set; }
 
         private Parser _commandParser;
         private Type[] _allCommandTypes;
