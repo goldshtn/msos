@@ -46,16 +46,32 @@ namespace msos
 
             for (int i = 0; i < length; ++i)
             {
+                context.Write("[{0}] ", i);
+
                 object value;
                 if (type.ArrayComponentType.IsValueClass)
                 {
                     value = type.GetArrayElementAddress(objPtr, i);
+                    context.Write("{0:x16}", value ?? "<null>");
                 }
                 else
                 {
                     value = type.GetArrayElementValue(objPtr, i);
+                    ulong elementAddr = type.GetArrayElementAddress(objPtr, i);
+                    ulong elementRef;
+                    if (context.Runtime.ReadPointer(elementAddr, out elementRef))
+                    {
+                        context.WriteLink(
+                            String.Format("{0:x16}", value ?? "<null>"),
+                            String.Format("!do {0:x16}", elementRef)
+                            ); 
+                    }
+                    else
+                    {
+                        context.Write("{0:x16}", value ?? "<null>");
+                    }
                 }
-                context.WriteLine("[{0}] {1:x16}", i, value ?? "<null>");
+                context.WriteLine();
             }
         }
     }
