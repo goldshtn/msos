@@ -38,6 +38,7 @@ namespace msos
         {
             using (new ConsoleColorChanger(ConsoleColor.Gray))
             {
+                Console.Write(value);
                 if (value.EndsWith(Environment.NewLine))
                 {
                     // If paging is enabled, stop after a certain number of lines
@@ -50,7 +51,6 @@ namespace msos
                         _rowsPrinted = 0;
                     }
                 }
-                Console.Write(value);
             }
         }
 

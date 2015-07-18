@@ -11,9 +11,13 @@ using System.Text;
 namespace msos
 {
     [Verb("!mk", HelpText =
-        "Display the managed and unmanaged call stack of the current thread.")]
+        "Display the managed and unmanaged call stack.")]
     class MixedStack : ICommand
     {
+        [Option("osid", Default = 0, HelpText =
+            "The OS thread ID of the thread whose stack is to be displayed. Defaults to the current thread.")]
+        public int OSThreadId { get; set; }
+
         public void Execute(CommandExecutionContext context)
         {
             if (String.IsNullOrEmpty(context.DumpFile))
@@ -22,13 +26,20 @@ namespace msos
                 return;
             }
 
+            // The [Option]-parsing engine doesn't work well with uint properties, so we convert here.
+            uint osThreadId = (uint)OSThreadId;
+            if (osThreadId == 0)
+            {
+                osThreadId = context.CurrentThread.OSThreadId;
+            }
+
             context.WriteLine("{0,-10} {1,-20} {2}", "Type", "IP", "Function");
             using (var target = context.CreateDbgEngTarget())
             {
                 var stackTracer = new UnifiedStackTrace(target.DebuggerInterface, context);
                 var stackTrace = stackTracer.GetStackTrace(
                     (from thr in stackTracer.Threads
-                     where thr.OSThreadId == context.CurrentThread.OSThreadId
+                     where thr.OSThreadId == osThreadId
                      select thr.Index).Single());
                 foreach (var frame in stackTrace)
                 {
