@@ -282,6 +282,11 @@ namespace msos
 
         private void OpenDumpFile()
         {
+            if (!File.Exists(_options.DumpFile))
+            {
+                Bail("The specified dump file '{0}' does not exist.", _options.DumpFile);
+            }
+
             _target = DataTarget.LoadCrashDump(_options.DumpFile, CrashDumpReader.ClrMD);
             _context.WriteInfo("Opened dump file '{0}', architecture {1}, {2} CLR versions detected.",
                 _options.DumpFile, _target.Architecture, _target.ClrVersions.Count);

@@ -24,7 +24,7 @@ namespace msos
             foreach (var objAndType in context.Heap.SubgraphOf(objPtr))
             {
                 ++count;
-                size += objAndType.Value.GetSize(objAndType.Key);
+                size += objAndType.Item2.GetSize(objAndType.Item1);
             }
 
             context.WriteLine("{0:x16} graph size is {1} objects, {2} bytes", objPtr, count, size);

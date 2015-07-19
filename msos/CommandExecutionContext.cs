@@ -100,7 +100,19 @@ namespace msos
 
             using (new TimeAndMemory(displayDiagnosticInformation, Printer))
             {
-                commandToExecute.Execute(this);
+                try
+                {
+                    commandToExecute.Execute(this);
+                }
+                catch (Exception ex)
+                {
+                    // Commands can throw exceptions occasionally. It's dangerous to continue
+                    // after an arbitrary exception, but some of them are perfectly benign. We are
+                    // taking the risk because there is no critical state that could become corrupted
+                    // as a result of continuing.
+                    WriteError("Exception during command execution -- {0}: '{1}'", ex.GetType().Name, ex.Message);
+                    WriteError("Proceed at your own risk, or restart the debugging session.");
+                }
             }
             if (HyperlinkOutput && _temporaryAliases.Count > WarnThresholdCountOfTemporaryAliases)
             {

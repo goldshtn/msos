@@ -55,8 +55,8 @@ namespace msos
 
         public IEnumerable<dynamic> SubgraphOf(ulong address)
         {
-            return from kvp in Heap.SubgraphOf(address)
-                   select Heap.GetDynamicObject(kvp.Key);
+            return from pair in Heap.SubgraphOf(address)
+                   select Heap.GetDynamicObject(pair.Item1);
         }
 
         public IEnumerable<object> Dump(ulong address)
