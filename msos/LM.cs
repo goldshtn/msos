@@ -27,11 +27,6 @@ namespace msos
             if (!DisplayNativeModules)
                 return;
 
-            if (String.IsNullOrEmpty(context.DumpFile))
-            {
-                context.WriteError("Displaying the native modules is supported only for dump files.");
-                return;
-            }
             using (var target = context.CreateDbgEngTarget())
             {
                 IDebugSymbols3 debugSymbols = (IDebugSymbols3)target.DebuggerInterface;

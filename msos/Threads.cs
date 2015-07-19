@@ -35,12 +35,6 @@ namespace msos
             if (!DisplayNativeThreads)
                 return;
 
-            if (!String.IsNullOrEmpty(context.DumpFile))
-            {
-                context.WriteError("Listing the native threads is supported only for dump files.");
-                return;
-            }
-
             context.WriteLine();
             context.WriteLine("{0,-6} {1,-6} {2,-10} {3}", "OSId", "MgdId", "ExitCode", "StartAddress");
             using (var target = context.CreateDbgEngTarget())

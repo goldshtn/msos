@@ -20,12 +20,6 @@ namespace msos
 
         public void Execute(CommandExecutionContext context)
         {
-            if (String.IsNullOrEmpty(context.DumpFile))
-            {
-                context.WriteError("Displaying the mixed call stack is supported only for dump files.");
-                return;
-            }
-
             // The [Option]-parsing engine doesn't work well with uint properties, so we convert here.
             uint osThreadId = (uint)OSThreadId;
             if (osThreadId == 0)

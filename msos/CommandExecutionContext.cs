@@ -191,7 +191,7 @@ namespace msos
         public DataTarget CreateDbgEngTarget()
         {
             if (String.IsNullOrEmpty(DumpFile))
-                return null; // Currently attach with DbgEng is not supported
+                throw new InvalidOperationException("DbgEng targets can be created only for dump files at this point.");
 
             var target = DataTarget.LoadCrashDump(DumpFile, CrashDumpReader.DbgEng);
             target.AppendSymbolPath(SymbolPath);
