@@ -17,6 +17,9 @@ namespace msos
         [Option("depth", Default = 5, HelpText = "The maximum depth of the tree.")]
         public int Depth { get; set; }
 
+        [Option("nothreaddetails", HelpText = "Do not display thread details.")]
+        public bool NoThreadDetails { get; set; }
+
         private CommandExecutionContext _context;
 
         class ThreadAndStack
@@ -96,25 +99,28 @@ namespace msos
             {
                 foreach (var stackGroup in grouping)
                 {
-                    _context.Write("{0}+ {1} Threads: ",
+                    _context.Write("{0}+ {1} ",
                         new String(' ', depth * 2), stackGroup.Key);
-                    foreach (var ts in stackGroup)
+                    if (!NoThreadDetails)
                     {
-                        if (ts.ManagedThreadId != 0)
+                        foreach (var ts in stackGroup)
                         {
-                            _context.WriteLink(
-                                String.Format("M{0}", ts.ManagedThreadId),
-                                String.Format("~ {0}; !clrstack", ts.ManagedThreadId)
-                                );
+                            if (ts.ManagedThreadId != 0)
+                            {
+                                _context.WriteLink(
+                                    String.Format("M{0}", ts.ManagedThreadId),
+                                    String.Format("~ {0}; !clrstack", ts.ManagedThreadId)
+                                    );
+                            }
+                            else
+                            {
+                                _context.WriteLink(
+                                    String.Format("OS{0}", ts.OSThreadId),
+                                    String.Format("!mk {0}", ts.OSThreadId)
+                                    );
+                            }
+                            _context.Write(" ");
                         }
-                        else
-                        {
-                            _context.WriteLink(
-                                String.Format("OS{0}", ts.OSThreadId),
-                                String.Format("!mk {0}", ts.OSThreadId)
-                                );
-                        }
-                        _context.Write(" ");
                     }
                     _context.WriteLine();
                     ProcessStacks(TrimOne(stackGroup), depth + 1);
