@@ -18,12 +18,12 @@ namespace msos
 
         public void DecompressionComplete(string localPath)
         {
-            _context.WriteLine("Extracted symbol file to {0}", localPath);
+            _context.WriteInfo("Extracted symbol file to {0}", localPath);
         }
 
         public void DownloadComplete(string localPath, bool requiresDecompression)
         {
-            _context.WriteLine("Downloaded symbol file {0}", localPath);
+            _context.WriteInfo("Downloaded symbol file {0}", localPath);
         }
 
         public void DownloadProgress(int bytesDownloaded)
@@ -32,12 +32,12 @@ namespace msos
 
         public void FoundSymbolInCache(string localPath)
         {
-            _context.WriteLine("Symbol file {0} found in symbol cache", localPath);
+            _context.WriteInfo("Symbol file {0} found in symbol cache", localPath);
         }
 
         public void FoundSymbolOnPath(string url)
         {
-            _context.WriteLine("Symbol file {0} found on symbol path", url);
+            _context.WriteInfo("Symbol file {0} found on symbol path", url);
         }
 
         public void ProbeFailed(string url)

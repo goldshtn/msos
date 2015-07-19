@@ -111,6 +111,7 @@ namespace msos
                     // taking the risk because there is no critical state that could become corrupted
                     // as a result of continuing.
                     WriteError("Exception during command execution -- {0}: '{1}'", ex.GetType().Name, ex.Message);
+                    WriteError("\n" + ex.StackTrace);
                     WriteError("Proceed at your own risk, or restart the debugging session.");
                 }
             }
