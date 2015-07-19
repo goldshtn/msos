@@ -18,22 +18,26 @@ namespace msos
 
         public override void WriteInfo(string value)
         {
-            _output.WriteLine("INFO: " + value);
+            _output.Write("INFO: " + value);
         }
 
         public override void WriteCommandOutput(string value)
         {
-            _output.WriteLine(value);
+            _output.Write(value);
         }
 
         public override void WriteError(string value)
         {
-            _output.WriteLine("ERROR: " + value);
+            _output.Write("ERROR: " + value);
         }
 
         public override void WriteWarning(string value)
         {
-            _output.WriteLine("WARNING: " + value);
+            _output.Write("WARNING: " + value);
+        }
+
+        public override void WriteLink(string value)
+        {
         }
 
         public override void Dispose()
