@@ -39,15 +39,7 @@ namespace msos
             context.WriteLine("{0,-6} {1,-6} {2,-10} {3}", "OSId", "MgdId", "ExitCode", "StartAddress");
             using (var target = context.CreateDbgEngTarget())
             {
-                var systemObjects = (IDebugSystemObjects3)target.DebuggerInterface;
-                uint numThreads;
-                if (0 != systemObjects.GetNumberThreads(out numThreads))
-                    return;
-
-                uint[] osThreadIds = new uint[numThreads];
-                if (0 != systemObjects.GetThreadIdsByIndex(0, numThreads, null, osThreadIds))
-                    return;
-
+                var osThreadIds = target.GetOSThreadIds();
                 var symbols = (IDebugSymbols)target.DebuggerInterface;
                 var advanced = (IDebugAdvanced2)target.DebuggerInterface;
                 int size;
@@ -55,7 +47,7 @@ namespace msos
                 GCHandle gch = GCHandle.Alloc(buffer, GCHandleType.Pinned);
                 try
                 {
-                    for (uint engineThreadId = 0; engineThreadId < numThreads; ++engineThreadId)
+                    for (uint engineThreadId = 0; engineThreadId < osThreadIds.Length; ++engineThreadId)
                     {
                         if (0 != advanced.GetSystemObjectInformation(DEBUG_SYSOBJINFO.THREAD_BASIC_INFORMATION, 0,
                             engineThreadId, buffer, buffer.Length, out size))
