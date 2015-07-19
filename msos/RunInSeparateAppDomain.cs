@@ -71,6 +71,12 @@ namespace msos
                 yield return new { Name = field.Name, Type = fieldTypeName, Value = field.GetValue(address) };
             }
         }
+
+        public IEnumerable<dynamic> ObjectsInSegment(int segmentIdx)
+        {
+            return from obj in Heap.Segments[segmentIdx].EnumerateObjects()
+                   select Heap.GetDynamicObject(obj);
+        }
     }
 
     internal interface IRunQuery
@@ -157,6 +163,11 @@ internal class RunQuery : IRunQuery
     private IEnumerable<object> Dump(ulong address)
     {
         return _context.Dump(address);
+    }
+
+    private IEnumerable<dynamic> ObjectsInSegment(int segmentIdx)
+    {
+        return _context.ObjectsInSegment(segmentIdx);
     }
 
     public object Run()

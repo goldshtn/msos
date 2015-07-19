@@ -150,13 +150,13 @@ namespace msos
             _context.WriteLine("Fragmentation statistics:");
             _context.WriteLine(
                 "{0,-4} {1,-20} {2,-12} {3,-12} {4,-12} {5,-12} {6,-10} {7,-10}",
-                "#", "Base", "Size", "Committed", "Reserved", "Fragmented", "% Frag", "SOH/LOH");
+                "#", "Base", "Size", "Committed", "Reserved", "Fragmented", "% Frag", "Type");
             for (int segmentIdx = 0; segmentIdx < _context.Heap.Segments.Count; ++segmentIdx)
             {
                 var segment = _context.Heap.Segments[segmentIdx];
                 var fragmented = freeSpaceBySegment.ContainsKey(segment) ? freeSpaceBySegment[segment] : 0;
-                _context.WriteLine(
-                    "{0,-4} {1,-20:x16} {2,-12} {3,-12} {4,-12} {5,-12} {6,-10:0.00%} {7,-10}",
+                _context.Write(
+                    "{0,-4} {1,-20:x16} {2,-12} {3,-12} {4,-12} {5,-12} {6,-10:0.00%} {7,-5} ",
                     segmentIdx,
                     segment.Start,
                     segment.Length.ToMemoryUnits(),
@@ -165,6 +165,15 @@ namespace msos
                     fragmented.ToMemoryUnits(),
                     fragmented / (double)segment.Length,
                     segment.IsLarge ? "LOH" : "SOH");
+                _context.WriteLink(
+                    "",
+                    String.Format("!hq --tabular from o in ObjectsInSegment({0}) " +
+                                  "group (long)o.__Size by o.__Type into g " +
+                                  "let totalSize = g.Sum() " + 
+                                  "orderby totalSize ascending " +
+                                  "select new {{ Type = g.Key, TotalSize = totalSize }}",
+                                  segmentIdx)
+                    );
             }
             _context.WriteLine();
             _context.WriteLine("Total size of free objects: {0}", totalFreeSize.ToMemoryUnits());
