@@ -1,4 +1,5 @@
-﻿using System;
+﻿using msos_server.Models;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Web;
@@ -8,23 +9,23 @@ namespace msos_server.Controllers
 {
     public class HomeController : Controller
     {
+        private IEnumerable<int> GetEligibleAttachTargets()
+        {
+            yield return 48;
+        }
+
+        private IEnumerable<string> GetEligibleDumpFiles()
+        {
+            yield return @"C:\Temp\VSDebugging.dmp";
+        }
+
         public ActionResult Index()
         {
-            return View();
-        }
-
-        public ActionResult About()
-        {
-            ViewBag.Message = "Your application description page.";
-
-            return View();
-        }
-
-        public ActionResult Contact()
-        {
-            ViewBag.Message = "Your contact page.";
-
-            return View();
+            return View(new Home
+            {
+                AttachTargets = GetEligibleAttachTargets(),
+                DumpFiles = GetEligibleDumpFiles()
+            });
         }
     }
 }

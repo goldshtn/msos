@@ -1,4 +1,5 @@
-﻿@{
+﻿@model msos_server.Models.Home
+@{
     ViewBag.Title = "Home Page";
 }
 
@@ -12,9 +13,21 @@
     <div class="col-md-6">
         <h2>Attach Targets</h2>
         <p>TODO</p>
+        <ul>
+            @foreach (var pid in Model.AttachTargets)
+            {
+                <li>@pid</li>
+            }
+        </ul>
     </div>
     <div class="col-md-6">
         <h2>Dump Files</h2>
         <p>TODO</p>
+        <ul>
+            @foreach (var file in Model.DumpFiles)
+            {
+                <li>@file</li>
+            }
+        </ul>
     </div>
 </div>
