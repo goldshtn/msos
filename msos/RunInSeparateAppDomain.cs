@@ -179,7 +179,7 @@ internal class RunQuery : IRunQuery
 }
 ";
 
-        private TextWriter _writer;
+        private IPrinter _printer;
         private ClrHeap _heap;
         private DataTarget _target;
 
@@ -189,18 +189,18 @@ internal class RunQuery : IRunQuery
             _heap = runtime.GetHeap();
         }
 
-        public RunInSeparateAppDomain(string dumpFile, string dacLocation, TextWriter writer)
+        public RunInSeparateAppDomain(string dumpFile, string dacLocation, IPrinter printer)
         {
             _target = DataTarget.LoadCrashDump(dumpFile, CrashDumpReader.ClrMD);
             CreateRuntime(dacLocation);
-            _writer = writer;
+            _printer = printer;
         }
 
-        public RunInSeparateAppDomain(int pid, string dacLocation, TextWriter writer)
+        public RunInSeparateAppDomain(int pid, string dacLocation, IPrinter printer)
         {
             _target = DataTarget.AttachToProcess(pid, AttachTimeout, AttachFlag.Passive);
             CreateRuntime(dacLocation);
-            _writer = writer;
+            _printer = printer;
         }
 
         public void RunQuery(string outputFormat, string query, List<string> defines)
@@ -241,10 +241,10 @@ internal class RunQuery : IRunQuery
             switch (outputFormat)
             {
                 case HeapQuery.TabularOutputFormat:
-                    printer = new TabularObjectPrinter(_writer);
+                    printer = new TabularObjectPrinter(_printer);
                     break;
                 case HeapQuery.JsonOutputFormat:
-                    printer = new JsonObjectPrinter(_writer);
+                    printer = new JsonObjectPrinter(_printer);
                     break;
                 default:
                     throw new NotSupportedException(String.Format(
@@ -260,7 +260,7 @@ internal class RunQuery : IRunQuery
                 {
                     if (obj is ulong)
                     {
-                        _writer.WriteLine(((ulong)obj).ToString("x16"));
+                        _printer.WriteCommandOutput(((ulong)obj).ToString("x16") + Environment.NewLine);
                     }
                     else if (obj.IsAnonymousType())
                     {
@@ -273,17 +273,17 @@ internal class RunQuery : IRunQuery
                     }
                     else
                     {
-                        _writer.WriteLine(obj.ToString());
+                        _printer.WriteCommandOutput(obj.ToString() + Environment.NewLine);
                     }
                     ++rowCount;
                 }
             }
             else
             {
-                _writer.WriteLine(result.ToString());
+                _printer.WriteCommandOutput(result.ToString() + Environment.NewLine);
                 ++rowCount;
             }
-            _writer.WriteLine("Rows: {0}", rowCount);
+            _printer.WriteCommandOutput("Rows: {0}" + Environment.NewLine, rowCount);
         }
 
         interface IObjectPrinter
@@ -294,11 +294,11 @@ internal class RunQuery : IRunQuery
 
         abstract class ObjectPrinterBase : IObjectPrinter
         {
-            protected TextWriter Output { get; private set; }
+            protected IPrinter Printer { get; private set; }
 
-            protected ObjectPrinterBase(TextWriter output)
+            protected ObjectPrinterBase(IPrinter printer)
             {
-                Output = output;
+                Printer = printer;
             }
 
             public abstract void PrintHeader(object obj);
@@ -320,8 +320,8 @@ internal class RunQuery : IRunQuery
 
         class TabularObjectPrinter : ObjectPrinterBase
         {
-            public TabularObjectPrinter(TextWriter output)
-                : base(output)
+            public TabularObjectPrinter(IPrinter printer)
+                : base(printer)
             {
             }
 
@@ -334,14 +334,14 @@ internal class RunQuery : IRunQuery
                     // Do not restrict the width of the last property.
                     if (i == props.Length - 1)
                     {
-                        Output.Write(props[i].Name.TrimEndToLength(width));
+                        Printer.WriteCommandOutput(props[i].Name.TrimEndToLength(width));
                     }
                     else
                     {
-                        Output.Write("{0,-" + width + "}  ", props[i].Name.TrimEndToLength(width));
+                        Printer.WriteCommandOutput("{0,-" + width + "}  ", props[i].Name.TrimEndToLength(width));
                     }
                 }
-                Output.WriteLine();
+                Printer.WriteCommandOutput(Environment.NewLine);
             }
 
             public override void PrintContents(object obj)
@@ -353,21 +353,23 @@ internal class RunQuery : IRunQuery
                     // Do not restrict the width of the last property.
                     if (i == props.Length - 1)
                     {
-                        Output.Write(RenderProperty(props[i], obj));
+                        Printer.WriteCommandOutput(RenderProperty(props[i], obj));
                     }
                     else
                     {
-                        Output.Write("{0,-" + width + "}  ", RenderProperty(props[i], obj).TrimEndToLength(width));
+                        Printer.WriteCommandOutput(
+                            "{0,-" + width + "}  ",
+                            RenderProperty(props[i], obj).TrimEndToLength(width));
                     }
                 }
-                Output.WriteLine();
+                Printer.WriteCommandOutput(Environment.NewLine);
             }
         }
 
         class JsonObjectPrinter : ObjectPrinterBase
         {
-            public JsonObjectPrinter(TextWriter output)
-                : base(output)
+            public JsonObjectPrinter(IPrinter printer)
+                : base(printer)
             {
             }
 
@@ -377,13 +379,15 @@ internal class RunQuery : IRunQuery
 
             public override void PrintContents(object obj)
             {
-                Output.WriteLine("{");
+                Printer.WriteCommandOutput("{" + Environment.NewLine);
                 var props = obj.GetType().GetProperties();
                 foreach (var prop in props)
                 {
-                    Output.WriteLine("  {0} = {1}", prop.Name, RenderProperty(prop, obj));
+                    Printer.WriteCommandOutput(
+                        "  {0} = {1}" + Environment.NewLine,
+                        prop.Name, RenderProperty(prop, obj));
                 }
-                Output.WriteLine("}");
+                Printer.WriteCommandOutput("}" + Environment.NewLine);
             }
         }
 

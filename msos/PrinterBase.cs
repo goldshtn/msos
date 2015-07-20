@@ -6,8 +6,13 @@ using System.Threading.Tasks;
 
 namespace msos
 {
-    abstract class PrinterBase : IPrinter
+    abstract class PrinterBase : MarshalByRefObject, IPrinter
     {
+        public override object InitializeLifetimeService()
+        {
+            return null;
+        }
+
         public uint RowsPerPage { get; set; }
 
         public void WriteInfo(string format, params object[] args)
