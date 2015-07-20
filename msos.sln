@@ -23,6 +23,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{7BA91B
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClrMemDiagExt", "ClrMemDiagExt\ClrMemDiagExt.csproj", "{249A0236-8FC8-4CD7-B6E1-C3422924EA09}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "msos-server", "msos-server\msos-server.csproj", "{7ED3B28F-1DFB-41E4-B041-2468CD222DF5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -47,6 +49,14 @@ Global
 		{249A0236-8FC8-4CD7-B6E1-C3422924EA09}.Release|x64.Build.0 = Release|x64
 		{249A0236-8FC8-4CD7-B6E1-C3422924EA09}.Release|x86.ActiveCfg = Release|x86
 		{249A0236-8FC8-4CD7-B6E1-C3422924EA09}.Release|x86.Build.0 = Release|x86
+		{7ED3B28F-1DFB-41E4-B041-2468CD222DF5}.Debug|x64.ActiveCfg = Debug|x64
+		{7ED3B28F-1DFB-41E4-B041-2468CD222DF5}.Debug|x64.Build.0 = Debug|x64
+		{7ED3B28F-1DFB-41E4-B041-2468CD222DF5}.Debug|x86.ActiveCfg = Debug|x86
+		{7ED3B28F-1DFB-41E4-B041-2468CD222DF5}.Debug|x86.Build.0 = Debug|x86
+		{7ED3B28F-1DFB-41E4-B041-2468CD222DF5}.Release|x64.ActiveCfg = Release|x64
+		{7ED3B28F-1DFB-41E4-B041-2468CD222DF5}.Release|x64.Build.0 = Release|x64
+		{7ED3B28F-1DFB-41E4-B041-2468CD222DF5}.Release|x86.ActiveCfg = Release|x86
+		{7ED3B28F-1DFB-41E4-B041-2468CD222DF5}.Release|x86.Build.0 = Release|x86
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
