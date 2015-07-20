@@ -17,8 +17,6 @@ namespace msos
     {
         const int SUCCESS_EXIT_CODE = 0;
         const int ERROR_EXIT_CODE = 1;
-        const int ATTACH_TIMEOUT = 5000;
-        const int WIN32_ACCESS_DENIED = 5;
 
         private void Bail(string format, params object[] args)
         {
@@ -38,8 +36,7 @@ namespace msos
         }
 
         private CommandLineOptions _options;
-        private DataTarget _target;
-        private ClrRuntime _runtime;
+        private AnalysisTarget _target;
         private CommandExecutionContext _context = new CommandExecutionContext();
 
         private void Run(string[] args)
@@ -53,7 +50,7 @@ namespace msos
 
             if (!String.IsNullOrEmpty(_options.DumpFile))
             {
-                OpenDumpFile();
+                _target = new AnalysisTarget(_options.DumpFile, _context, _options.ClrVersion);
             }
             else if (!String.IsNullOrEmpty(_options.ProcessName))
             {
@@ -61,31 +58,19 @@ namespace msos
             }
             else if (_options.ProcessId != 0)
             {
-                AttachToProcessById();
+                _target = new AnalysisTarget(_options.ProcessId, _context, _options.ClrVersion);
             }
             else
             {
                 Bail("One of the -z, --pid, or --pn options must be specified. Try --help.");
             }
 
-            VerifyTargetArchitecture();
-
-            VerifyCLRVersion();
-
-            SetupSymPath();
-
-            CreateRuntime();
-
             RunMainLoop();
         }
 
         private void RunMainLoop()
         {
-            _context.Runtime = _runtime;
-            _context.Heap = _runtime.GetHeap();
-            _target.DefaultSymbolNotification = new SymbolNotification(_context);
-
-            var threadToSwitchTo = _runtime.ThreadWithActiveExceptionOrFirstThread();
+            var threadToSwitchTo = _context.Runtime.ThreadWithActiveExceptionOrFirstThread();
             new SwitchThread() { ManagedThreadId = threadToSwitchTo.ManagedThreadId }.Execute(_context);
 
             ExecuteInitialCommand();
@@ -142,125 +127,15 @@ namespace msos
 
                 foreach (var command in commands)
                 {
-                    _context.WriteInfo("> {0}", command);
+                    _context.WriteInfo("#> {0}", command);
                     _context.ExecuteOneCommand(command, _options.DisplayDiagnosticInformation);
                 }
             }
             else if (!String.IsNullOrEmpty(_options.InitialCommand))
             {
-                _context.WriteInfo("> {0}", _options.InitialCommand);
+                _context.WriteInfo("#> {0}", _options.InitialCommand);
                 _context.ExecuteCommand(_options.InitialCommand, _options.DisplayDiagnosticInformation);
             }
-        }
-
-        private void CreateRuntime()
-        {
-            string dacLocation = _target.ClrVersions[0].TryDownloadDac();
-            _context.WriteInfo("Using Data Access DLL at: " + dacLocation);
-            _runtime = _target.CreateRuntime(dacLocation);
-            _context.DacLocation = dacLocation;
-        }
-
-        private void SetupSymPath()
-        {
-            string symPath = Environment.GetEnvironmentVariable("_NT_SYMBOL_PATH");
-            _context.WriteInfo("Symbol path: " + symPath);
-            _target.AppendSymbolPath(symPath);
-            _context.SymbolPath = symPath;
-        }
-
-        private void VerifyCLRVersion()
-        {
-            if (_target.ClrVersions.Count == 0)
-            {
-                Bail("There is no CLR loaded into the process.");
-            }
-            for (int i = 0; i < _target.ClrVersions.Count; ++i)
-            {
-                var clrVersion = _target.ClrVersions[i];
-                _context.WriteInfo("#{0} Flavor: {1}, Version: {2}", i, clrVersion.Flavor, clrVersion.Version);
-            }
-            if (_options.ClrVersion < 0 || _options.ClrVersion >= _target.ClrVersions.Count)
-            {
-                Bail("The ordinal number of the CLR to interact with is not valid. {0} specified, valid values are 0-{1}.",
-                    _options.ClrVersion, _target.ClrVersions.Count - 1);
-            }
-            if (_target.ClrVersions.Count > 1)
-            {
-                _context.WriteInfo("The rest of this session will interact with CLR version #{0} ({1}). Change using --clrVersion.",
-                    _options.ClrVersion, _target.ClrVersions[_options.ClrVersion].Version);
-            }
-        }
-
-        private void VerifyTargetArchitecture()
-        {
-            if (_target.Architecture == Architecture.Amd64 && !Environment.Is64BitProcess)
-            {
-                Bail("You must use the 64-bit version of this application.");
-            }
-            if (_target.Architecture != Architecture.Amd64 && Environment.Is64BitProcess)
-            {
-                Bail("You must use the 32-bit version of this application.");
-            }
-        }
-
-        private void VerifyTargetArchitecture(int pid)
-        {
-            Process process = null;
-            try
-            {
-                process = Process.GetProcessById(pid);
-            }
-            catch (ArgumentException ex)
-            {
-                Bail("Error opening process {0}: {1}", pid, ex.Message);
-            }
-
-            if (Environment.Is64BitOperatingSystem)
-            {
-                IntPtr handle = IntPtr.Zero;
-                try
-                {
-                    handle = process.Handle;
-                }
-                catch (Win32Exception ex)
-                {
-                    if (ex.NativeErrorCode == WIN32_ACCESS_DENIED)
-                    {
-                        Bail("You do not have sufficient privileges to attach to the target process. Try running as administrator.");
-                    }
-                    Bail("An error occurred while retrieving the process handle. Error code: {0}", ex.NativeErrorCode);
-                }
-
-                bool isTarget32Bit;
-                if (!NativeMethods.IsWow64Process(handle, out isTarget32Bit))
-                {
-                    Bail("Unable to determine whether target is a 64-bit process.");
-                }
-                if (!isTarget32Bit && !Environment.Is64BitProcess)
-                {
-                    Bail("You must use the 64-bit version of this application.");
-                }
-                if (isTarget32Bit && Environment.Is64BitProcess)
-                {
-                    Bail("You must use the 32-bit version of this application.");
-                }
-            }
-        }
-
-        private void AttachToProcessById(int pid = 0)
-        {
-            if (pid == 0)
-            {
-                pid = _options.ProcessId;
-            }
-
-            VerifyTargetArchitecture(pid);
-
-            _target = DataTarget.AttachToProcess(pid, ATTACH_TIMEOUT, AttachFlag.Passive);
-            _context.WriteInfo("Attached to process {0}, architecture {1}, {2} CLR versions detected.",
-                pid, _target.Architecture, _target.ClrVersions.Count);
-            _context.ProcessId = pid;
         }
 
         private void AttachToProcessByName()
@@ -277,21 +152,7 @@ namespace msos
                 _context.WriteInfo("Matching process ids: {0}", String.Join(", ", processes.Select(p => p.Id).ToArray()));
                 Bail();
             }
-            AttachToProcessById(processes[0].Id);
-        }
-
-        private void OpenDumpFile()
-        {
-            if (!File.Exists(_options.DumpFile))
-            {
-                Bail("The specified dump file '{0}' does not exist.", _options.DumpFile);
-            }
-
-            _target = DataTarget.LoadCrashDump(_options.DumpFile, CrashDumpReader.ClrMD);
-            _context.WriteInfo("Opened dump file '{0}', architecture {1}, {2} CLR versions detected.",
-                _options.DumpFile, _target.Architecture, _target.ClrVersions.Count);
-            Console.Title = "msos - " + _options.DumpFile;
-            _context.DumpFile = _options.DumpFile;
+            _target = new AnalysisTarget(processes[0].Id, _context, _options.ClrVersion);
         }
 
         private void ParseCommandLineArguments(string[] args)
