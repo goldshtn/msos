@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace msos
 {
-    public static class ClrRootExtensions
+    static class ClrRootExtensions
     {
         public static string BetterToString(this ClrRoot root)
         {

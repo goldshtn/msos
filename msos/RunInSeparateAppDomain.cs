@@ -85,7 +85,7 @@ namespace msos
     }
 
     [Serializable]
-    public class RunFailedException : Exception
+    class RunFailedException : Exception
     {
         public RunFailedException(string message)
             : base(message)
