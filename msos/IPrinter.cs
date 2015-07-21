@@ -8,6 +8,7 @@ namespace msos
 {
     interface IPrinter : IDisposable
     {
+        bool HasNativeHyperlinkSupport { get; }
         uint RowsPerPage { get; set; }
         void WriteInfo(string format, params object[] args);
         void WriteInfo(string value);
@@ -17,7 +18,7 @@ namespace msos
         void WriteError(string value);
         void WriteWarning(string format, object[] args);
         void WriteWarning(string value);
-        void WriteLink(string value);
+        void WriteLink(string text, string command);
         void ClearScreen();
         void CommandEnded();
     }

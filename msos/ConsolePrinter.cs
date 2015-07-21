@@ -70,11 +70,11 @@ namespace msos
             }
         }
 
-        public override void WriteLink(string value)
+        public override void WriteLink(string text, string command)
         {
             using (new ConsoleColorChanger(ConsoleColor.Blue))
             {
-                Console.Write(value);
+                Console.Write(text);
             }
         }
 
