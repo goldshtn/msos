@@ -10,6 +10,10 @@ namespace msos_server.Models
     {
         private StringBuilder _html = new StringBuilder();
 
+        public override bool HasNativeHyperlinkSupport { get { return true; } }
+
+        public string SessionId { get; set; }
+
         public string Html { get { return _html.ToString(); } }
 
         private string NewlineToBR(string value)
@@ -42,10 +46,20 @@ namespace msos_server.Models
             _html.AppendFormat("<font color='red'>{0}</font>", NewlineToBR(value));
         }
 
-        public override void WriteLink(string value)
+        public override void WriteLink(string text, string command)
         {
-            // TODO Need to get the actual command too!
-            throw new NotImplementedException();
+            if (String.IsNullOrEmpty(text))
+            {
+                text = command; // TODO
+            }
+            _html.AppendFormat(
+                "<a href='/Analysis/ExecuteCommand?sessionId={0}&command={1}'>{2}</a>",
+                SessionId, command, text);
+        }
+
+        public override void ClearScreen()
+        {
+            _html.Clear();
         }
     }
 }

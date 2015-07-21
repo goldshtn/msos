@@ -26,6 +26,7 @@ namespace msos_server.Controllers
             AnalysisTarget target = new AnalysisTarget(dumpFile, context);
             AnalysisSession session = new AnalysisSession(context, target, printer);
             AddToSession(session);
+            printer.SessionId = session.Id;
             return View("Index", new TargetModel(printer, session.Id));
         }
 
