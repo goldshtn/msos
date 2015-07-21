@@ -2,6 +2,7 @@
 using Microsoft.Diagnostics.Runtime;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -32,7 +33,7 @@ namespace msos
         private List<string> _temporaryAliases = new List<string>();
         private const int WarnThresholdCountOfTemporaryAliases = 100;
 
-        public CommandExecutionContext()
+        public CommandExecutionContext(TextWriter helpWriter = null)
         {
             SymbolCache = new SymbolCache();
             Aliases = new Dictionary<string, string>();
@@ -41,7 +42,7 @@ namespace msos
             _commandParser = new Parser(ps =>
             {
                 ps.CaseSensitive = false;
-                ps.HelpWriter = Console.Out;
+                ps.HelpWriter = helpWriter ?? Console.Out;
             });
             _allCommandTypes = GetAllCommandTypes();
         }
