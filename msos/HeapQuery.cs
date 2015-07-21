@@ -35,7 +35,10 @@ namespace msos
                 return;
             }
 
-            AppDomain appDomain = AppDomain.CreateDomain("RunQueryAppDomain");
+            AppDomainSetup setupInfo = new AppDomainSetup();
+            setupInfo.ApplicationBase = AppDomain.CurrentDomain.BaseDirectory;
+            setupInfo.PrivateBinPath = "bin";
+            AppDomain appDomain = AppDomain.CreateDomain("RunQueryAppDomain", null, setupInfo);
             // TODO Create the compiled query in a temporary directory and delete after unloading the AppDomain
 
             object[] arguments;
