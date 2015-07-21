@@ -19,7 +19,7 @@ namespace msos_server.Controllers
         public ActionResult OpenDump(string dumpFile)
         {
             HtmlPrinter printer = new HtmlPrinter();
-            CommandExecutionContext context = new CommandExecutionContext()
+            CommandExecutionContext context = new CommandExecutionContext(new PrinterWrapper(printer))
             {
                 Printer = printer
             };

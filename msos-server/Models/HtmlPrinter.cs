@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Web;
@@ -60,6 +61,27 @@ namespace msos_server.Models
         public override void ClearScreen()
         {
             _html.Clear();
+        }
+    }
+
+    class PrinterWrapper : TextWriter
+    {
+        private HtmlPrinter _printer;
+
+        public PrinterWrapper(HtmlPrinter printer)
+        {
+            _printer = printer;
+        }
+
+        public override Encoding Encoding
+        {
+            get { return Encoding.UTF8; }
+        }
+
+        public override void Write(char value)
+        {
+            // TODO Maybe override a string-writing method to save alloc costs?
+            _printer.WriteCommandOutput(value.ToString());
         }
     }
 }
