@@ -191,9 +191,20 @@ namespace msos
         {
             if (HyperlinkOutput)
             {
-                string alias = AddTemporaryAlias(command);
-                Write(text + " ");
-                Printer.WriteLink(String.Format("[{0}]", alias));
+                if (Printer.HasNativeHyperlinkSupport)
+                {
+                    Printer.WriteLink(text, command);
+                }
+                else
+                {
+                    // To work around the fact that we don't always have native
+                    // hyperlink output (like HTML), we create a temporary alias
+                    // for each link. The user can then execute the alias, which 
+                    // is like "clicking" the link.
+                    string alias = AddTemporaryAlias(command);
+                    Write(text + " ");
+                    Printer.WriteLink(String.Format("[{0}]", alias), command);
+                }
             }
             else
             {

@@ -13,6 +13,8 @@ namespace msos
             return null;
         }
 
+        public virtual bool HasNativeHyperlinkSupport { get { return false; } }
+
         public uint RowsPerPage { get; set; }
 
         public void WriteInfo(string format, params object[] args)
@@ -40,7 +42,7 @@ namespace msos
         public abstract void WriteCommandOutput(string value);
         public abstract void WriteError(string value);
         public abstract void WriteWarning(string value);
-        public abstract void WriteLink(string value);
+        public abstract void WriteLink(string text, string command);
 
         public virtual void ClearScreen()
         {

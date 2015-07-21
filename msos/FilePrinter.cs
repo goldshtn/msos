@@ -36,7 +36,7 @@ namespace msos
             _output.Write("WARNING: " + value);
         }
 
-        public override void WriteLink(string value)
+        public override void WriteLink(string text, string command)
         {
         }
 
