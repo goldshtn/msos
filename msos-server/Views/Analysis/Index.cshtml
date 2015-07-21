@@ -1,0 +1,22 @@
+﻿@model msos_server.Models.TargetModel
+@{
+    ViewBag.Title = "Analysis";
+}
+
+<h2>Analysis</h2>
+<div class="row">
+    <!-- TODO Want to get this to scroll horizontally instead of wrapping text -->
+    <div id="outputDiv" style="height: 500px; overflow: scroll;">
+        <pre>@Html.Raw(Model.Output)</pre>
+    </div>
+    <form method="post" action="/Analysis/ExecuteCommand">
+        <input type="text" name="command" />
+        <input type="hidden" name="sessionId" value="@Model.SessionId" />
+        <input type="submit" value="Go" />
+    </form>
+</div>
+
+<script type="text/javascript">
+    var outDiv = document.getElementById("outputDiv");
+    outDiv.scrollTop = outDiv.scrollHeight;
+</script>

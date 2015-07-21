@@ -1,4 +1,5 @@
-﻿@{
+﻿@model msos_server.Models.ErrorModel
+@{
     Layout = null;
 }
 
@@ -9,9 +10,8 @@
     <title>Error</title>
 </head>
 <body>
-    <hgroup>
-        <h1>Error.</h1>
-        <h2>An error occurred while processing your request.</h2>
-    </hgroup>
+    <h1>Error:</h1>
+    <p>An error occurred while processing your request.</p>
+    <p><pre>@Model.Error</pre></p>
 </body>
 </html>

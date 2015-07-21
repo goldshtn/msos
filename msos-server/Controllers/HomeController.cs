@@ -1,30 +1,35 @@
 ﻿using msos_server.Models;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Web;
 using System.Web.Mvc;
 
 namespace msos_server.Controllers
 {
-    public class HomeController : Controller
+    public class HomeController : BaseController
     {
-        private IEnumerable<int> GetEligibleAttachTargets()
+        private IEnumerable<AttachTarget> GetEligibleAttachTargets()
         {
-            yield return 48;
+            // TODO Filter out processes of inappropriate bitness, or where permissions are insufficient
+            return from process in Process.GetProcesses()
+                   select new AttachTarget { ProcessId = process.Id, ProcessName = process.ProcessName };
         }
 
         private IEnumerable<string> GetEligibleDumpFiles()
         {
-            yield return @"C:\Temp\VSDebugging.dmp";
+            return Directory.EnumerateFiles(@"C:\Temp", "*.dmp");
         }
 
         public ActionResult Index()
         {
-            return View(new Home
+            return View(new HomeModel
             {
                 AttachTargets = GetEligibleAttachTargets(),
-                DumpFiles = GetEligibleDumpFiles()
+                DumpFiles = GetEligibleDumpFiles(),
+                OpenSessionIds = GetOpenSessionIds()
             });
         }
     }

@@ -1,4 +1,4 @@
-﻿@model msos_server.Models.Home
+﻿@model msos_server.Models.HomeModel
 @{
     ViewBag.Title = "Home Page";
 }
@@ -10,23 +10,41 @@
 </div>
 
 <div class="row">
-    <div class="col-md-6">
+    <div class="col-md-4">
         <h2>Attach Targets</h2>
-        <p>TODO</p>
+        <p>Click a target process to perform a passive attach. The process is not suspended and its performance is not affected by the attach.</p>
         <ul>
-            @foreach (var pid in Model.AttachTargets)
+            @foreach (var target in Model.AttachTargets)
             {
-                <li>@pid</li>
+                <li>
+                    @Html.ActionLink(String.Format("{0} {1}", target.ProcessId, target.ProcessName), "Attach", "Analysis", new { processId = target.ProcessId }, null)
+                </li>
             }
         </ul>
     </div>
-    <div class="col-md-6">
+    <div class="col-md-4">
         <h2>Dump Files</h2>
-        <p>TODO</p>
+        <p>Click a dump file to open it for analysis.</p>
         <ul>
             @foreach (var file in Model.DumpFiles)
             {
-                <li>@file</li>
+                <li>
+                    @Html.ActionLink(file, "OpenDump", "Analysis", new { dumpFile = file }, null)
+                </li>
+
+            }
+        </ul>
+    </div>
+    <div class="col-md-4">
+        <h2>Open Sessions</h2>
+        <p>Navigate to an open analysis session, or close it.</p>
+        <ul>
+            @foreach (var sessionId in Model.OpenSessionIds)
+            {
+                <li>
+                    @Html.ActionLink(sessionId, "ReconnectToSession", "Analysis", new { sessionId = sessionId }, null)
+                    @Html.ActionLink("close", "CloseSession", "Analysis", new { sessionId = sessionId }, null)
+                </li>
             }
         </ul>
     </div>
