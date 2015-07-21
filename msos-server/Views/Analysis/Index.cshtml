@@ -10,7 +10,7 @@
         <pre>@Html.Raw(Model.Output)</pre>
     </div>
     <form method="post" action="/Analysis/ExecuteCommand">
-        <input type="text" name="command" />
+        <textarea style="min-width: 80%;" name="command"></textarea>
         <input type="hidden" name="sessionId" value="@Model.SessionId" />
         <input type="submit" value="Go" />
     </form>
