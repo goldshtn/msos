@@ -106,6 +106,7 @@
     <Compile Include="DumpHeap.cs" />
     <Compile Include="DumpObject.cs" />
     <Compile Include="DumpStackObjects.cs" />
+    <Compile Include="EnumerableExtensions.cs" />
     <Compile Include="FieldValueForDisplayRetriever.cs" />
     <Compile Include="FilePrinter.cs" />
     <Compile Include="FReachableQueue.cs" />
@@ -141,6 +142,7 @@
     <Compile Include="ThreadPool.cs" />
     <Compile Include="Threads.cs" />
     <Compile Include="TimeAndMemory.cs" />
+    <Compile Include="WaitChains.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
