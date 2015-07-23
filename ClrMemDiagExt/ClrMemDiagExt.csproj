@@ -69,8 +69,6 @@
     <Compile Include="ClrNullValue.cs" />
     <Compile Include="ClrObject.cs" />
     <Compile Include="ClrPrimitiveValue.cs" />
-    <Compile Include="COMInterfaces.cs" />
-    <Compile Include="COMInterop.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
