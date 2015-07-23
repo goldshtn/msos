@@ -203,7 +203,7 @@ internal class RunQuery : IRunQuery
             _printer = printer;
         }
 
-        public void RunQuery(string outputFormat, string query, List<string> defines)
+        public string RunQuery(string outputFormat, string query, List<string> defines)
         {
             var options = new CompilerParameters();
             options.ReferencedAssemblies.Add(typeof(Enumerable).Assembly.Location);
@@ -211,9 +211,12 @@ internal class RunQuery : IRunQuery
             options.ReferencedAssemblies.Add(typeof(ClrHeap).Assembly.Location);
             options.ReferencedAssemblies.Add(typeof(Microsoft.CSharp.RuntimeBinder.RuntimeBinderException).Assembly.Location);
             options.CompilerOptions = "/optimize+";
-            options.OutputAssembly = Path.Combine(
-                AppDomain.CurrentDomain.BaseDirectory,
-                CompiledQueryAssemblyName) + ".dll";
+
+            string compilationOutputDir = Path.Combine(Path.GetTempPath(), "msos_" + Guid.NewGuid().ToString());
+            Directory.CreateDirectory(compilationOutputDir);
+            options.OutputAssembly = Path.ChangeExtension(
+                Path.Combine(compilationOutputDir, CompiledQueryAssemblyName),
+                ".dll");
 
             string source = CompiledQueryTemplate.Replace(CompiledQueryPlaceholder, query);
             source = source.Replace(HelperDefinesPlaceholder,
@@ -284,6 +287,8 @@ internal class RunQuery : IRunQuery
                 ++rowCount;
             }
             _printer.WriteCommandOutput("Rows: {0}" + Environment.NewLine, rowCount);
+
+            return compilationOutputDir;
         }
 
         interface IObjectPrinter

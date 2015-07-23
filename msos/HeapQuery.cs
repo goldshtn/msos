@@ -39,8 +39,8 @@ namespace msos
             setupInfo.ApplicationBase = AppDomain.CurrentDomain.BaseDirectory;
             setupInfo.PrivateBinPath = "bin";
             AppDomain appDomain = AppDomain.CreateDomain("RunQueryAppDomain", null, setupInfo);
-            // TODO Create the compiled query in a temporary directory and delete after unloading the AppDomain
 
+            string compilationOutputDirectory = null;
             object[] arguments;
             if (context.ProcessId != 0)
             {
@@ -60,7 +60,8 @@ namespace msos
             {
                 try
                 {
-                    runner.RunQuery(OutputFormat.Substring(2), String.Join(" ", Query.ToArray()), context.Defines);
+                    compilationOutputDirectory = 
+                        runner.RunQuery(OutputFormat.Substring(2), String.Join(" ", Query.ToArray()), context.Defines);
                 }
                 catch (Exception ex)
                 {
@@ -72,6 +73,10 @@ namespace msos
             }
 
             AppDomain.Unload(appDomain);
+            if (compilationOutputDirectory != null)
+            {
+                Directory.Delete(compilationOutputDirectory, recursive: true);
+            }
         }
     }
 }
