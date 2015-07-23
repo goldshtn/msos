@@ -55,6 +55,14 @@ namespace msos
             }
         }
 
+        public TargetType TargetType
+        {
+            get
+            {
+                return String.IsNullOrEmpty(DumpFile) ? TargetType.LiveProcess : TargetType.DumpFile;
+            }
+        }
+
         public void ExecuteCommand(string inputCommand, bool displayDiagnosticInformation = false)
         {
             var commands = inputCommand.Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries);

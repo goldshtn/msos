@@ -37,11 +37,22 @@ namespace msos
 
         public void Execute(CommandExecutionContext context)
         {
-            if (!InMemoryOnly && String.IsNullOrEmpty(HeapIndexFileName))
+            if (!InMemoryOnly)
             {
-                context.WriteError("You must either request an in-memory index (--nofile), or a file name to store it (-f).");
-                return;
+                if (context.TargetType == TargetType.LiveProcess)
+                {
+                    context.WriteError(
+                        "Generating a persistent heap index for a live process is not recommended. " +
+                        "Use the --nofile switch to generate an in-memory index instead.");
+                    return;
+                }
+                if (String.IsNullOrEmpty(HeapIndexFileName))
+                {
+                    HeapIndexFileName = Path.ChangeExtension(context.DumpFile, ".heapindex");
+                    context.WriteLine("Using an automatically generated heap index filename: '{0}'", HeapIndexFileName);
+                }
             }
+            
             if (InMemoryOnly && !String.IsNullOrEmpty(HeapIndexFileName))
             {
                 context.WriteError("The --nofile and -f options are incompatible.");
@@ -67,11 +78,28 @@ namespace msos
     [Verb("!lhi", HelpText = "Loads a heap index from the specified file.")]
     class LoadHeapIndex : ICommand
     {
-        [Option('f', Required = true, HelpText = "The file name from which to load the index.")]
+        [Option('f', HelpText = "The file name from which to load the index.")]
         public string HeapIndexFileName { get; set; }
 
         public void Execute(CommandExecutionContext context)
         {
+            if (String.IsNullOrEmpty(HeapIndexFileName))
+            {
+                if (context.TargetType != TargetType.DumpFile)
+                {
+                    context.WriteError("You must specify the heap index's location.");
+                    return;
+                }
+                HeapIndexFileName = Path.ChangeExtension(context.DumpFile, ".heapindex");
+                context.WriteLine("Using automatically generated heap index filename: '{0}'", HeapIndexFileName);
+            }
+
+            if (!File.Exists(HeapIndexFileName))
+            {
+                context.WriteError("The heap index file '{0}' does not exist.", HeapIndexFileName);
+                return;
+            }
+
             context.HeapIndex = new HeapIndex(context);
             context.HeapIndex.Load(HeapIndexFileName);
         }
