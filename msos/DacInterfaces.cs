@@ -108,11 +108,25 @@ namespace msos
             out uint nameLen,
             [Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder name);
 
-        void GetCodeName_do_not_use();
+        [PreserveSig]
+        int GetCodeName(uint flags, uint bufLen, out uint nameLen,
+            [Out, MarshalAs(UnmanagedType.LPWStr, SizeParamIndex = 1)] StringBuilder nameBuf);
+
         void GetMethodInstance_do_not_use();
         void Request_do_not_use();
         void GetNumTypeArguments_do_not_use();
         void GetTypeArgumentByIndex_do_not_use();
+    }
+
+    enum CLRDataTypeFlag : uint
+    {
+        CLRDATA_TYPE_IS_PRIMITIVE  = 0x00000001,
+        CLRDATA_TYPE_IS_VALUE_TYPE = 0x00000002,
+        CLRDATA_TYPE_IS_STRING     = 0x00000004,
+        CLRDATA_TYPE_IS_ARRAY      = 0x00000008,
+        CLRDATA_TYPE_IS_REFERENCE  = 0x00000010,
+        CLRDATA_TYPE_IS_POINTER    = 0x00000020,
+        CLRDATA_TYPE_IS_ENUM       = 0x00000040,
     }
 
     [ComImport, InterfaceType(ComInterfaceType.InterfaceIsIUnknown), Guid("4D078D91-9CB3-4b0d-97AC-28C8A5A82597")]
@@ -139,7 +153,10 @@ namespace msos
 
         void GetModule_do_not_use();
         void GetDefinition_do_not_use();
-        void GetFlags_do_not_use();
+        
+        [PreserveSig]
+        int GetFlags(out uint flags); // CLRDataTypeFlag
+        
         void IsSameObject_do_not_use();
         void Request_do_not_use();
         void GetNumStaticField2_do_not_use();

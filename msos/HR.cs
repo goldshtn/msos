@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -19,6 +20,12 @@ namespace msos
         public static bool Succeeded(int hr)
         {
             return hr >= 0;
+        }
+
+        public static void Verify(int hr)
+        {
+            if (Failed(hr))
+                throw new Win32Exception(hr);
         }
     }
 }
