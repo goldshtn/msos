@@ -44,26 +44,19 @@ namespace msos
             return "";
         }
 
-        public static void WriteCurrentStackTraceToContext(this ClrThread thread, CommandExecutionContext context, bool displayStackObjects)
+        public static void WriteCurrentStackTraceToContext(this ClrThread thread, CommandExecutionContext context)
         {
-            thread.WriteStackTraceToContext(thread.StackTrace, context, displayStackObjects);
+            thread.WriteStackTraceToContext(thread.StackTrace, context);
         }
 
         public static void WriteCurrentExceptionStackTraceToContext(this ClrThread thread, CommandExecutionContext context)
         {
-            thread.WriteStackTraceToContext(thread.CurrentException.StackTrace, context, false);
+            thread.WriteStackTraceToContext(thread.CurrentException.StackTrace, context);
         }
 
-        public static void WriteStackTraceToContext(this ClrThread thread, IList<ClrStackFrame> stackTrace, CommandExecutionContext context, bool displayStackObjects)
+        public static void WriteStackTraceToContext(this ClrThread thread, IList<ClrStackFrame> stackTrace, CommandExecutionContext context)
         {
-            List<ClrRoot> stackObjects = null;
-            if (displayStackObjects)
-            {
-                stackObjects = thread.EnumerateStackObjects().ToList();
-            }
-
             context.WriteLine("{0,-20} {1,-20} {2}", "SP", "IP", "Function");
-            ulong prevFrameStackPointer = displayStackObjects ? thread.StackBase : 0;
             foreach (var frame in stackTrace)
             {
                 var sourceLocation = context.SymbolCache.GetFileAndLineNumberSafe(frame);
@@ -71,15 +64,6 @@ namespace msos
                     frame.StackPointer, frame.InstructionPointer,
                     frame.DisplayString,
                     sourceLocation == null ? "" : String.Format("[{0}:{1},{2}]", sourceLocation.FilePath, sourceLocation.LineNumber, sourceLocation.ColStart));
-
-                if (!displayStackObjects)
-                    continue;
-
-                foreach (var localRoot in stackObjects.Where(r => r.Address > prevFrameStackPointer && r.Address <= frame.StackPointer))
-                {
-                    context.WriteLine("    {0:x16} = {1:x16} ({2})", localRoot.Address, localRoot.Object, localRoot.Type.Name);
-                }
-                prevFrameStackPointer = frame.StackPointer;
             }
         }
     }

@@ -97,6 +97,7 @@
     <Compile Include="CommandHelpers.cs" />
     <Compile Include="CommandLineOptions.cs" />
     <Compile Include="ConsolePrinter.cs" />
+    <Compile Include="DacInterfaces.cs" />
     <Compile Include="DataTargetExtensions.cs" />
     <Compile Include="DB.cs" />
     <Compile Include="Define.cs" />
@@ -113,6 +114,7 @@
     <Compile Include="GCRoot.cs" />
     <Compile Include="HeapIndex.cs" />
     <Compile Include="HeapQuery.cs" />
+    <Compile Include="HR.cs" />
     <Compile Include="ICommand.cs" />
     <Compile Include="IPrinter.cs" />
     <Compile Include="LastEvent.cs" />
