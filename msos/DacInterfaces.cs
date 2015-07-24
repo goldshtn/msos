@@ -95,7 +95,7 @@ namespace msos
             [Out, MarshalAs(UnmanagedType.IUnknown)] out object arg,
             uint bufLen,
             out uint nameLen,
-            [Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder name);
+            [Out, MarshalAs(UnmanagedType.LPWStr, SizeParamIndex = 2)] StringBuilder name);
 
         [PreserveSig]
         int GetNumLocalVariables(out uint numLocals);
@@ -106,7 +106,7 @@ namespace msos
             [Out, MarshalAs(UnmanagedType.IUnknown)] out object localVariable,
             uint bufLen,
             out uint nameLen,
-            [Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder name);
+            [Out, MarshalAs(UnmanagedType.LPWStr, SizeParamIndex = 2)] StringBuilder name);
 
         [PreserveSig]
         int GetCodeName(uint flags, uint bufLen, out uint nameLen,
@@ -148,7 +148,7 @@ namespace msos
 
         [PreserveSig]
         int GetName(uint flags, uint bufLen, out uint nameLen,
-            [Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder nameBuf
+            [Out, MarshalAs(UnmanagedType.LPWStr, SizeParamIndex = 1)] StringBuilder nameBuf
             );
 
         void GetModule_do_not_use();
