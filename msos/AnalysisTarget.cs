@@ -53,8 +53,9 @@ namespace msos
 
         private void Bail(string format, params object[] args)
         {
-            _context.WriteError(format, args);
-            throw new AnalysisFailedException(); // TODO Error message in the exception itself?
+            string errorMessage = String.Format(format, args);
+            _context.WriteError(errorMessage);
+            throw new AnalysisFailedException(errorMessage);
         }
 
         private void OpenDumpFile()
@@ -67,7 +68,6 @@ namespace msos
             _target = DataTarget.LoadCrashDump(_dumpFile, CrashDumpReader.ClrMD);
             _context.WriteInfo("Opened dump file '{0}', architecture {1}, {2} CLR versions detected.",
                 _dumpFile, _target.Architecture, _target.ClrVersions.Count);
-            Console.Title = "msos - " + _dumpFile; // TODO Move to Program.cs
             _context.DumpFile = _dumpFile;
         }
 

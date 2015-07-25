@@ -51,6 +51,7 @@ namespace msos
             if (!String.IsNullOrEmpty(_options.DumpFile))
             {
                 _target = new AnalysisTarget(_options.DumpFile, _context, _options.ClrVersion);
+                Console.Title = "msos - " + _options.DumpFile;
             }
             else if (!String.IsNullOrEmpty(_options.ProcessName))
             {
@@ -59,6 +60,7 @@ namespace msos
             else if (_options.ProcessId != 0)
             {
                 _target = new AnalysisTarget(_options.ProcessId, _context, _options.ClrVersion);
+                Console.Title = "msos - attached to pid " + _options.ProcessId;
             }
             else
             {
@@ -188,11 +190,29 @@ namespace msos
             Exit(SUCCESS_EXIT_CODE);
         }
 
+        private void RunWrapper(string[] args)
+        {
+            try
+            {
+                Run(args);
+            }
+            catch (AnalysisFailedException)
+            {
+                // The exception message is already printed by Bail(),
+                // so there is no need to do anything special here but exit.
+            }
+            catch (Exception ex)
+            {
+                _context.WriteError("An unexpected error occurred.");
+                _context.WriteError("{0}: {1}", ex.GetType().Name, ex.Message);
+            }
+        }
+
         static void Main(string[] args)
         {
             using (var program = new Program())
             {
-                program.Run(args);
+                program.RunWrapper(args);
             }
         }
     }

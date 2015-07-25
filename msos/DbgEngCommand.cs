@@ -31,12 +31,13 @@ namespace msos
                 HR.Verify(client.SetOutputCallbacksWide(outputCallbacks));
 
                 IDebugControl6 control = (IDebugControl6)target.DebuggerInterface;
-                HR.Verify(
-                    control.ExecuteWide(
-                        DEBUG_OUTCTL.THIS_CLIENT,
-                        String.Join(" ", Command.ToArray()),
-                        DEBUG_EXECUTE.DEFAULT)
+                int hr = control.ExecuteWide(
+                    DEBUG_OUTCTL.THIS_CLIENT,
+                    String.Join(" ", Command.ToArray()),
+                    DEBUG_EXECUTE.DEFAULT
                     );
+                if (HR.Failed(hr))
+                    context.WriteError("Command execution failed with hr = {0:x8}", hr);
             }
         }
     }
@@ -55,14 +56,14 @@ namespace msos
             switch (mask)
             {
                 case DEBUG_OUTPUT.ERROR:
-                    _context.WriteError(text);
+                    _context.WriteError(text.TrimEnd('\n', '\r'));
                     break;
                 case DEBUG_OUTPUT.EXTENSION_WARNING:
                 case DEBUG_OUTPUT.WARNING:
-                    _context.WriteWarning(text);
+                    _context.WriteWarning(text.TrimEnd('\n', '\r'));
                     break;
                 case DEBUG_OUTPUT.SYMBOLS:
-                    _context.WriteInfo(text);
+                    _context.WriteInfo(text.TrimEnd('\n', '\r'));
                     break;
                 default:
                     _context.Write(text);
