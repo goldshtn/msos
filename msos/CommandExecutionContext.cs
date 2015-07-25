@@ -266,9 +266,6 @@ namespace msos
             return candidates[0];
         }
 
-        // TODO Can offer a command that runs an arbitrary WinDbg command by creating
-        // a DbgEng target and then using the appropriate IDebug* method.
-
         public void Dispose()
         {
             Printer.Dispose();
