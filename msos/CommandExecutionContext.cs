@@ -89,8 +89,8 @@ namespace msos
             // like arguments, such as --type, the parser will erroneously think that it's an 
             // argument to the .newalias command, and not to the alias command. The same thing is
             // going on with the !hq command, where the query could contain -- and - symbols and it
-            // crashes the parser. So, we give these two commands special treatment here, with the
-            // hope there will be a more decent solution in the future.
+            // crashes the parser, and with the dec command. So, we give these commands special treatment
+            // here, with the hope there will be a more decent solution in the future.
             if (parts[0] == "!hq" && parts.Length >= 2)
             {
                 commandToExecute = new HeapQuery() { OutputFormat = parts[1], Query = parts.Skip(2) };
@@ -98,6 +98,10 @@ namespace msos
             else if (parts[0] == ".newalias" && parts.Length >= 2)
             {
                 commandToExecute = new CreateAlias() { AliasName = parts[1], AliasCommand = parts.Skip(2) };
+            }
+            else if (parts[0] == "dec" && parts.Length >= 2)
+            {
+                commandToExecute = new DbgEngCommand() { Command = parts.Skip(1) };
             }
             else
             {

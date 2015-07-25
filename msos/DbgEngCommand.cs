@@ -9,7 +9,10 @@ using System.Threading.Tasks;
 
 namespace msos
 {
-    [Verb("dec", HelpText = "Executes a command through the DbgEng engine.")]
+    [Verb("dec", HelpText =
+        "Executes a command through the DbgEng engine. To run extension commands, " +
+        "put the .load and the command on the same line. For example: dec .loadby " +
+        "sos clr; !eeheap; lm")]
     class DbgEngCommand : ICommand
     {
         [Value(0, Required = true)]
@@ -17,6 +20,10 @@ namespace msos
 
         public void Execute(CommandExecutionContext context)
         {
+            // NOTE Currently, extensions can't be loaded sensibly because 
+            // the session only survives one command. The client can separate
+            // commands by semicolons and then load an extension and use it
+            // within the same 'dec' invocation, but it's not very convenient.
             using (var target = context.CreateDbgEngTarget())
             {
                 var outputCallbacks = new OutputCallbacks(context);
