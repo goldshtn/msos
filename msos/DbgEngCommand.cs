@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace msos
 {
-    [Verb("dec", HelpText = "")]
+    [Verb("dec", HelpText = "Executes a command through the DbgEng engine.")]
     class DbgEngCommand : ICommand
     {
         [Value(0, Required = true)]
