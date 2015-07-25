@@ -23,7 +23,6 @@ namespace msos
         /// </summary>
         public static IXCLRDataProcess GetCLRDataProcess(this ClrRuntime runtime)
         {
-            // TODO Make sure the m_dacInterface is always initialized by the time we get here
             Type runtimeType = runtime.GetType();
             FieldInfo dacField = runtimeType.GetField("m_dacInterface", BindingFlags.NonPublic | BindingFlags.Instance);
             object dacInterface = dacField.GetValue(runtime);

@@ -29,6 +29,7 @@ namespace msos
 
         private Parser _commandParser;
         private Type[] _allCommandTypes;
+        private Dictionary<Tuple<string, int>, List<ClrType>> _typesByModuleAndMDToken;
         
         private List<string> _temporaryAliases = new List<string>();
         private const int WarnThresholdCountOfTemporaryAliases = 100;
@@ -230,6 +231,43 @@ namespace msos
             target.AppendSymbolPath(SymbolPath);
             return target;
         }
+
+        public ClrType GetTypeByMetadataToken(string moduleName, int mdTypeDefToken)
+        {
+            // The metadata token is not unique, and it repeats across modules. Turns out
+            // sometimes it even repeats in the same module: all closed generic types share 
+            // the same metadata token, and it's also the same token as the corresponding 
+            // open generic type.
+            if (_typesByModuleAndMDToken == null)
+            {
+                _typesByModuleAndMDToken = new Dictionary<Tuple<string, int>, List<ClrType>>();
+                foreach (var type in Heap.EnumerateTypes())
+                {
+                    List<ClrType> list;
+                    var key = new Tuple<string, int>(
+                        Path.GetFileNameWithoutExtension(type.Module.Name),
+                        (int)type.MetadataToken);
+                    if (!_typesByModuleAndMDToken.TryGetValue(key, out list))
+                    {
+                        list = new List<ClrType>();
+                        _typesByModuleAndMDToken.Add(key, list);
+                    }
+                    list.Add(type);
+                }
+            }
+            
+            List<ClrType> candidates;
+            _typesByModuleAndMDToken.TryGetValue(
+                new Tuple<string, int>(moduleName, mdTypeDefToken), out candidates);
+
+            if (candidates == null || candidates.Count != 1)
+                return null; // We don't know which one to pick
+
+            return candidates[0];
+        }
+
+        // TODO Can offer a command that runs an arbitrary WinDbg command by creating
+        // a DbgEng target and then using the appropriate IDebug* method.
 
         public void Dispose()
         {

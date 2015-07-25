@@ -58,7 +58,7 @@ namespace msos
         public static void WriteStackTraceToContext(this ClrThread thread, IList<ClrStackFrame> stackTrace, CommandExecutionContext context, bool displayArgumentsAndLocals)
         {
             FrameArgumentsAndLocals[] argsAndLocals = displayArgumentsAndLocals ?
-                GetFrameArgumentsAndLocals(thread, context) :
+                new FrameArgumentsAndLocalsRetriever(thread, context).ArgsAndLocals :
                 new FrameArgumentsAndLocals[0];
 
             context.WriteLine("{0,-20} {1,-20} {2}", "SP", "IP", "Function");
@@ -76,14 +76,19 @@ namespace msos
                 {
                     Action<string, ArgumentOrLocal> action = (which, argOrLocal) =>
                     {
-                        argOrLocal.PopulateActualType(context.Heap);
-                        context.Write("  {0} {1} = {2} ({3}, size {4}) ",
-                            which, argOrLocal.Name, argOrLocal.ValueRaw(),
-                            argOrLocal.DynamicTypeName, argOrLocal.Size);
+                        context.Write("  {0} {1} {2:x16} = {3} ({4}, size {5}) ",
+                            which, argOrLocal.Name, argOrLocal.Location,
+                            argOrLocal.ValueRaw(), argOrLocal.DynamicTypeName,
+                            argOrLocal.Size);
                         if (argOrLocal.ObjectAddress != 0)
                         {
                             context.WriteLink("",
                                 String.Format("!do {0:x16}", argOrLocal.ObjectAddress));
+                        }
+                        else if (argOrLocal.HasNonTrivialValueToDisplay)
+                        {
+                            context.WriteLink("",
+                                String.Format("!do {0:x16} --type {1}", argOrLocal.Location, argOrLocal.ClrType.Name));
                         }
                         context.WriteLine();
                     };
@@ -100,31 +105,49 @@ namespace msos
             public ulong Size;
             public byte[] Value;
             public ulong ObjectAddress; // If it's a reference type
-            public bool ProbablyReferenceType;
+            public ClrType ClrType;
+            public ulong Location; // The arg/local's address, not value
 
-            private ClrType _actualType;
-
-            public void PopulateActualType(ClrHeap heap)
+            public bool IsReferenceType
             {
-                if (!ProbablyReferenceType)
-                    return;
+                get
+                {
+                    return ClrType != null ? ClrType.IsObjectReference : false;
+                }
+            }
 
-                _actualType = heap.GetObjectType(ObjectAddress);
+            public bool HasNonTrivialValueToDisplay
+            {
+                get
+                {
+                    return Location != 0 && ClrType != null &&
+                        ClrType.IsValueClass && !ClrType.HasSimpleValue;
+                }
             }
 
             public string DynamicTypeName
             {
-                get { return _actualType != null ? _actualType.Name : StaticTypeName; }
+                get { return ClrType != null ? ClrType.Name : StaticTypeName; }
             }
 
             public string ValueRaw()
             {
-                if (_actualType != null)
+                if (ClrType != null)
                 {
-                    if (_actualType.IsObjectReference && !_actualType.IsString)
+                    // Display strings inline.
+                    if (ClrType.IsString)
+                        return ClrType.GetValue(ObjectAddress).ToStringOrNull();
+
+                    // Display objects (non-strings) as an address.
+                    if (ClrType.IsObjectReference)
                         return String.Format("{0:x16}", ObjectAddress);
-                    
-                    return _actualType.GetValue(ObjectAddress).ToStringOrNull();
+
+                    if (HasNonTrivialValueToDisplay)
+                        return "VALTYPE";
+
+                    // Display primitive value types inline.
+                    if (ClrType.HasSimpleValue && Location != 0)
+                        return ClrType.GetValue(Location).ToStringOrNull();
                 }
 
                 if (Value == null || Value.Length == 0)
@@ -144,31 +167,52 @@ namespace msos
             public List<ArgumentOrLocal> LocalVariables = new List<ArgumentOrLocal>();
         }
 
-        private static FrameArgumentsAndLocals[] GetFrameArgumentsAndLocals(
-            ClrThread thread, CommandExecutionContext context)
+        class FrameArgumentsAndLocalsRetriever
         {
-            IXCLRDataProcess ixclrDataProcess = context.Runtime.GetCLRDataProcess();
+            const int MaxNameSize = 1024;
 
-            object tmp;
-            HR.Verify(ixclrDataProcess.GetTaskByOSThreadID(thread.OSThreadId, out tmp));
+            private CommandExecutionContext _context;
+            private List<FrameArgumentsAndLocals> _results = new List<FrameArgumentsAndLocals>();
 
-            IXCLRDataTask task = (IXCLRDataTask)tmp;
-            HR.Verify(task.CreateStackWalk(0xf /*all flags*/, out tmp));
+            public FrameArgumentsAndLocals[] ArgsAndLocals { get { return _results.ToArray(); } }
 
-            IXCLRDataStackWalk stackWalk = (IXCLRDataStackWalk)tmp;
-
-            List<FrameArgumentsAndLocals> results = new List<FrameArgumentsAndLocals>();
-            while (HR.S_OK == stackWalk.Next())
+            public FrameArgumentsAndLocalsRetriever(ClrThread thread, CommandExecutionContext context)
             {
+                _context = context;
+                GetFrameArgumentsAndLocals(thread.OSThreadId);
+            }
+
+            private void GetFrameArgumentsAndLocals(uint osThreadId)
+            {
+                IXCLRDataProcess ixclrDataProcess = _context.Runtime.GetCLRDataProcess();
+
+                object tmp;
+                HR.Verify(ixclrDataProcess.GetTaskByOSThreadID(osThreadId, out tmp));
+
+                IXCLRDataTask task = (IXCLRDataTask)tmp;
+                HR.Verify(task.CreateStackWalk(0xf /*all flags*/, out tmp));
+
+                IXCLRDataStackWalk stackWalk = (IXCLRDataStackWalk)tmp;
+
+                while (HR.S_OK == stackWalk.Next())
+                {
+                    ProcessFrame(stackWalk);
+                }
+            }
+
+            private void ProcessFrame(IXCLRDataStackWalk stackWalk)
+            {
+                object tmp;
+
                 if (HR.Failed(stackWalk.GetFrame(out tmp)))
-                    continue;
+                    return;
 
                 IXCLRDataFrame frame = (IXCLRDataFrame)tmp;
 
-                StringBuilder methodName = new StringBuilder(1024);
+                StringBuilder methodName = new StringBuilder(MaxNameSize);
                 uint methodNameLen;
                 if (HR.Failed(frame.GetCodeName(0 /*default flags*/, (uint)methodName.Capacity, out methodNameLen, methodName)))
-                    continue;
+                    return;
 
                 uint numArgs, numLocals;
                 if (HR.Failed(frame.GetNumArguments(out numArgs)))
@@ -182,8 +226,9 @@ namespace msos
                 };
                 for (uint argIdx = 0; argIdx < numArgs; ++argIdx)
                 {
-                    StringBuilder argName = new StringBuilder(1024);
+                    StringBuilder argName = new StringBuilder(MaxNameSize);
                     uint argNameLen;
+
                     if (HR.Failed(frame.GetArgumentByIndex(argIdx, out tmp, (uint)argName.Capacity, out argNameLen, argName)))
                         continue;
 
@@ -194,74 +239,142 @@ namespace msos
 
                 for (uint lclIdx = 0; lclIdx < numLocals; ++lclIdx)
                 {
-                    StringBuilder lclName = new StringBuilder(1024);
+                    StringBuilder lclName = new StringBuilder(MaxNameSize);
                     uint lclNameLen;
                     if (HR.Failed(frame.GetLocalVariableByIndex(lclIdx, out tmp, (uint)lclName.Capacity, out lclNameLen, lclName)))
                         continue;
+                    // TODO It looks like we are always getting an empty name on success
 
                     var lcl = new ArgumentOrLocal() { Name = lclName.ToString() };
                     FillValue(lcl, (IXCLRDataValue)tmp);
                     frameArgsLocals.LocalVariables.Add(lcl);
                 }
 
-                results.Add(frameArgsLocals);
+                _results.Add(frameArgsLocals);
             }
-            
-            return results.ToArray();
-        }
 
-        private static void FillValue(ArgumentOrLocal argOrLocal, IXCLRDataValue value)
-        {
-            object tmp;
-
-            ulong size;
-            if (HR.Failed(value.GetSize(out size)))
-                size = 0; // When the value is unavailable, GetSize fails; consider it 0
-
-            bool probablyReferenceType = false;
-            int getTypeHr = value.GetType(out tmp);
-            if (getTypeHr == HR.S_FALSE)
+            private void FillValue(ArgumentOrLocal argOrLocal, IXCLRDataValue value)
             {
-                // For reference types, GetType returns S_FALSE and we need to call GetAssociatedType
-                // to retrieve the type that the reference points to.
-                getTypeHr = value.GetAssociatedType(out tmp);
-                probablyReferenceType = (getTypeHr == HR.S_OK);
+                object tmp;
+
+                ulong size;
+                if (HR.Failed(value.GetSize(out size)))
+                    size = 0; // When the value is unavailable, GetSize fails; consider it 0
+
+                argOrLocal.Size = size;
+
+                bool probablyReferenceType = false;
+                int getTypeHr = value.GetType(out tmp);
+                if (getTypeHr == HR.S_FALSE)
+                {
+                    // For reference types, GetType returns S_FALSE and we need to call GetAssociatedType
+                    // to retrieve the type that the reference points to.
+                    getTypeHr = value.GetAssociatedType(out tmp);
+                    probablyReferenceType = (getTypeHr == HR.S_OK);
+                }
+
+                if (getTypeHr != HR.S_OK)
+                    return;
+
+                IXCLRDataTypeInstance typeInstance = (IXCLRDataTypeInstance)tmp;
+                StringBuilder typeName = new StringBuilder(MaxNameSize);
+                uint typeNameLen;
+                int hr;
+                if (HR.Failed(hr = typeInstance.GetName(0 /*CLRDATA_GETNAME_DEFAULT*/, (uint)typeName.Capacity, out typeNameLen, typeName)))
+                    return;
+
+                // TODO For CLR v2 DAC on x64, if the return HRESULT is random garbage but
+                // the name comes out OK, ignore the error (for now). This applies to multiple
+                // methods that return names -- here, and IXCLRDataFrame::Get*ByIndex.
+
+                argOrLocal.StaticTypeName = typeName.ToString();
+                argOrLocal.ClrType = _context.Heap.GetTypeByName(argOrLocal.StaticTypeName);
+
+                // If the type is an inner type, IXCLRDataTypeInstance::GetName reports only
+                // the inner part of the type. This isn't enough for ClrHeap.GetTypeByName,
+                // so we have yet another option in that case -- searching by metadata token.
+                if (argOrLocal.ClrType == null) 
+                {
+                    TryGetTypeByMetadataToken(argOrLocal, typeInstance);
+                }
+
+                // If the value is unavailable, we're done here.
+                if (size == 0)
+                    return;
+
+                argOrLocal.Value = new byte[size];
+                uint dataSize;
+                if (HR.Failed(value.GetBytes((uint)argOrLocal.Value.Length, out dataSize, argOrLocal.Value)))
+                    argOrLocal.Value = null;
+
+                if (probablyReferenceType || argOrLocal.IsReferenceType)
+                {
+                    argOrLocal.ObjectAddress = Environment.Is64BitProcess ?
+                        BitConverter.ToUInt64(argOrLocal.Value, 0) :
+                        BitConverter.ToUInt32(argOrLocal.Value, 0);
+                    // The type assigned here can be different from the previous value,
+                    // because the static and dynamic type of the argument could differ.
+                    // If the object reference is null or invalid, it could also be null --
+                    // so we keep the previous type if it was already available.
+                    argOrLocal.ClrType =
+                        _context.Heap.GetObjectType(argOrLocal.ObjectAddress) ?? argOrLocal.ClrType;
+                }
+
+                FillLocation(argOrLocal, value);
             }
 
-            if (getTypeHr != HR.S_OK)
-                return;
-
-            IXCLRDataTypeInstance typeInstance = (IXCLRDataTypeInstance)tmp;
-            StringBuilder typeName = new StringBuilder(2048);
-            uint typeNameLen;
-            if (HR.Failed(typeInstance.GetName(0 /*CLRDATA_GETNAME_DEFAULT*/, (uint)typeName.Capacity, out typeNameLen, typeName)))
-                return;
-
-            argOrLocal.Size = size;
-            argOrLocal.StaticTypeName = typeName.ToString();
-
-            // Calling IXCLRDataTypeInstance::GetFlags doesn't tell us if it's a reference type,
-            // a value type, or something else entirely. It just always returns 0 as the flag (and S_OK).
-            // So we have to rely on the heuristic 'probablyReferenceType' to decide.
-            
-            if (size == 0)
-                return;
-
-            argOrLocal.Value = new byte[size];
-            uint dataSize;
-            if (HR.Failed(value.GetBytes((uint)argOrLocal.Value.Length, out dataSize, argOrLocal.Value)))
-                argOrLocal.Value = null;
-
-            if (probablyReferenceType)
+            private void FillLocation(ArgumentOrLocal argOrLocal, IXCLRDataValue value)
             {
-                argOrLocal.ObjectAddress = Environment.Is64BitProcess ? 
-                    BitConverter.ToUInt64(argOrLocal.Value, 0) :
-                    BitConverter.ToUInt32(argOrLocal.Value, 0);
-                argOrLocal.ProbablyReferenceType = true;
+                uint numLocs;
+                if (HR.Failed(value.GetNumLocations(out numLocs)))
+                    return;
+
+                // Values could span multiple locations when they are enregistered. 
+                // The IXCLRDataValue::GetBytes method is supposed to take care of it,
+                // but we don't have a location to display. We don't even get the 
+                // register name(s), so there's really nothing to display in this case.
+                if (numLocs != 1)
+                    return;
+
+                uint flags;
+                ulong address;
+                if (HR.Failed(value.GetLocationByIndex(0, out flags, out address)))
+                    return;
+
+                // Only memory locations have a memory address.
+                if (flags == (uint)ClrDataValueLocationFlag.CLRDATA_VLOC_MEMORY)
+                {
+                    argOrLocal.Location = address;
+                }
             }
 
-            // TODO Handle value types by creating a !do --type link, or for primitives,
-            // just display the value inline.
+            private void TryGetTypeByMetadataToken(ArgumentOrLocal argOrLocal, IXCLRDataTypeInstance typeInstance)
+            {
+                object tmp;
+                if (typeInstance.GetDefinition(out tmp) != HR.S_OK)
+                    return;
+
+                IXCLRDataTypeDefinition typeDefinition = (IXCLRDataTypeDefinition)tmp;
+                int typeTok;
+                if (HR.S_OK == typeDefinition.GetTokenAndScope(out typeTok, out tmp))
+                {
+                    IXCLRDataModule module = (IXCLRDataModule)tmp;
+                    argOrLocal.ClrType = _context.GetTypeByMetadataToken(
+                        GetModuleName(module), typeTok);
+                    // This might fail if we don't have that type cached (unlikely)
+                    // or if the type is generic, which makes the token non-unique.
+                }
+            }
+
+            private string GetModuleName(IXCLRDataModule module)
+            {
+                StringBuilder name = new StringBuilder(MaxNameSize);
+                uint nameLen;
+                if (HR.Failed(module.GetName((uint)name.Capacity, out nameLen, name)))
+                    return null;
+
+                return name.ToString();
+            }
         }
     }
 }

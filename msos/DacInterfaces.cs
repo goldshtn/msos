@@ -129,6 +129,117 @@ namespace msos
         CLRDATA_TYPE_IS_ENUM       = 0x00000040,
     }
 
+    [ComImport, InterfaceType(ComInterfaceType.InterfaceIsIUnknown), Guid("4675666C-C275-45b8-9F6C-AB165D5C1E09")]
+    interface IXCLRDataTypeDefinition
+    {
+        void GetModule_do_not_use();
+        void StartEnumMethodDefinitions_do_not_use();
+        void EnumMethodDefinition_do_not_use();
+        void EndEnumMethodDefinitions_do_not_use();
+
+        void StartEnumMethodDefinitionsByName_do_not_use();
+        void EnumMethodDefinitionByName_do_not_use();
+        void EndEnumMethodDefinitionsByName_do_not_use();
+
+        void GetMethodDefinitionByToken_do_not_use();
+    
+        void StartEnumInstances_do_not_use();
+        void EnumInstance_do_not_use();
+        void EndEnumInstances_do_not_use();
+
+        [PreserveSig]
+        int GetName(uint flags, uint bufLen, out uint nameLen,
+            [Out, MarshalAs(UnmanagedType.LPWStr, SizeParamIndex = 1)] StringBuilder nameBuf);
+
+        [PreserveSig]
+        int GetTokenAndScope(
+            out int token, //mdTypeDef*
+            [Out, MarshalAs(UnmanagedType.IUnknown)] out object mod //IXCLRDataModule**
+            );
+
+        void GetCorElementType_do_not_use();
+    
+        [PreserveSig]
+        int GetFlags(out uint flags);
+    
+        void IsSameObject_do_not_use();
+        
+        void Request_do_not_use();
+
+        void GetArrayRank_do_not_use();
+
+        void GetBase_do_not_use();
+
+        void GetNumFields_do_not_use();
+
+        void StartEnumFields_do_not_use();
+        void EnumField_do_not_use();
+        void EndEnumFields_do_not_use();
+
+        void StartEnumFieldsByName_do_not_use();
+        void EnumFieldByName_do_not_use();
+        void EndEnumFieldsByName_do_not_use();
+
+        void GetFieldByToken_do_not_use();
+    
+        void GetTypeNotification_do_not_use();
+        void SetTypeNotification_do_not_use();
+
+        void EnumField2_do_not_use();
+        void EnumFieldByName2_do_not_use();
+        void GetFieldByToken2_do_not_use();
+    }
+
+    [ComImport, InterfaceType(ComInterfaceType.InterfaceIsIUnknown), Guid("88E32849-0A0A-4cb0-9022-7CD2E9E139E2")]
+    interface IXCLRDataModule
+    {
+        void StartEnumAssemblies_do_not_use();
+        void EnumAssembly_do_not_use();
+        void EndEnumAssemblies_do_not_use();
+        void StartEnumTypeDefinitions_do_not_use();
+        void EnumTypeDefinition_do_not_use();
+        void EndEnumTypeDefinitions_do_not_use();
+        void StartEnumTypeInstances_do_not_use();
+        void EnumTypeInstance_do_not_use();
+        void EndEnumTypeInstances_do_not_use();
+        void StartEnumTypeDefinitionsByName_do_not_use();
+        void EnumTypeDefinitionByName_do_not_use();
+        void EndEnumTypeDefinitionsByName_do_not_use();
+        void StartEnumTypeInstancesByName_do_not_use();
+        void EnumTypeInstanceByName_do_not_use();
+        void EndEnumTypeInstancesByName_do_not_use();
+        void GetTypeDefinitionByToken_do_not_use();
+        void StartEnumMethodDefinitionsByName_do_not_use();
+        void EnumMethodDefinitionByName_do_not_use();
+        void EndEnumMethodDefinitionsByName_do_not_use();
+        void StartEnumMethodInstancesByName_do_not_use();
+        void EnumMethodInstanceByName_do_not_use();
+        void EndEnumMethodInstancesByName_do_not_use();
+        void GetMethodDefinitionByToken_do_not_use();
+        void StartEnumDataByName_do_not_use();
+        void EnumDataByName_do_not_use();
+        void EndEnumDataByName_do_not_use();
+
+        [PreserveSig]
+        int GetName(
+            uint bufLen,
+            out uint nameLen,
+            [Out, MarshalAs(UnmanagedType.LPWStr, SizeParamIndex = 1)] StringBuilder name
+            );
+
+        void GetFileName_do_not_use();
+        void GetFlags_do_not_use();
+        void IsSameObject_do_not_use();
+        void StartEnumExtents_do_not_use();
+        void EnumExtent_do_not_use();
+        void EndEnumExtents_do_not_use();
+        void Request_do_not_use();
+        void StartEnumAppDomains_do_not_use();
+        void EnumAppDomain_do_not_use();
+        void EndEnumAppDomains_do_not_use();
+        void GetVersionId_do_not_use();
+    }
+
     [ComImport, InterfaceType(ComInterfaceType.InterfaceIsIUnknown), Guid("4D078D91-9CB3-4b0d-97AC-28C8A5A82597")]
     interface IXCLRDataTypeInstance
     {
@@ -152,7 +263,9 @@ namespace msos
             );
 
         void GetModule_do_not_use();
-        void GetDefinition_do_not_use();
+
+        [PreserveSig]
+        int GetDefinition([Out, MarshalAs(UnmanagedType.IUnknown)] out object typeDefinition);
         
         [PreserveSig]
         int GetFlags(out uint flags); // CLRDataTypeFlag
@@ -172,6 +285,12 @@ namespace msos
         void EnumStaticFieldByName3_do_not_use();
         void GetStaticFieldByToken2_do_not_use();
     }
+
+    enum ClrDataValueLocationFlag : uint
+	{
+	    CLRDATA_VLOC_MEMORY   = 0x00000000,
+	    CLRDATA_VLOC_REGISTER = 0x00000001,
+	};
 
     [ComImport, InterfaceType(ComInterfaceType.InterfaceIsIUnknown), Guid("96EC93C7-1000-4e93-8991-98D8766E6666")]
     interface IXCLRDataValue
@@ -217,10 +336,10 @@ namespace msos
         void GetFieldByToken2_do_not_use();
 
         [PreserveSig]
-        int GetNumLocations(uint numLocs);
+        int GetNumLocations(out uint numLocs);
 
         [PreserveSig]
-        int GetLocationByIndex(uint loc, out ulong flags, out ulong arg);
+        int GetLocationByIndex(uint loc, out uint flags, out ulong arg);
     }
 
     [ComImport, InterfaceType(ComInterfaceType.InterfaceIsIUnknown), Guid("E59D8D22-ADA7-49a2-89B5-A415AFCFC95F")]
