@@ -15,6 +15,7 @@ namespace msos
             if (context.IsInDbgEngNativeMode)
             {
                 context.ExitDbgEngNativeMode();
+                context.WriteLine("Exited DbgEng mode; you are now back in msos.");
             }
             else
             {
