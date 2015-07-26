@@ -24,7 +24,8 @@ namespace msos
                     m => String.Equals(Path.GetFileName(m.Name), SpecificModule, StringComparison.InvariantCultureIgnoreCase));
                 if (module != null)
                 {
-                    var moduleInfo = context.Runtime.DataTarget.EnumerateModules().Single(m => m.FileName == module.FileName);
+                    var moduleInfo = context.Runtime.DataTarget.EnumerateModules().Single(
+                        m => String.Equals(m.FileName, module.FileName, StringComparison.InvariantCultureIgnoreCase));
                     context.WriteLine("Module:     {0}", module.Name);
                     context.WriteLine("PDB loaded: {0}", module.IsPdbLoaded);
                     context.WriteLine("PDB name:   {0}", moduleInfo.Pdb.FileName);

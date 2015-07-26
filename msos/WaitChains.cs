@@ -72,7 +72,10 @@ namespace msos
                 _context.WriteLine();
                 foreach (var owner in blockingObject.Owners)
                 {
-                    DisplayChainForThreadAux(thread, depth + 2, visitedThreadIds);
+                    if (owner == null) // ClrMD sometimes reports this nonsense
+                        continue;
+
+                    DisplayChainForThreadAux(owner, depth + 2, visitedThreadIds);
                 }
             }
         }

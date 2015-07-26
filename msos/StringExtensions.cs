@@ -12,7 +12,7 @@ namespace msos
         {
             if (str.Length > length - 3)
             {
-                return "..." + str.Substring(str.Length - (length + 3));
+                return "..." + str.Substring(str.Length - (length - 3));
             }
             return str;
         }
