@@ -2,7 +2,9 @@
 using Microsoft.Diagnostics.Runtime.Interop;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -31,6 +33,18 @@ namespace msos
                 DEBUG_OUTCTL.THIS_CLIENT, command, DEBUG_EXECUTE.DEFAULT);
             if (HR.Failed(hr))
                 context.WriteError("Command execution failed with hr = {0:x8}", hr);
+        }
+
+        public static string TryDownloadSos(this DataTarget target, ModuleInfo dacInfo)
+        {
+            Type dataTargetType = target.GetType();
+            MethodInfo tryDownloadFile = dataTargetType.GetMethod("TryDownloadFile", BindingFlags.NonPublic | BindingFlags.Instance);
+            string sosFileName = Path.GetFileName(dacInfo.FileName)
+                .Replace("mscordacwks", "sos")
+                .Replace("mscordaccore", "sos");
+            return (string)tryDownloadFile.Invoke(target, new object[] {
+                sosFileName, (int)dacInfo.TimeStamp, (int)dacInfo.FileSize, target.DefaultSymbolNotification
+            });
         }
     }
 }

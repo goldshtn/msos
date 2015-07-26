@@ -111,6 +111,7 @@ namespace msos
             string dacLocation = clrInfo.TryDownloadDac();
             _context.WriteInfo("Using Data Access DLL at: " + dacLocation);
             _context.DacLocation = dacLocation;
+            _context.ClrVersion = clrInfo;
             CreateRuntimeImpl(dacLocation, clrInfo);
             _context.Heap = _context.Runtime.GetHeap();
             _target.DefaultSymbolNotification = new SymbolNotification(_context);

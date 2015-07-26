@@ -50,12 +50,29 @@ namespace msos
 
             // In case the user is going to use sos/sosex, make sure they have
             // the appropriate DAC location configured.
+            context.WriteLine("Loading DAC from " + context.DacLocation);
             context.NativeDbgEngTarget.ExecuteDbgEngCommand(
                 ".cordll -ve -sd -lp " + Path.GetDirectoryName(context.DacLocation),
                 context);
-            
-            // TODO But SOS hasn't been loaded at this point; can try to load it
-            // from the symbol server and then issue the appropriate .load command.
+
+            // SOS hasn't necessarily been loaded at this point; try to load it
+            // from the symbol server and then issue the appropriate .load command
+            // so that the user can have it immediately available.
+            string sosLocation = context.NativeDbgEngTarget.TryDownloadSos(
+                context.ClrVersion.DacInfo);
+            if (sosLocation == null)
+            {
+                context.WriteWarning(
+                    "Unable to load SOS automatically from symbol server, " +
+                    "try to find and .load it manually if needed.");
+            }
+            else
+            {
+                context.WriteLine("Loading SOS from " + sosLocation);
+                context.NativeDbgEngTarget.ExecuteDbgEngCommand(
+                    ".load " + sosLocation,
+                    context);
+            }
         }
     }
 

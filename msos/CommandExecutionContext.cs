@@ -27,6 +27,7 @@ namespace msos
         public SymbolCache SymbolCache { get; private set; }
         public List<string> Defines { get; private set; }
         public string SymbolPath { get; set; }
+        public ClrInfo ClrVersion { get; set; }
 
         private Parser _commandParser;
         private Type[] _allCommandTypes;
