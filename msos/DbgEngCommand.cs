@@ -53,6 +53,9 @@ namespace msos
             context.NativeDbgEngTarget.ExecuteDbgEngCommand(
                 ".cordll -ve -sd -lp " + Path.GetDirectoryName(context.DacLocation),
                 context);
+            
+            // TODO But SOS hasn't been loaded at this point; can try to load it
+            // from the symbol server and then issue the appropriate .load command.
         }
     }
 

@@ -31,6 +31,13 @@ namespace msos
         {
             _context = context;
 
+            if (!DisplayVirtualMemoryRanges && !DisplayVirtualMemoryStatistics &&
+                !DisplayManagedHeapStatistics && !DisplayManagedHeapFragmentation)
+            {
+                _context.WriteLine("No memory information requested. Use one of the " +
+                    "command switches, or look at the help: 'help !memstats'");
+            }
+
             if (DisplayVirtualMemoryStatistics)
                 VirtualMemoryStatistics();
 
@@ -174,6 +181,7 @@ namespace msos
                                   "select new {{ Type = g.Key, TotalSize = totalSize }}",
                                   segmentIdx)
                     );
+                _context.WriteLine();
             }
             _context.WriteLine();
             _context.WriteLine("Total size of free objects: {0}", totalFreeSize.ToMemoryUnits());
