@@ -81,7 +81,7 @@ namespace msos
             _context.ProcessId = _processId;
         }
 
-        private void CreateRuntimeInner(string dacLocation, ClrInfo clrInfo)
+        private void CreateRuntimeImpl(string dacLocation, ClrInfo clrInfo)
         {
             // FIXME This is a temporary patch for .NET 4.6. The DataTarget.CreateRuntime
             // code incorrectly detects .NET 4.6 and creates a LegacyRuntime instead of the
@@ -111,7 +111,7 @@ namespace msos
             string dacLocation = clrInfo.TryDownloadDac();
             _context.WriteInfo("Using Data Access DLL at: " + dacLocation);
             _context.DacLocation = dacLocation;
-            CreateRuntimeInner(dacLocation, clrInfo);
+            CreateRuntimeImpl(dacLocation, clrInfo);
             _context.Heap = _context.Runtime.GetHeap();
             _target.DefaultSymbolNotification = new SymbolNotification(_context);
         }

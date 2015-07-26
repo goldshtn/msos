@@ -33,7 +33,7 @@ namespace msos
                 else
                 {
                     // Couldn't find managed module, try to find native:
-                    using (var target = context.CreateDbgEngTarget())
+                    using (var target = context.CreateTemporaryDbgEngTarget())
                     {
                         var moduleInfo = context.Runtime.DataTarget.EnumerateModules().FirstOrDefault(
                             m => String.Equals(Path.GetFileName(m.FileName), SpecificModule, StringComparison.InvariantCultureIgnoreCase));

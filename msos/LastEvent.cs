@@ -14,7 +14,7 @@ namespace msos
     {
         public void Execute(CommandExecutionContext context)
         {
-            using (var target = context.CreateDbgEngTarget())
+            using (var target = context.CreateTemporaryDbgEngTarget())
             {
                 var control = (IDebugControl)target.DebuggerInterface;
                 DEBUG_EVENT eventType;

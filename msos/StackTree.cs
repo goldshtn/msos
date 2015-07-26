@@ -35,7 +35,7 @@ namespace msos
 
             if (IncludeNativeThreads)
             {
-                using (var target = context.CreateDbgEngTarget())
+                using (var target = context.CreateTemporaryDbgEngTarget())
                 {
                     var tracer = new UnifiedStackTrace(target.DebuggerInterface, context);
                     context.WriteLine("Stack tree for {0} threads:", tracer.NumThreads);

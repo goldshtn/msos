@@ -7,12 +7,19 @@ using System.Threading.Tasks;
 
 namespace msos
 {
-    [Verb("q", HelpText = "Quit the debugger.")]
+    [Verb("q", HelpText = "Quit the debugger, or leave DbgEng native mode.")]
     class Quit : ICommand
     {
         public void Execute(CommandExecutionContext context)
         {
-            context.ShouldQuit = true;
+            if (context.IsInDbgEngNativeMode)
+            {
+                context.ExitDbgEngNativeMode();
+            }
+            else
+            {
+                context.ShouldQuit = true;
+            }
         }
     }
 }

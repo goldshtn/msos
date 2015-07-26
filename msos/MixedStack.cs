@@ -28,7 +28,7 @@ namespace msos
             }
 
             context.WriteLine("{0,-10} {1,-20} {2}", "Type", "IP", "Function");
-            using (var target = context.CreateDbgEngTarget())
+            using (var target = context.CreateTemporaryDbgEngTarget())
             {
                 var stackTracer = new UnifiedStackTrace(target.DebuggerInterface, context);
                 var stackTrace = stackTracer.GetStackTrace(

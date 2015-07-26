@@ -37,7 +37,7 @@ namespace msos
 
             context.WriteLine();
             context.WriteLine("{0,-6} {1,-6} {2,-10} {3}", "OSId", "MgdId", "ExitCode", "StartAddress");
-            using (var target = context.CreateDbgEngTarget())
+            using (var target = context.CreateTemporaryDbgEngTarget())
             {
                 var osThreadIds = target.GetOSThreadIds();
                 var symbols = (IDebugSymbols)target.DebuggerInterface;

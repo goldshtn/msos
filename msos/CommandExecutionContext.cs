@@ -1,5 +1,6 @@
 ﻿using CommandLine;
 using Microsoft.Diagnostics.Runtime;
+using Microsoft.Diagnostics.Runtime.Interop;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -30,7 +31,7 @@ namespace msos
         private Parser _commandParser;
         private Type[] _allCommandTypes;
         private Dictionary<Tuple<string, int>, List<ClrType>> _typesByModuleAndMDToken;
-        
+        private DataTarget _dbgEngDataTarget;
         private List<string> _temporaryAliases = new List<string>();
         private const int WarnThresholdCountOfTemporaryAliases = 100;
 
@@ -64,6 +65,19 @@ namespace msos
             }
         }
 
+        public bool IsInDbgEngNativeMode { get { return _dbgEngDataTarget != null; } }
+
+        public string Prompt
+        {
+            get
+            {
+                if (IsInDbgEngNativeMode)
+                    return "dbgeng> ";
+
+                return String.Format("{0}> ", CurrentManagedThreadId);
+            }
+        }
+
         public void ExecuteCommand(string inputCommand, bool displayDiagnosticInformation = false)
         {
             var commands = inputCommand.Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
@@ -89,9 +103,13 @@ namespace msos
             // like arguments, such as --type, the parser will erroneously think that it's an 
             // argument to the .newalias command, and not to the alias command. The same thing is
             // going on with the !hq command, where the query could contain -- and - symbols and it
-            // crashes the parser, and with the dec command. So, we give these commands special treatment
+            // crashes the parser, and with the .dec command. So, we give these commands special treatment
             // here, with the hope there will be a more decent solution in the future.
-            if (parts[0] == "!hq" && parts.Length >= 2)
+            if (IsInDbgEngNativeMode && parts[0] != "q")
+            {
+                commandToExecute = new DbgEngCommand() { Command = parts };
+            }
+            else if (parts[0] == "!hq" && parts.Length >= 2)
             {
                 commandToExecute = new HeapQuery() { OutputFormat = parts[1], Query = parts.Skip(2) };
             }
@@ -99,7 +117,7 @@ namespace msos
             {
                 commandToExecute = new CreateAlias() { AliasName = parts[1], AliasCommand = parts.Skip(2) };
             }
-            else if (parts[0] == "dec" && parts.Length >= 2)
+            else if (parts[0] == ".dec" && parts.Length >= 2)
             {
                 commandToExecute = new DbgEngCommand() { Command = parts.Skip(1) };
             }
@@ -226,13 +244,50 @@ namespace msos
             }
         }
 
-        public DataTarget CreateDbgEngTarget()
+        /// <summary>
+        /// Creates a persistent DbgEng DataTarget that can be used to execute multiple
+        /// commands (remembers state). While this DataTarget is in place, msos is placed
+        /// in native DbgEng "mode", and accepts only DbgEng commands.
+        /// </summary>
+        public void EnterDbgEngNativeMode()
+        {
+            _dbgEngDataTarget = CreateDbgEngDataTargetImpl();
+        }
+
+        public void ExitDbgEngNativeMode()
+        {
+            _dbgEngDataTarget.Dispose();
+            _dbgEngDataTarget = null;
+        }
+
+        /// <summary>
+        /// Creates a temporary DbgEng DataTarget. It is used for a single command's
+        /// execution, such as !lm or !mk, and disposed immediately thereafter. If there
+        /// is already a persistent DbgEng DataTarget, i.e. the debugger is currently in 
+        /// native DbgEng "mode", this method fails.
+        /// </summary>
+        public DataTarget CreateTemporaryDbgEngTarget()
+        {
+            if (_dbgEngDataTarget != null)
+                throw new InvalidOperationException("There is already a persistent DbgEng DataTarget. Creating a temporary one is not allowed.");
+
+            return CreateDbgEngDataTargetImpl();
+        }
+
+        public DataTarget NativeDbgEngTarget { get { return _dbgEngDataTarget; } }
+
+        private DataTarget CreateDbgEngDataTargetImpl()
         {
             if (String.IsNullOrEmpty(DumpFile))
                 throw new InvalidOperationException("DbgEng targets can be created only for dump files at this point.");
 
             var target = DataTarget.LoadCrashDump(DumpFile, CrashDumpReader.DbgEng);
             target.AppendSymbolPath(SymbolPath);
+
+            var outputCallbacks = new OutputCallbacks(this);
+            msos_IDebugClient5 client = (msos_IDebugClient5)target.DebuggerInterface;
+            HR.Verify(client.SetOutputCallbacksWide(outputCallbacks));
+
             return target;
         }
 
@@ -273,6 +328,9 @@ namespace msos
         public void Dispose()
         {
             Printer.Dispose();
+
+            if (_dbgEngDataTarget != null)
+                _dbgEngDataTarget.Dispose();
         }
 
         private string AddTemporaryAlias(string command)

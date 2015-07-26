@@ -23,5 +23,14 @@ namespace msos
 
             return osThreadIds;
         }
+
+        public static void ExecuteDbgEngCommand(this DataTarget target, string command, CommandExecutionContext context)
+        {
+            IDebugControl6 control = (IDebugControl6)target.DebuggerInterface;
+            int hr = control.ExecuteWide(
+                DEBUG_OUTCTL.THIS_CLIENT, command, DEBUG_EXECUTE.DEFAULT);
+            if (HR.Failed(hr))
+                context.WriteError("Command execution failed with hr = {0:x8}", hr);
+        }
     }
 }

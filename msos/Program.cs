@@ -79,7 +79,7 @@ namespace msos
 
             while (!_context.ShouldQuit)
             {
-                Console.Write("{0}> ", _context.CurrentManagedThreadId);
+                Console.Write(_context.Prompt);
 
                 string command = "";
                 while (true)

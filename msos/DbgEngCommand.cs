@@ -1,7 +1,9 @@
 ﻿using CommandLine;
+using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.Runtime.Interop;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -9,36 +11,48 @@ using System.Threading.Tasks;
 
 namespace msos
 {
-    [Verb("dec", HelpText =
+    [Verb(".dec", HelpText =
         "Executes a command through the DbgEng engine. To run extension commands, " +
-        "put the .load and the command on the same line. For example: dec .loadby " +
-        "sos clr; !eeheap; lm")]
+        "put the .load and the command on the same line. For example: '.dec .loadby " +
+        "sos clr; !eeheap; lm'. Alternatively, switch to DbgEng mode and run multiple " +
+        "commands by using '.dem'.")]
     class DbgEngCommand : ICommand
     {
         [Value(0, Required = true)]
         public IEnumerable<string> Command { get; set; }
 
+        private string RealCommand { get { return String.Join(" ", Command.ToArray()); } }
+
         public void Execute(CommandExecutionContext context)
         {
-            // NOTE Currently, extensions can't be loaded sensibly because 
-            // the session only survives one command. The client can separate
-            // commands by semicolons and then load an extension and use it
-            // within the same 'dec' invocation, but it's not very convenient.
-            using (var target = context.CreateDbgEngTarget())
+            if (context.IsInDbgEngNativeMode)
             {
-                var outputCallbacks = new OutputCallbacks(context);
-                msos_IDebugClient5 client = (msos_IDebugClient5)target.DebuggerInterface;
-                HR.Verify(client.SetOutputCallbacksWide(outputCallbacks));
-
-                IDebugControl6 control = (IDebugControl6)target.DebuggerInterface;
-                int hr = control.ExecuteWide(
-                    DEBUG_OUTCTL.THIS_CLIENT,
-                    String.Join(" ", Command.ToArray()),
-                    DEBUG_EXECUTE.DEFAULT
-                    );
-                if (HR.Failed(hr))
-                    context.WriteError("Command execution failed with hr = {0:x8}", hr);
+                context.NativeDbgEngTarget.ExecuteDbgEngCommand(RealCommand, context);
             }
+            else
+            {
+                using (var target = context.CreateTemporaryDbgEngTarget())
+                {
+                    target.ExecuteDbgEngCommand(RealCommand, context);
+                }
+            }
+        }
+    }
+    
+    [Verb(".dem", HelpText =
+        "Switches to DbgEng mode to execute multiple native DbgEng commands. " +
+        "To switch back, run 'q'.")]
+    class SwitchToDbgEngMode : ICommand
+    {
+        public void Execute(CommandExecutionContext context)
+        {
+            context.EnterDbgEngNativeMode();
+
+            // In case the user is going to use sos/sosex, make sure they have
+            // the appropriate DAC location configured.
+            context.NativeDbgEngTarget.ExecuteDbgEngCommand(
+                ".cordll -ve -sd -lp " + Path.GetDirectoryName(context.DacLocation),
+                context);
         }
     }
 
