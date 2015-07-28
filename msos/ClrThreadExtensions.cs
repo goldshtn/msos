@@ -78,28 +78,28 @@ namespace msos
                     al => al.MethodName == frame.DisplayString);
                 if (frameArgsAndLocals != null)
                 {
-                    Action<string, ArgumentOrLocal> action = (which, argOrLocal) =>
-                    {
-                        context.Write("  {0} {1,-10} = {2} ({3},{4} {5} bytes) ",
-                            which, argOrLocal.Name, argOrLocal.ValueRaw(), argOrLocal.DynamicTypeName,
-                            argOrLocal.StaticAndDynamicTypesAreTheSame ? "" : (" original " + argOrLocal.StaticTypeName + ","),
-                            argOrLocal.Size);
-                        if (argOrLocal.ObjectAddress != 0)
-                        {
-                            context.WriteLink("",
-                                String.Format("!do {0:x16}", argOrLocal.ObjectAddress));
-                        }
-                        else if (argOrLocal.HasNonTrivialValueToDisplay)
-                        {
-                            context.WriteLink("",
-                                String.Format("!do {0:x16} --type {1}", argOrLocal.Location, argOrLocal.ClrType.Name));
-                        }
-                        context.WriteLine();
-                    };
-                    frameArgsAndLocals.Arguments.ForEach(a => action("arg", a));
-                    frameArgsAndLocals.LocalVariables.ForEach(l => action("lcl", l));
+                    frameArgsAndLocals.Arguments.ForEach(a => DisplayOneArgumentOrLocal(context, "arg", a));
+                    frameArgsAndLocals.LocalVariables.ForEach(l => DisplayOneArgumentOrLocal(context, "lcl", l));
                 }
             }
+        }
+
+        private static void DisplayOneArgumentOrLocal(CommandExecutionContext context, string which, ArgumentOrLocal argOrLocal)
+        {
+            context.Write("  {0} {1,-10} = {2} ({3},{4} {5} bytes) ",
+                which, argOrLocal.Name, argOrLocal.ValueRaw(), argOrLocal.DynamicTypeName,
+                argOrLocal.StaticAndDynamicTypesAreTheSame ? "" : (" original " + argOrLocal.StaticTypeName + ","),
+                argOrLocal.Size);
+            if (argOrLocal.ObjectAddress != 0)
+            {
+                context.WriteLink("", String.Format("!do {0:x16}", argOrLocal.ObjectAddress));
+            }
+            else if (argOrLocal.HasNonTrivialValueToDisplay)
+            {
+                context.WriteLink("",
+                    String.Format("!do {0:x16} --type {1}", argOrLocal.Location, argOrLocal.ClrType.Name));
+            }
+            context.WriteLine();
         }
 
         class ArgumentOrLocal
@@ -158,9 +158,7 @@ namespace msos
 
                     // Display primitive value types inline.
                     if (ClrType.HasSimpleValue && Location != 0)
-                    {
                         return ClrType.GetPrimitiveValueNonBoxed(Location).ToStringOrNull();
-                    }
                 }
 
                 if (Value == null || Value.Length == 0)
@@ -187,6 +185,7 @@ namespace msos
             private CommandExecutionContext _context;
             private List<FrameArgumentsAndLocals> _results = new List<FrameArgumentsAndLocals>();
             private IList<ClrStackFrame> _stackTrace;
+            private bool _isOnCLRv2;
 
             public FrameArgumentsAndLocals[] ArgsAndLocals { get { return _results.ToArray(); } }
 
@@ -195,10 +194,13 @@ namespace msos
             {
                 _context = context;
                 _stackTrace = stackTrace;
-                GetFrameArgumentsAndLocals(thread.OSThreadId);
+
+                _isOnCLRv2 = _context.ClrVersion.Version.Major == 2;
+
+                ProcessStackWalk(thread.OSThreadId);
             }
 
-            private void GetFrameArgumentsAndLocals(uint osThreadId)
+            private void ProcessStackWalk(uint osThreadId)
             {
                 IXCLRDataProcess ixclrDataProcess = _context.Runtime.GetCLRDataProcess();
 
@@ -213,6 +215,17 @@ namespace msos
                 {
                     ProcessFrame(stackWalk);
                 }
+            }
+
+            private bool FailedUnlessOnCLR2DAC(int hr)
+            {
+                // For CLR v2 DAC, if the return HRESULT is random garbage, ignore the error.
+                // This happens because of a source-level bug in the DAC that returns an 
+                // uninitialized stack variable. This was confirmed by a Microsoft engineer.
+                if (_isOnCLRv2)
+                    return false;
+
+                return HR.Failed(hr);
             }
 
             private void ProcessFrame(IXCLRDataStackWalk stackWalk)
@@ -244,7 +257,8 @@ namespace msos
                     StringBuilder argName = new StringBuilder(MaxNameSize);
                     uint argNameLen;
 
-                    if (HR.Failed(frame.GetArgumentByIndex(argIdx, out tmp, (uint)argName.Capacity, out argNameLen, argName)))
+                    if (FailedUnlessOnCLR2DAC(frame.GetArgumentByIndex(argIdx, out tmp, (uint)argName.Capacity, out argNameLen, argName)) ||
+                        tmp == null)
                         continue;
 
                     var arg = new ArgumentOrLocal() { Name = argName.ToString() };
@@ -258,7 +272,8 @@ namespace msos
                     // names for local variables. Need to go through metadata to get them.
                     StringBuilder dummy = new StringBuilder(2);
                     uint lclNameLen;
-                    if (HR.Failed(frame.GetLocalVariableByIndex(lclIdx, out tmp, (uint)dummy.Capacity, out lclNameLen, dummy)))
+                    if (FailedUnlessOnCLR2DAC(frame.GetLocalVariableByIndex(lclIdx, out tmp, (uint)dummy.Capacity, out lclNameLen, dummy)) ||
+                        tmp == null)
                         continue;
 
                     string lclName = dummy.ToString();
@@ -359,13 +374,8 @@ namespace msos
                 IXCLRDataTypeInstance typeInstance = (IXCLRDataTypeInstance)tmp;
                 StringBuilder typeName = new StringBuilder(MaxNameSize);
                 uint typeNameLen;
-                int hr;
-                if (HR.Failed(hr = typeInstance.GetName(0 /*CLRDATA_GETNAME_DEFAULT*/, (uint)typeName.Capacity, out typeNameLen, typeName)))
+                if (FailedUnlessOnCLR2DAC(typeInstance.GetName(0 /*CLRDATA_GETNAME_DEFAULT*/, (uint)typeName.Capacity, out typeNameLen, typeName)))
                     return;
-
-                // TODO For CLR v2 DAC on x64, if the return HRESULT is random garbage but
-                // the name comes out OK, ignore the error (for now). This applies to multiple
-                // methods that return names -- here, and IXCLRDataFrame::Get*ByIndex.
 
                 argOrLocal.StaticTypeName = typeName.ToString();
                 argOrLocal.ClrType = _context.Heap.GetTypeByName(argOrLocal.StaticTypeName);
