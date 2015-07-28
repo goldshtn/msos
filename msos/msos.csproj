@@ -67,6 +67,7 @@
     <Reference Include="ICSharpCode.SharpZipLib">
       <HintPath>..\packages\SharpZipLib.0.86.0\lib\20\ICSharpCode.SharpZipLib.dll</HintPath>
     </Reference>
+    <Reference Include="ISymWrapper" />
     <Reference Include="Microsoft.Diagnostics.Runtime">
       <HintPath>..\packages\Microsoft.Diagnostics.Runtime.0.8.27-beta\lib\net40\Microsoft.Diagnostics.Runtime.dll</HintPath>
       <Private>True</Private>

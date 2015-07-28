@@ -1,8 +1,11 @@
 ﻿using Microsoft.Diagnostics.Runtime;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.SymbolStore;
+using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -58,7 +61,7 @@ namespace msos
         public static void WriteStackTraceToContext(this ClrThread thread, IList<ClrStackFrame> stackTrace, CommandExecutionContext context, bool displayArgumentsAndLocals)
         {
             FrameArgumentsAndLocals[] argsAndLocals = displayArgumentsAndLocals ?
-                new FrameArgumentsAndLocalsRetriever(thread, context).ArgsAndLocals :
+                new FrameArgumentsAndLocalsRetriever(thread, stackTrace, context).ArgsAndLocals :
                 new FrameArgumentsAndLocals[0];
 
             context.WriteLine("{0,-20} {1,-20} {2}", "SP", "IP", "Function");
@@ -148,7 +151,13 @@ namespace msos
 
                     // Display primitive value types inline.
                     if (ClrType.HasSimpleValue && Location != 0)
-                        return ClrType.GetValue(Location).ToStringOrNull();
+                    {
+                        // The ClrType.GetValue implementation assumes that if a primitive
+                        // is passed in, then it must be boxed, and adds 4/8 bytes to the address
+                        // specified. We compensate by subtracting 4/8 bytes as necessary.s
+                        ulong location = ClrType.IsPrimitive ? Location - (ulong)IntPtr.Size : Location;
+                        return ClrType.GetValue(location).ToStringOrNull();
+                    }
                 }
 
                 if (Value == null || Value.Length == 0)
@@ -174,12 +183,15 @@ namespace msos
 
             private CommandExecutionContext _context;
             private List<FrameArgumentsAndLocals> _results = new List<FrameArgumentsAndLocals>();
+            private IList<ClrStackFrame> _stackTrace;
 
             public FrameArgumentsAndLocals[] ArgsAndLocals { get { return _results.ToArray(); } }
 
-            public FrameArgumentsAndLocalsRetriever(ClrThread thread, CommandExecutionContext context)
+            public FrameArgumentsAndLocalsRetriever(ClrThread thread,
+                IList<ClrStackFrame> stackTrace, CommandExecutionContext context)
             {
                 _context = context;
+                _stackTrace = stackTrace;
                 GetFrameArgumentsAndLocals(thread.OSThreadId);
             }
 
@@ -194,7 +206,6 @@ namespace msos
                 HR.Verify(task.CreateStackWalk(0xf /*all flags*/, out tmp));
 
                 IXCLRDataStackWalk stackWalk = (IXCLRDataStackWalk)tmp;
-
                 while (HR.S_OK == stackWalk.Next())
                 {
                     ProcessFrame(stackWalk);
@@ -240,31 +251,77 @@ namespace msos
 
                 for (uint lclIdx = 0; lclIdx < numLocals; ++lclIdx)
                 {
-                    StringBuilder lclName = new StringBuilder(MaxNameSize);
+                    // The mscordacwks!ClrDataFrame::GetLocalVariableByIndex implementation never returns
+                    // names for local variables. Need to go through metadata to get them.
+                    StringBuilder dummy = new StringBuilder(2);
                     uint lclNameLen;
-                    if (HR.Failed(frame.GetLocalVariableByIndex(lclIdx, out tmp, (uint)lclName.Capacity, out lclNameLen, lclName)))
+                    if (HR.Failed(frame.GetLocalVariableByIndex(lclIdx, out tmp, (uint)dummy.Capacity, out lclNameLen, dummy)))
                         continue;
 
-                    // TODO The mscordacwks!ClrDataFrame::GetLocalVariableByIndex implementation never returns
-                    // names for local variables. See https://github.com/dotnet/coreclr/blob/4cf8a6b082d9bb1789facd996d8265d3908757b2/src/debug/daccess/stack.cpp#L983.
-                    // What we need to do instead is the following:
-                    //   1) Get the PDB path for the module that contains the method
-                    //   2) Get the IMetadataImport interface from ClrMD's ModuleInfo
-                    //   3) Create a SymBinder and call GetReader to get an ISymbolReader for that IMetadataImport, module, and PDB path
-                    //   4) Call ISymbolReader.GetMethod with the method's mdToken to get an ISymbolMethod
-                    //   5) Enumerate its scopes recursively from ISymbolMethod.RootScope through its GetChildren()
-                    //   6) In each scope, inspect the locals with ISymbolScope.GetLocals()
-                    //   7) For each local, verify AddressKind == SymAddressKind.ILOffset and AddressField1 is the local variable index
-                    //   8) Get the matching local's name
-                    // It seems that getting the ISymbolReader is a time-consuming operation, so it's worthwhile to cache
-                    // the ISymbolReader-s already obtained on a module basis.
+                    string lclName = dummy.ToString();
+                    var matchingFrame = _stackTrace.SingleOrDefault(f => f.DisplayString == frameArgsLocals.MethodName);
+                    if (matchingFrame != null)
+                    {
+                        lclName = GetLocalVariableName(matchingFrame.InstructionPointer, lclIdx);
+                    }
 
-                    var lcl = new ArgumentOrLocal() { Name = lclName.ToString() };
+                    var lcl = new ArgumentOrLocal() { Name = lclName };
                     FillValue(lcl, (IXCLRDataValue)tmp);
                     frameArgsLocals.LocalVariables.Add(lcl);
                 }
 
                 _results.Add(frameArgsLocals);
+            }
+
+            private string GetLocalVariableName(ulong instructionPointer, uint localIndex)
+            {
+                ClrMethod method = _context.Runtime.GetMethodByAddress(instructionPointer);
+                ClrModule module = method.Type.Module;
+                string pdbLocation = module.TryDownloadPdb(null);
+                IntPtr iunkMetadataImport = Marshal.GetIUnknownForObject(module.MetadataImport);
+                try
+                {
+                    using (var binder = new SymBinder())
+                    {
+                        ISymbolReader reader = binder.GetReader(
+                            iunkMetadataImport, module.FileName, Path.GetDirectoryName(pdbLocation));
+
+                        ISymbolMethod symMethod = reader.GetMethod(new SymbolToken((int)method.MetadataToken));
+                        return GetLocalVariableName(symMethod.RootScope, localIndex);
+                    }
+                }
+                catch (COMException comEx)
+                {
+                    // 0x806D0005 occurs when the PDB cannot be found or doesn't contain the necessary
+                    // information to create a symbol reader. It's OK to ignore.
+                    if ((uint)comEx.HResult == 0x806D0005)
+                        return "";
+
+                    throw;
+                }
+                finally
+                {
+                    Marshal.Release(iunkMetadataImport);
+                }
+            }
+
+            private string GetLocalVariableName(ISymbolScope scope, uint localIndex)
+            {
+                foreach (var localVar in scope.GetLocals())
+                {
+                    if (localVar.AddressKind == SymAddressKind.ILOffset &&
+                        localVar.AddressField1 == localIndex)
+                        return localVar.Name;
+                }
+
+                foreach (var childScope in scope.GetChildren())
+                {
+                    string result = GetLocalVariableName(childScope, localIndex);
+                    if (result != null)
+                        return result;
+                }
+
+                return null;
             }
 
             private void FillValue(ArgumentOrLocal argOrLocal, IXCLRDataValue value)
@@ -329,7 +386,7 @@ namespace msos
                 // If the value is unavailable, we're done here.
                 if (size == 0)
                     return;
-
+                
                 argOrLocal.Value = new byte[size];
                 uint dataSize;
                 if (HR.Failed(value.GetBytes((uint)argOrLocal.Value.Length, out dataSize, argOrLocal.Value)))
