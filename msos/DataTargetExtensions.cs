@@ -46,5 +46,27 @@ namespace msos
                 sosFileName, (int)dacInfo.TimeStamp, (int)dacInfo.FileSize, target.DefaultSymbolNotification
             });
         }
+
+        public static ClrRuntime CreateRuntimeHack(this DataTarget target, string dacLocation, int major, int minor)
+        {
+            // FIXME This is a temporary patch for .NET 4.6. The DataTarget.CreateRuntime
+            // code incorrectly detects .NET 4.6 and creates a LegacyRuntime instead of the
+            // V45Runtime. The result is that the runtime fails to initialize. This was already
+            // fixed in a PR https://github.com/Microsoft/dotnetsamples/pull/17 to ClrMD, 
+            // but wasn't merged yet.
+            string dacFileNoExt = Path.GetFileNameWithoutExtension(dacLocation);
+            if (dacFileNoExt.Contains("mscordacwks") && major == 4 && minor >= 5)
+            {
+                Type dacLibraryType = typeof(DataTarget).Assembly.GetType("Microsoft.Diagnostics.Runtime.DacLibrary");
+                object dacLibrary = Activator.CreateInstance(dacLibraryType, target, dacLocation);
+                Type v45RuntimeType = typeof(DataTarget).Assembly.GetType("Microsoft.Diagnostics.Runtime.Desktop.V45Runtime");
+                object runtime = Activator.CreateInstance(v45RuntimeType, target, dacLibrary);
+                return (ClrRuntime)runtime;
+            }
+            else
+            {
+                return target.CreateRuntime(dacLocation);
+            }
+        }
     }
 }

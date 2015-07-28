@@ -183,23 +183,23 @@ internal class RunQuery : IRunQuery
         private ClrHeap _heap;
         private DataTarget _target;
 
-        private void CreateRuntime(string dacLocation)
+        private void CreateRuntime(string dacLocation, int major, int minor)
         {
-            ClrRuntime runtime = _target.CreateRuntime(dacLocation);
+            ClrRuntime runtime = _target.CreateRuntimeHack(dacLocation, major, minor);
             _heap = runtime.GetHeap();
         }
 
-        public RunInSeparateAppDomain(string dumpFile, string dacLocation, IPrinter printer)
+        public RunInSeparateAppDomain(string dumpFile, string dacLocation, int major, int minor, IPrinter printer)
         {
             _target = DataTarget.LoadCrashDump(dumpFile, CrashDumpReader.ClrMD);
-            CreateRuntime(dacLocation);
+            CreateRuntime(dacLocation, major, minor);
             _printer = printer;
         }
 
-        public RunInSeparateAppDomain(int pid, string dacLocation, IPrinter printer)
+        public RunInSeparateAppDomain(int pid, string dacLocation, int major, int minor, IPrinter printer)
         {
             _target = DataTarget.AttachToProcess(pid, AttachTimeout, AttachFlag.Passive);
-            CreateRuntime(dacLocation);
+            CreateRuntime(dacLocation, major, minor);
             _printer = printer;
         }
 

@@ -139,7 +139,8 @@ namespace msos
                         return ClrType.GetValue(ObjectAddress).ToStringOrNull();
 
                     // Display objects (non-strings) as an address.
-                    if (ClrType.IsObjectReference)
+                    // NOTE ObjectAddress could be 0 while the value is simply unavailable.
+                    if (ClrType.IsObjectReference && Value != null)
                         return String.Format("{0:x16}", ObjectAddress);
 
                     if (HasNonTrivialValueToDisplay)
@@ -243,7 +244,20 @@ namespace msos
                     uint lclNameLen;
                     if (HR.Failed(frame.GetLocalVariableByIndex(lclIdx, out tmp, (uint)lclName.Capacity, out lclNameLen, lclName)))
                         continue;
-                    // TODO It looks like we are always getting an empty name on success
+
+                    // TODO The mscordacwks!ClrDataFrame::GetLocalVariableByIndex implementation never returns
+                    // names for local variables. See https://github.com/dotnet/coreclr/blob/4cf8a6b082d9bb1789facd996d8265d3908757b2/src/debug/daccess/stack.cpp#L983.
+                    // What we need to do instead is the following:
+                    //   1) Get the PDB path for the module that contains the method
+                    //   2) Get the IMetadataImport interface from ClrMD's ModuleInfo
+                    //   3) Create a SymBinder and call GetReader to get an ISymbolReader for that IMetadataImport, module, and PDB path
+                    //   4) Call ISymbolReader.GetMethod with the method's mdToken to get an ISymbolMethod
+                    //   5) Enumerate its scopes recursively from ISymbolMethod.RootScope through its GetChildren()
+                    //   6) In each scope, inspect the locals with ISymbolScope.GetLocals()
+                    //   7) For each local, verify AddressKind == SymAddressKind.ILOffset and AddressField1 is the local variable index
+                    //   8) Get the matching local's name
+                    // It seems that getting the ISymbolReader is a time-consuming operation, so it's worthwhile to cache
+                    // the ISymbolReader-s already obtained on a module basis.
 
                     var lcl = new ArgumentOrLocal() { Name = lclName.ToString() };
                     FillValue(lcl, (IXCLRDataValue)tmp);
@@ -289,6 +303,16 @@ namespace msos
 
                 argOrLocal.StaticTypeName = typeName.ToString();
                 argOrLocal.ClrType = _context.Heap.GetTypeByName(argOrLocal.StaticTypeName);
+
+                // TODO If the type is an array type (e.g. System.Byte[]), or a pointer type
+                // (e.g. System.Byte*), or a by-ref type (e.g. System.Byte&), ClrHeap.GetTypeByName
+                // will never return a good value. Think if we want to parse the name and "understand"
+                // its kind and then look at the associated type and do a reconstruction, or
+                // maybe IXCLRDataTypeInstance has some magic way of telling us what kind of type
+                // it is (IXCLRDataTypeInstance::GetFlags always returns 0). This is only a
+                // problem with variables that are either ref types and null (and then we can't
+                // get the type name from the object itself), variables that are pointers, and
+                // variables that are by-ref types.
 
                 // If the type is an inner type, IXCLRDataTypeInstance::GetName reports only
                 // the inner part of the type. This isn't enough for ClrHeap.GetTypeByName,

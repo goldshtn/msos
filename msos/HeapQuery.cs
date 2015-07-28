@@ -1,4 +1,5 @@
 ﻿using CommandLine;
+using Microsoft.Diagnostics.Runtime;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -42,13 +43,14 @@ namespace msos
 
             string compilationOutputDirectory = null;
             object[] arguments;
+            VersionInfo version = context.ClrVersion.Version;
             if (context.ProcessId != 0)
             {
-                arguments = new object[] { context.ProcessId, context.DacLocation, context.Printer };
+                arguments = new object[] { context.ProcessId, context.DacLocation, version.Major, version.Minor, context.Printer };
             }
             else
             {
-                arguments = new object[] { context.DumpFile, context.DacLocation, context.Printer };
+                arguments = new object[] { context.DumpFile, context.DacLocation, version.Major, version.Minor, context.Printer };
             }
             using (RunInSeparateAppDomain runner = (RunInSeparateAppDomain)appDomain.CreateInstanceAndUnwrap(
                 typeof(RunInSeparateAppDomain).Assembly.FullName,

@@ -81,30 +81,6 @@ namespace msos
             _context.ProcessId = _processId;
         }
 
-        private void CreateRuntimeImpl(string dacLocation, ClrInfo clrInfo)
-        {
-            // FIXME This is a temporary patch for .NET 4.6. The DataTarget.CreateRuntime
-            // code incorrectly detects .NET 4.6 and creates a LegacyRuntime instead of the
-            // V45Runtime. The result is that the runtime fails to initialize. This was already
-            // fixed in a PR https://github.com/Microsoft/dotnetsamples/pull/17 to ClrMD, 
-            // but wasn't merged yet.
-            string dacFileNoExt = Path.GetFileNameWithoutExtension(dacLocation);
-            if (dacFileNoExt.Contains("mscordacwks") &&
-                clrInfo.Version.Major == 4 &&
-                clrInfo.Version.Minor >= 6)
-            {
-                Type dacLibraryType = typeof(DataTarget).Assembly.GetType("Microsoft.Diagnostics.Runtime.DacLibrary");
-                object dacLibrary = Activator.CreateInstance(dacLibraryType, _target, dacLocation);
-                Type v45RuntimeType = typeof(DataTarget).Assembly.GetType("Microsoft.Diagnostics.Runtime.Desktop.V45Runtime");
-                object runtime = Activator.CreateInstance(v45RuntimeType, _target, dacLibrary);
-                _context.Runtime = (ClrRuntime)runtime;
-            }
-            else
-            {
-                _context.Runtime = _target.CreateRuntime(dacLocation);
-            }
-        }
-
         private void CreateRuntime()
         {
             ClrInfo clrInfo = _target.ClrVersions[_clrVersionIndex];
@@ -112,7 +88,7 @@ namespace msos
             _context.WriteInfo("Using Data Access DLL at: " + dacLocation);
             _context.DacLocation = dacLocation;
             _context.ClrVersion = clrInfo;
-            CreateRuntimeImpl(dacLocation, clrInfo);
+            _context.Runtime = _target.CreateRuntimeHack(dacLocation, clrInfo.Version.Major, clrInfo.Version.Minor);
             _context.Heap = _context.Runtime.GetHeap();
             _target.DefaultSymbolNotification = new SymbolNotification(_context);
         }
