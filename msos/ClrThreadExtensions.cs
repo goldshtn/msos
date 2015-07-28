@@ -313,6 +313,10 @@ namespace msos
                 // problem with variables that are either ref types and null (and then we can't
                 // get the type name from the object itself), variables that are pointers, and
                 // variables that are by-ref types.
+                // Some starting points:
+                //      - IXCLRDataValue::GetFlags (doesn't always return 0 :-))
+                //      - IXCLRDataValue::GetAssociatedType returns the array element type/pointed to type
+                //      - IXCLRDataValue::GetAssociatedValue returns the pointed to value
 
                 // If the type is an inner type, IXCLRDataTypeInstance::GetName reports only
                 // the inner part of the type. This isn't enough for ClrHeap.GetTypeByName,
