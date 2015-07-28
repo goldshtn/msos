@@ -297,22 +297,22 @@ namespace msos
                 ClrModule module = method.Type.Module;
                 string pdbLocation = module.TryDownloadPdb(null);
                 IntPtr iunkMetadataImport = Marshal.GetIUnknownForObject(module.MetadataImport);
+                ISymbolReader reader = null;
+                ISymbolMethod symMethod = null;
                 try
                 {
-                    // TODO See if we need to .Dispose() all these objects; their finalizers are
-                    // occasionally crashing, probably because some are released and some aren't.
                     using (var binder = new SymBinder())
                     {
-                        ISymbolReader reader = binder.GetReader(
+                        reader = binder.GetReader(
                             iunkMetadataImport, module.FileName, Path.GetDirectoryName(pdbLocation));
 
-                        ISymbolMethod symMethod = reader.GetMethod(new SymbolToken((int)method.MetadataToken));
+                        symMethod = reader.GetMethod(new SymbolToken((int)method.MetadataToken));
                         return GetLocalVariableName(symMethod.RootScope, localIndex);
                     }
                 }
                 catch (COMException comEx)
                 {
-                    // E_FAIL occasionally occurs in GetMethod. Nothing we can do about it.
+                    // E_FAIL occasionally occurs in ISymbolReader.GetMethod. Nothing we can do about it.
                     if ((uint)comEx.HResult == 0x80004005)
                         return "";
 
@@ -325,27 +325,49 @@ namespace msos
                 }
                 finally
                 {
+                    // These interfaces aren't IDisposable, but the underlying objects are. And it is
+                    // important to dispose of them properly, because if their finalizer runs on exit,
+                    // it crashes with an access violation.
+                    if (reader != null)
+                        ((IDisposable)reader).Dispose();
+                    if (symMethod != null)
+                        ((IDisposable)symMethod).Dispose();
+
                     Marshal.Release(iunkMetadataImport);
                 }
             }
 
             private string GetLocalVariableName(ISymbolScope scope, uint localIndex)
             {
-                foreach (var localVar in scope.GetLocals())
+                ISymbolVariable[] localVariables = null;
+                try
                 {
-                    if (localVar.AddressKind == SymAddressKind.ILOffset &&
-                        localVar.AddressField1 == localIndex)
-                        return localVar.Name;
-                }
+                    localVariables = scope.GetLocals();
+                    foreach (var localVar in localVariables)
+                    {
+                        if (localVar.AddressKind == SymAddressKind.ILOffset &&
+                            localVar.AddressField1 == localIndex)
+                            return localVar.Name;
+                    }
 
-                foreach (var childScope in scope.GetChildren())
+                    foreach (var childScope in scope.GetChildren())
+                    {
+                        string result = GetLocalVariableName(childScope, localIndex);
+                        if (result != null)
+                            return result;
+                    }
+
+                    return null;
+                }
+                finally
                 {
-                    string result = GetLocalVariableName(childScope, localIndex);
-                    if (result != null)
-                        return result;
+                    if (localVariables != null)
+                    {
+                        foreach (var localVar in localVariables)
+                            ((IDisposable)localVar).Dispose();
+                    }
+                    ((IDisposable)scope).Dispose();
                 }
-
-                return null;
             }
 
             private void FillValue(ArgumentOrLocal argOrLocal, IXCLRDataValue value)
