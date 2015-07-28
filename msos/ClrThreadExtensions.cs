@@ -1,6 +1,7 @@
 ﻿using Microsoft.Diagnostics.Runtime;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.SymbolStore;
 using System.IO;
 using System.Linq;
@@ -79,9 +80,9 @@ namespace msos
                 {
                     Action<string, ArgumentOrLocal> action = (which, argOrLocal) =>
                     {
-                        context.Write("  {0} {1} {2:x16} = {3} ({4}, size {5}) ",
-                            which, argOrLocal.Name, argOrLocal.Location,
-                            argOrLocal.ValueRaw(), argOrLocal.DynamicTypeName,
+                        context.Write("  {0} {1,-10} = {2} ({3},{4} {5} bytes) ",
+                            which, argOrLocal.Name, argOrLocal.ValueRaw(), argOrLocal.DynamicTypeName,
+                            argOrLocal.StaticAndDynamicTypesAreTheSame ? "" : (" original " + argOrLocal.StaticTypeName + ","),
                             argOrLocal.Size);
                         if (argOrLocal.ObjectAddress != 0)
                         {
@@ -109,7 +110,12 @@ namespace msos
             public byte[] Value;
             public ulong ObjectAddress; // If it's a reference type
             public ClrType ClrType;
-            public ulong Location; // The arg/local's address, not value
+            public ulong Location;      // The arg/local's address, not value
+
+            public bool StaticAndDynamicTypesAreTheSame
+            {
+                get { return StaticTypeName == DynamicTypeName; }
+            }
 
             public bool IsReferenceType
             {
@@ -137,12 +143,13 @@ namespace msos
             {
                 if (ClrType != null)
                 {
+                    // NOTE ObjectAddress could be 0 while the value is simply unavailable.
+
                     // Display strings inline.
-                    if (ClrType.IsString)
+                    if (ClrType.IsString && Value != null)
                         return ClrType.GetValue(ObjectAddress).ToStringOrNull();
 
                     // Display objects (non-strings) as an address.
-                    // NOTE ObjectAddress could be 0 while the value is simply unavailable.
                     if (ClrType.IsObjectReference && Value != null)
                         return String.Format("{0:x16}", ObjectAddress);
 
@@ -152,11 +159,7 @@ namespace msos
                     // Display primitive value types inline.
                     if (ClrType.HasSimpleValue && Location != 0)
                     {
-                        // The ClrType.GetValue implementation assumes that if a primitive
-                        // is passed in, then it must be boxed, and adds 4/8 bytes to the address
-                        // specified. We compensate by subtracting 4/8 bytes as necessary.s
-                        ulong location = ClrType.IsPrimitive ? Location - (ulong)IntPtr.Size : Location;
-                        return ClrType.GetValue(location).ToStringOrNull();
+                        return ClrType.GetPrimitiveValueNonBoxed(Location).ToStringOrNull();
                     }
                 }
 
@@ -281,6 +284,8 @@ namespace msos
                 IntPtr iunkMetadataImport = Marshal.GetIUnknownForObject(module.MetadataImport);
                 try
                 {
+                    // TODO See if we need to .Dispose() all these objects; their finalizers are
+                    // occasionally crashing, probably because some are released and some aren't.
                     using (var binder = new SymBinder())
                     {
                         ISymbolReader reader = binder.GetReader(
@@ -292,6 +297,10 @@ namespace msos
                 }
                 catch (COMException comEx)
                 {
+                    // E_FAIL occasionally occurs in GetMethod. Nothing we can do about it.
+                    if ((uint)comEx.HResult == 0x80004005)
+                        return "";
+
                     // 0x806D0005 occurs when the PDB cannot be found or doesn't contain the necessary
                     // information to create a symbol reader. It's OK to ignore.
                     if ((uint)comEx.HResult == 0x806D0005)
@@ -361,42 +370,99 @@ namespace msos
                 argOrLocal.StaticTypeName = typeName.ToString();
                 argOrLocal.ClrType = _context.Heap.GetTypeByName(argOrLocal.StaticTypeName);
 
-                // TODO If the type is an array type (e.g. System.Byte[]), or a pointer type
-                // (e.g. System.Byte*), or a by-ref type (e.g. System.Byte&), ClrHeap.GetTypeByName
-                // will never return a good value. Think if we want to parse the name and "understand"
-                // its kind and then look at the associated type and do a reconstruction, or
-                // maybe IXCLRDataTypeInstance has some magic way of telling us what kind of type
-                // it is (IXCLRDataTypeInstance::GetFlags always returns 0). This is only a
-                // problem with variables that are either ref types and null (and then we can't
-                // get the type name from the object itself), variables that are pointers, and
-                // variables that are by-ref types.
-                // Some starting points:
-                //      - IXCLRDataValue::GetFlags (doesn't always return 0 :-))
-                //      - IXCLRDataValue::GetAssociatedType returns the array element type/pointed to type
-                //      - IXCLRDataValue::GetAssociatedValue returns the pointed to value
-
-                // If the type is an inner type, IXCLRDataTypeInstance::GetName reports only
-                // the inner part of the type. This isn't enough for ClrHeap.GetTypeByName,
-                // so we have yet another option in that case -- searching by metadata token.
-                if (argOrLocal.ClrType == null) 
-                {
-                    TryGetTypeByMetadataToken(argOrLocal, typeInstance);
-                }
-
                 // If the value is unavailable, we're done here.
                 if (size == 0)
                     return;
-                
+
+                FillLocation(argOrLocal, value);
+
                 argOrLocal.Value = new byte[size];
                 uint dataSize;
                 if (HR.Failed(value.GetBytes((uint)argOrLocal.Value.Length, out dataSize, argOrLocal.Value)))
                     argOrLocal.Value = null;
 
-                if (probablyReferenceType || argOrLocal.IsReferenceType)
+                // If the type is an array type (e.g. System.Byte[]), or a pointer type
+                // (e.g. System.Byte*), or a by-ref type (e.g. System.Byte&), ClrHeap.GetTypeByName
+                // will never return a good value. This is only a problem with variables that
+                // are either ref types and null (and then we can't get the type name from
+                // the object itself), variables that are pointers, and variables that are
+                // by-ref types. Here's the plan:
+                //  1) If the variable is a ref type and is null, we don't care about the
+                //     ClrType being correct anyway. We report the type returned by GetName
+                //     above, and report the value as null.
+                //  2) If the value is a by-ref type or a pointer type, IXCLRDataValue::GetFlags
+                //     can detect it. Then, we keep the ClrType null (because ClrMD doesn't have
+                //     a representation for pointer types or by-ref types), but we read the
+                //     value anyway by dereferencing the pointer. According to the comments in
+                //     xclrdata.idl, IXCLRDataValue::GetAssociatedValue is supposed to return the
+                //     pointed-to value, but it doesn't (it only works for references).
+
+                uint vf;
+                CLRDataValueFlag valueFlags = CLRDataValueFlag.Invalid;
+                if (HR.S_OK == value.GetFlags(out vf))
+                    valueFlags = (CLRDataValueFlag)vf;
+                
+                // * Pointers are identified as CLRDATA_VALUE_IS_POINTER.
+                // * By-refs are identified as CLRDATA_VALUE_DEFAULT regardless of referenced type.
+                bool byRefOrPointerType =
+                    (valueFlags & CLRDataValueFlag.CLRDATA_VALUE_IS_POINTER) != 0 ||
+                    (valueFlags == CLRDataValueFlag.CLRDATA_VALUE_DEFAULT /* it is 0 */);
+                if (byRefOrPointerType)
                 {
-                    argOrLocal.ObjectAddress = Environment.Is64BitProcess ?
-                        BitConverter.ToUInt64(argOrLocal.Value, 0) :
-                        BitConverter.ToUInt32(argOrLocal.Value, 0);
+                    // By-refs to pointers are identified as CLRDATA_VALUE_DEFAULT with target UInt64,
+                    // which makes them undistinguishable from 'ref ulong', unfortunately. But if the 
+                    // type name reported didn't include the &, we know that's what it is.
+                    if (argOrLocal.StaticTypeName == "System.UInt64")
+                    {
+                        argOrLocal.ClrType = null; // We don't really know what the type is
+                        argOrLocal.StaticTypeName = "UNKNOWN*&";
+                    }
+
+                    if (argOrLocal.Value != null)
+                    {
+                        ulong ptrValue = RawBytesToAddress(argOrLocal.Value);
+
+                        ulong potentialReference;
+                        if (_context.Runtime.ReadPointer(ptrValue, out potentialReference) &&
+                            (argOrLocal.ClrType = _context.Heap.GetObjectType(potentialReference)) != null)
+                        {
+                            // If the type was resolved, then this was the address of a heap object.
+                            // In that case, we're done and we have a type.
+                            argOrLocal.ObjectAddress = potentialReference;
+                        }
+                        else
+                        {
+                            // Otherwise, this address is the address of a value type. We don't know
+                            // which type, because IXCLRDataValue::GetAssociatedType doesn't return anything
+                            // useful when the value is a pointer or by-ref. But we can try to remove
+                            // the * or & from the type name, and then try to figure out what the target
+                            // type is.
+                            string noRefNoPtrTypeName = argOrLocal.StaticTypeName.TrimEnd('&', '*');
+                            if ((argOrLocal.ClrType = _context.Heap.GetTypeByName(noRefNoPtrTypeName))
+                                != null)
+                            {                                
+                                argOrLocal.Location = ptrValue;
+                            }
+                        }
+                    }
+                }
+                
+                if (argOrLocal.ClrType == null)
+                {
+                    // If the type is an inner type, IXCLRDataTypeInstance::GetName reports only
+                    // the inner part of the type. This isn't enough for ClrHeap.GetTypeByName,
+                    // so we have yet another option in that case -- searching by metadata token.
+                    TryGetTypeByMetadataToken(argOrLocal, typeInstance);
+
+                    // If we had a pointer or by-ref type and didn't know what it was, we now do,
+                    // so we can store its location and have it displayed.
+                    if (byRefOrPointerType && argOrLocal.ClrType != null)
+                        argOrLocal.Location = RawBytesToAddress(argOrLocal.Value);
+                }
+
+                if (!byRefOrPointerType && (probablyReferenceType || argOrLocal.IsReferenceType))
+                {
+                    argOrLocal.ObjectAddress = RawBytesToAddress(argOrLocal.Value);
                     // The type assigned here can be different from the previous value,
                     // because the static and dynamic type of the argument could differ.
                     // If the object reference is null or invalid, it could also be null --
@@ -404,8 +470,13 @@ namespace msos
                     argOrLocal.ClrType =
                         _context.Heap.GetObjectType(argOrLocal.ObjectAddress) ?? argOrLocal.ClrType;
                 }
+            }
 
-                FillLocation(argOrLocal, value);
+            private static ulong RawBytesToAddress(byte[] rawBytes)
+            {
+                return Environment.Is64BitProcess ?
+                        BitConverter.ToUInt64(rawBytes, 0) :
+                        BitConverter.ToUInt32(rawBytes, 0);
             }
 
             private void FillLocation(ArgumentOrLocal argOrLocal, IXCLRDataValue value)

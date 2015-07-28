@@ -118,17 +118,6 @@ namespace msos
         void GetTypeArgumentByIndex_do_not_use();
     }
 
-    enum CLRDataTypeFlag : uint
-    {
-        CLRDATA_TYPE_IS_PRIMITIVE  = 0x00000001,
-        CLRDATA_TYPE_IS_VALUE_TYPE = 0x00000002,
-        CLRDATA_TYPE_IS_STRING     = 0x00000004,
-        CLRDATA_TYPE_IS_ARRAY      = 0x00000008,
-        CLRDATA_TYPE_IS_REFERENCE  = 0x00000010,
-        CLRDATA_TYPE_IS_POINTER    = 0x00000020,
-        CLRDATA_TYPE_IS_ENUM       = 0x00000040,
-    }
-
     [ComImport, InterfaceType(ComInterfaceType.InterfaceIsIUnknown), Guid("4675666C-C275-45b8-9F6C-AB165D5C1E09")]
     interface IXCLRDataTypeDefinition
     {
@@ -292,10 +281,106 @@ namespace msos
 	    CLRDATA_VLOC_REGISTER = 0x00000001,
 	};
 
+    [Flags]
+    enum CLRDataTypeFlag : uint
+    {
+        CLRDATA_TYPE_DEFAULT       = 0x00000000,
+
+        // Identify particular kinds of types.  These flags
+        // are shared between type, field and value.
+        CLRDATA_TYPE_IS_PRIMITIVE  = 0x00000001,
+        CLRDATA_TYPE_IS_VALUE_TYPE = 0x00000002,
+        CLRDATA_TYPE_IS_STRING     = 0x00000004,
+        CLRDATA_TYPE_IS_ARRAY      = 0x00000008,
+        CLRDATA_TYPE_IS_REFERENCE  = 0x00000010,
+        CLRDATA_TYPE_IS_POINTER    = 0x00000020,
+        CLRDATA_TYPE_IS_ENUM       = 0x00000040,
+
+        // Alias for all field kinds.
+        CLRDATA_TYPE_ALL_KINDS     = 0x7f,
+    }
+
+    [Flags]
+    enum CLRDataFieldFlag : uint
+    {
+        CLRDATA_FIELD_DEFAULT         = 0x00000000,
+    
+        // Identify particular kinds of types.  These flags
+        // are shared between type, field and value.
+        CLRDATA_FIELD_IS_PRIMITIVE    = CLRDataTypeFlag.CLRDATA_TYPE_IS_PRIMITIVE,
+        CLRDATA_FIELD_IS_VALUE_TYPE   = CLRDataTypeFlag.CLRDATA_TYPE_IS_VALUE_TYPE,
+        CLRDATA_FIELD_IS_STRING       = CLRDataTypeFlag.CLRDATA_TYPE_IS_STRING,
+        CLRDATA_FIELD_IS_ARRAY        = CLRDataTypeFlag.CLRDATA_TYPE_IS_ARRAY,
+        CLRDATA_FIELD_IS_REFERENCE    = CLRDataTypeFlag.CLRDATA_TYPE_IS_REFERENCE,
+        CLRDATA_FIELD_IS_POINTER      = CLRDataTypeFlag.CLRDATA_TYPE_IS_POINTER,
+        CLRDATA_FIELD_IS_ENUM         = CLRDataTypeFlag.CLRDATA_TYPE_IS_ENUM,
+
+        // Alias for all field kinds.
+        CLRDATA_FIELD_ALL_KINDS       = CLRDataTypeFlag.CLRDATA_TYPE_ALL_KINDS,
+
+        // Identify field properties.  These flags are
+        // shared between field and value.
+        CLRDATA_FIELD_IS_INHERITED    = 0x00000080,
+        CLRDATA_FIELD_IS_LITERAL      = 0x00000100,
+
+        // Identify field storage location.  These flags are
+        // shared between field and value.
+        CLRDATA_FIELD_FROM_INSTANCE   = 0x00000200,
+        CLRDATA_FIELD_FROM_TASK_LOCAL = 0x00000400,
+        CLRDATA_FIELD_FROM_STATIC     = 0x00000800,
+
+        // Alias for all types of field locations.
+        CLRDATA_FIELD_ALL_LOCATIONS   = 0x00000e00,
+        // Alias for all fields from all locations.
+        CLRDATA_FIELD_ALL_FIELDS      = 0x00000eff,
+    }
+
+    [Flags]
+    enum CLRDataValueFlag : uint
+    {
+        Invalid                       = uint.MaxValue,
+
+        CLRDATA_VALUE_DEFAULT         = 0x00000000,
+
+        // Identify particular kinds of types.  These flags
+        // are shared between type, field and value.
+        CLRDATA_VALUE_IS_PRIMITIVE    = CLRDataTypeFlag.CLRDATA_TYPE_IS_PRIMITIVE,
+        CLRDATA_VALUE_IS_VALUE_TYPE   = CLRDataTypeFlag.CLRDATA_TYPE_IS_VALUE_TYPE,
+        CLRDATA_VALUE_IS_STRING       = CLRDataTypeFlag.CLRDATA_TYPE_IS_STRING,
+        CLRDATA_VALUE_IS_ARRAY        = CLRDataTypeFlag.CLRDATA_TYPE_IS_ARRAY,
+        CLRDATA_VALUE_IS_REFERENCE    = CLRDataTypeFlag.CLRDATA_TYPE_IS_REFERENCE,
+        CLRDATA_VALUE_IS_POINTER      = CLRDataTypeFlag.CLRDATA_TYPE_IS_POINTER,
+        CLRDATA_VALUE_IS_ENUM         = CLRDataTypeFlag.CLRDATA_TYPE_IS_ENUM,
+
+        // Alias for all value kinds.
+        CLRDATA_VALUE_ALL_KINDS       = CLRDataTypeFlag.CLRDATA_TYPE_ALL_KINDS,
+
+        // Identify field properties.  These flags are
+        // shared between field and value.
+        CLRDATA_VALUE_IS_INHERITED    = CLRDataFieldFlag.CLRDATA_FIELD_IS_INHERITED,
+        CLRDATA_VALUE_IS_LITERAL      = CLRDataFieldFlag.CLRDATA_FIELD_IS_LITERAL,
+
+        // Identify field storage location.  These flags are
+        // shared between field and value.
+        CLRDATA_VALUE_FROM_INSTANCE   = CLRDataFieldFlag.CLRDATA_FIELD_FROM_INSTANCE,
+        CLRDATA_VALUE_FROM_TASK_LOCAL = CLRDataFieldFlag.CLRDATA_FIELD_FROM_TASK_LOCAL,
+        CLRDATA_VALUE_FROM_STATIC     = CLRDataFieldFlag.CLRDATA_FIELD_FROM_STATIC,
+
+        // Alias for all types of field locations.
+        CLRDATA_VALUE_ALL_LOCATIONS   = CLRDataFieldFlag.CLRDATA_FIELD_ALL_LOCATIONS,
+        // Alias for all fields from all locations.
+        CLRDATA_VALUE_ALL_FIELDS      = CLRDataFieldFlag.CLRDATA_FIELD_ALL_FIELDS,
+
+        // Identify whether the value is a boxed object.
+        CLRDATA_VALUE_IS_BOXED        = 0x00001000,
+    }
+
     [ComImport, InterfaceType(ComInterfaceType.InterfaceIsIUnknown), Guid("96EC93C7-1000-4e93-8991-98D8766E6666")]
     interface IXCLRDataValue
     {
-        void GetFlags_do_not_use();
+        [PreserveSig]
+        int GetFlags(out uint flags); // returns values from CLRDataValueFlag
+
         void GetAddress_do_not_use();
 
         [PreserveSig]
@@ -323,7 +408,9 @@ namespace msos
         void EnumFieldByName_do_not_use();
         void EndEnumFieldsByName_do_not_use();
         void GetFieldByToken_do_not_use();
-        void GetAssociatedValue_do_not_use();
+        
+        [PreserveSig]
+        int GetAssociatedValue(out object assocValue);
 
         [PreserveSig]
         int GetAssociatedType([Out, MarshalAs(UnmanagedType.IUnknown)] out object assocType);

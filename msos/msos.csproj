@@ -95,6 +95,7 @@
     <Compile Include="ClrRuntimeExtensions.cs" />
     <Compile Include="CLRStack.cs" />
     <Compile Include="ClrThreadExtensions.cs" />
+    <Compile Include="ClrTypeExtensions.cs" />
     <Compile Include="CommandExecutionContext.cs" />
     <Compile Include="CommandHelpers.cs" />
     <Compile Include="CommandLineOptions.cs" />
