@@ -41,6 +41,11 @@ namespace Microsoft.Diagnostics.RuntimeExt
             return m_type;
         }
 
+        public bool IsNull()
+        {
+            return false;
+        }
+
         public override string ToString()
         {
             return m_value.ToString();

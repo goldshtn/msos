@@ -1,14 +1,24 @@
-.newalias httprequests !hq --tabular from hc in ObjectsOfType("System.Web.HttpContext") _
-let elapsed = new TimeSpan(DateTime.Now.Ticks - (long)hc._utcTimestamp.dateData) _
-let timeout = new TimeSpan((long)hc._timeout._ticks) _
-select new { _
-  hc.__Address, _
-  Method = hc._request._httpMethod, _
-  Code = hc._response._statusCode, _
-  Elapsed = ((bool)hc._response._completed || (bool)hc._finishPipelineRequestCalled) ? "Finished" : elapsed.ToString() , _
-  Timeout = (bool)hc._timeoutSet ? timeout.ToString() : "No timeout", _
-  VirtualPath = hc._request._filePath._virtualPath _
+.define IEnumerable<dynamic> HttpRequests() _
+{ _
+  return from hc in ObjectsOfType("System.Web.HttpContext") _
+         let elapsed = DateTime.Now - new DateTime((long)hc._timeoutStartTimeUtcTicks) _
+         select new { _
+           hc.__Address, _
+           Method = hc._request._httpMethod, _
+           Code = hc._response._statusCode, _
+           Elapsed = ((bool)hc._response._completed || (bool)hc._finishPipelineRequestCalled) ? "Finished" : elapsed.ToString() , _
+           Timeout = new TimeSpan((long)hc._timeoutTicks).ToString(), _
+           VirtualPath = hc._request._filePath._virtualPath, _
+           Thread = hc._thread.m_ManagedThreadId _
+         }; _
 }
+
+.newalias detailedhttprequests !hq --json from hr in HttpRequests() _
+where !hr.Thread.IsNull() _
+let thread = GetRuntime().Threads.SingleOrDefault(t => t.ManagedThreadId == (int)hr.Thread) _
+select new { Request = hr, StackTrace = String.Join(Environment.NewLine + "\t\t", thread.StackTrace.Select(f => f.DisplayString)) }
+
+.newalias httprequests !hq --tabular HttpRequests()
 
 # This is an example of a helper function that you can use in all subsequent queries
 .define IEnumerable<dynamic> NonEmptyXmlSections() _

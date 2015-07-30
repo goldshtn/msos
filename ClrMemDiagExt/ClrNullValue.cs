@@ -62,6 +62,11 @@ namespace Microsoft.Diagnostics.RuntimeExt
             return true;
         }
 
+        public override string ToString()
+        {
+            return "<null>";
+        }
+
         public static bool GetDefaultNullValue(Type type, out object result)
         {
             result = null;
