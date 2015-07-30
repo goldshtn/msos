@@ -22,6 +22,7 @@ namespace msos
     internal class RunQueryContext
     {
         public ClrHeap Heap { get; set; }
+        public ClrRuntime Runtime { get; set; }
 
         public IEnumerable<dynamic> ObjectsOfType(string typeName)
         {
@@ -170,6 +171,11 @@ internal class RunQuery : IRunQuery
         return _context.ObjectsInSegment(segmentIdx);
     }
 
+    private ClrRuntime GetRuntime()
+    {
+        return _context.Runtime;
+    }
+
     public object Run()
     {
         return (" + CompiledQueryPlaceholder + @");
@@ -181,12 +187,13 @@ internal class RunQuery : IRunQuery
 
         private IPrinter _printer;
         private ClrHeap _heap;
+        private ClrRuntime _runtime;
         private DataTarget _target;
 
         private void CreateRuntime(string dacLocation, int major, int minor)
         {
-            ClrRuntime runtime = _target.CreateRuntimeHack(dacLocation, major, minor);
-            _heap = runtime.GetHeap();
+            _runtime = _target.CreateRuntimeHack(dacLocation, major, minor);
+            _heap = _runtime.GetHeap();
         }
 
         public RunInSeparateAppDomain(string dumpFile, string dacLocation, int major, int minor, IPrinter printer)
@@ -236,7 +243,7 @@ internal class RunQuery : IRunQuery
 
             Type compiledQueryType = results.CompiledAssembly.GetType("RunQuery");
             IRunQuery runQuery = (IRunQuery)Activator.CreateInstance(
-                compiledQueryType, new RunQueryContext { Heap = _heap });
+                compiledQueryType, new RunQueryContext { Heap = _heap, Runtime = _runtime });
             
             object result = runQuery.Run();
 
