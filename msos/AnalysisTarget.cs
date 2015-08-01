@@ -88,7 +88,7 @@ namespace msos
             _context.WriteInfo("Using Data Access DLL at: " + dacLocation);
             _context.DacLocation = dacLocation;
             _context.ClrVersion = clrInfo;
-            _context.Runtime = _target.CreateRuntimeHack(dacLocation, clrInfo.Version.Major, clrInfo.Version.Minor);
+            _context.Runtime = _target.CreateRuntime(dacLocation);
             _context.Heap = _context.Runtime.GetHeap();
             _target.DefaultSymbolNotification = new SymbolNotification(_context);
         }

@@ -197,7 +197,8 @@ namespace Microsoft.Diagnostics.Runtime
             }
             else if (major == 4)
             {
-                if (patch < 10000)
+                // 'minor < 5' adds support for .NET 4.6 RC and RTM
+                if (minor < 5 && patch < 10000)
                     ver = DesktopVersion.v4;
                 else
                     return new V45Runtime(this, lib);
