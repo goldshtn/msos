@@ -587,6 +587,11 @@ namespace Microsoft.Diagnostics.Runtime
 
                 m_client.EndSession(DEBUG_END.ACTIVE_DETACH);
                 m_client.DetachProcesses();
+
+                // If we don't do this here, the client lingers on until its RCW
+                // is finalized. That can cause issues if there is no GC-finalization
+                // cycle by the time the next client is created.
+                Marshal.FinalReleaseComObject(m_client);
             }
 
             // If there are no more debug instances, we can safely reset this variable
