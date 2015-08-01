@@ -202,7 +202,7 @@ namespace msos
 
             private void ProcessStackWalk(uint osThreadId)
             {
-                IXCLRDataProcess ixclrDataProcess = _context.Runtime.GetCLRDataProcess();
+                IXCLRDataProcess ixclrDataProcess = _context.Runtime.DacInterface;
 
                 object tmp;
                 HR.Verify(ixclrDataProcess.GetTaskByOSThreadID(osThreadId, out tmp));

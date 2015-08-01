@@ -57,6 +57,11 @@ namespace Microsoft.Diagnostics.Runtime
             get { return IntPtr.Size; }
         }
 
+        public override IXCLRDataProcess DacInterface
+        {
+            get { return m_dacInterface; }
+        }
+
         internal bool CanWalkHeap { get; private set; }
         
         internal MemoryReader MemoryReader

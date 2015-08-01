@@ -3093,6 +3093,12 @@ namespace Microsoft.Diagnostics.Runtime
         abstract public IList<ClrThread> Threads { get; }
 
         /// <summary>
+        /// Returns the primary interface to the DAC, which can be used to obtain additional information 
+        /// on top of what the library already exposes.
+        /// </summary>
+        abstract public IXCLRDataProcess DacInterface { get; }
+
+        /// <summary>
         /// Enumerates all objects currently on the finalizer queue.  (Not finalizable objects, but objects
         /// which have been collected and will be imminently finalized.)
         /// </summary>
