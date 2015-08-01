@@ -68,10 +68,6 @@
       <HintPath>..\packages\SharpZipLib.0.86.0\lib\20\ICSharpCode.SharpZipLib.dll</HintPath>
     </Reference>
     <Reference Include="ISymWrapper" />
-    <Reference Include="Microsoft.Diagnostics.Runtime">
-      <HintPath>..\packages\Microsoft.Diagnostics.Runtime.0.8.27-beta\lib\net40\Microsoft.Diagnostics.Runtime.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
     <Reference Include="NetSerializer">
       <HintPath>..\packages\NetSerializer.3.0.0.0\lib\net40\NetSerializer.dll</HintPath>
     </Reference>
@@ -161,6 +157,10 @@
     <ProjectReference Include="..\ClrMemDiagExt\ClrMemDiagExt.csproj">
       <Project>{249a0236-8fc8-4cd7-b6e1-c3422924ea09}</Project>
       <Name>ClrMemDiagExt</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\ClrMemDiag\ClrMemDiag.csproj">
+      <Project>{a82126ca-23aa-41f1-8586-a5938d44d0a7}</Project>
+      <Name>ClrMemDiag</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup Condition="'$(Platform)' == 'x86'">
