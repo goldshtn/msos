@@ -2233,6 +2233,46 @@ namespace Microsoft.Diagnostics.Runtime
             return TryDownloadDac(null);
         }
 
+        /// <summary>
+        /// Atempts to download the matching SOS for this runtime from the symbol server.
+        /// </summary>
+        public string TryDownloadSos()
+        {
+            if (m_sosLocation != null)
+                return m_sosLocation;
+
+            string sosFileName;
+            if (m_dacLocation != null)
+            {
+                // If we have a local DAC, we probably also have a local SOS.
+                sosFileName = GetSosFileName(m_dacLocation);
+                if (File.Exists(sosFileName))
+                {
+                    m_sosLocation = sosFileName;
+                    return m_sosLocation;
+                }
+            }
+
+            if (m_dacLocation == null)
+                TryDownloadDac();
+
+            // We couldn't find the DAC on the symbol server, so SOS won't help us.
+            if (m_dacLocation == null)
+                return null;
+
+            // We don't have a local DAC, so try downloading SOS from the symbol server.
+            sosFileName = GetSosFileName(Path.GetFileName(m_dacLocation));
+            m_sosLocation = m_dataTarget.TryDownloadFile(sosFileName, (int)DacInfo.TimeStamp, (int)DacInfo.FileSize, null);
+            return m_sosLocation;
+        }
+
+        private static string GetSosFileName(string dacFileName)
+        {
+            return dacFileName
+                .Replace("mscordacwks", "sos")
+                .Replace("mscordaccore", "sos");
+        }
+
 
         /// <summary>
         /// To string.
@@ -2259,6 +2299,7 @@ namespace Microsoft.Diagnostics.Runtime
         }
 
         string m_dacLocation;
+        string m_sosLocation;
         DataTarget m_dataTarget;
 
         /// <summary>
