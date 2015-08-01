@@ -162,7 +162,10 @@
     <Compile Include="Utilities\SymbolPath.cs" />
     <Compile Include="Utilities\SymbolReader.cs" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Content Include="Refs\Dia2Lib.dll" />
+    <Content Include="Refs\Interop.Dia2Lib.dll" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
