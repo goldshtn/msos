@@ -67,6 +67,7 @@ namespace msos
         }
     }
 
+    [SupportedTargets(TargetType.DumpFile, TargetType.DumpFileNoHeap, TargetType.LiveProcess)]
     [Verb("!pe", HelpText = "Display the current exception or the specified exception object.")]
     class PE : PrintException
     {
