@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 
 namespace msos
 {
+    [SupportedTargets(TargetType.DumpFile, TargetType.LiveProcess)]
     [Verb("!DumpArray", HelpText = "Display all the elements in an array.")]
     class DumpArray : ICommand
     {

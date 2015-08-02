@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 
 namespace msos
 {
+    [SupportedTargets(TargetType.DumpFile, TargetType.LiveProcess)]
     [Verb("!memstats", HelpText =
         "Display memory-related statistics and fragmentation information on the CLR heaps and virtual address space.")]
     class MemStats : ICommand

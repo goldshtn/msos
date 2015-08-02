@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 
 namespace msos
 {
+    [SupportedTargets(TargetType.DumpFile, TargetType.LiveProcess)]
     [Verb("!dso", HelpText =
         "Dump stack objects for the specified thread. Not all objects displayed are actually " +
         "referenced by live local variables.")]

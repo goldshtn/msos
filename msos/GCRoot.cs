@@ -11,6 +11,7 @@ namespace msos
 {
     // Portions of the code below adapted from https://github.com/Microsoft/dotnetsamples/blob/master/Microsoft.Diagnostics.Runtime/CLRMD/GCRoot/Program.cs
     // under the MIT License
+    [SupportedTargets(TargetType.DumpFile, TargetType.LiveProcess)]
     [Verb("!GCRoot", HelpText = "Display paths from GC roots leading to the specified object. For large dumps or many repetitions, consider building a heap index (!bhi) and using the !paths command instead.")]
     class GCRoot : ICommand
     {

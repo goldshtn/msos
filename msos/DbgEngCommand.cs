@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 
 namespace msos
 {
+    [SupportedTargets(TargetType.DumpFile, TargetType.DumpFileNoHeap)]
     [Verb(".dec", HelpText =
         "Executes a command through the DbgEng engine. To run extension commands, " +
         "put the .load and the command on the same line. For example: '.dec .loadby " +
@@ -38,7 +39,8 @@ namespace msos
             }
         }
     }
-    
+
+    [SupportedTargets(TargetType.DumpFile, TargetType.DumpFileNoHeap)]
     [Verb(".dem", HelpText =
         "Switches to DbgEng mode to execute multiple native DbgEng commands. " +
         "To switch back, run 'q'.")]

@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 
 namespace msos
 {
+    [SupportedTargets(TargetType.DumpFile, TargetType.LiveProcess)]
     [Verb("!DumpCollection", HelpText = "Displays the contents of a collection. Arrays, lists, and dictionaries are supported at present.")]
     class DumpCollection : ICommand
     {

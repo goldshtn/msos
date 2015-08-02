@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 
 namespace msos
 {
+    [SupportedTargets(TargetType.DumpFile, TargetType.DumpFileNoHeap, TargetType.LiveProcess)]
     [Verb(".formats", HelpText = "Formats a hexadecimal 64-bit value in multiple representations.")]
     class Formats : ICommand
     {

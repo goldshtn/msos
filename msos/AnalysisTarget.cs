@@ -69,6 +69,16 @@ namespace msos
             _context.WriteInfo("Opened dump file '{0}', architecture {1}, {2} CLR versions detected.",
                 _dumpFile, _target.Architecture, _target.ClrVersions.Count);
             _context.DumpFile = _dumpFile;
+            _context.TargetType = _target.IsMinidump ? TargetType.DumpFileNoHeap : TargetType.DumpFile;
+            
+            if (_target.IsMinidump)
+            {
+                _context.WriteWarning(
+                    "This dump does not have heap information present. Most commands will not work. " + 
+                    "Basic triage commands such as !pe, !clrstack, !threads are still available. " +
+                    "To get good information, make sure to put your modules (.exe/.dll files) on " +
+                    "the symbol path, not just the symbols (.pdb files).");
+            }
         }
 
         private void AttachToProcess()
@@ -79,6 +89,7 @@ namespace msos
             _context.WriteInfo("Attached to process {0}, architecture {1}, {2} CLR versions detected.",
                 _processId, _target.Architecture, _target.ClrVersions.Count);
             _context.ProcessId = _processId;
+            _context.TargetType = TargetType.LiveProcess;
         }
 
         private void CreateRuntime()

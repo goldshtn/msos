@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 
 namespace msos
 {
+    [SupportedTargets(TargetType.DumpFile, TargetType.LiveProcess)]
     [Verb("!waits", HelpText = "Displays wait chain information and detects deadlocks.")]
     class WaitChains : ICommand
     {

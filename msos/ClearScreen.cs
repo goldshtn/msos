@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 
 namespace msos
 {
+    [SupportedTargets(TargetType.DumpFile, TargetType.DumpFileNoHeap, TargetType.LiveProcess)]
     [Verb(".cls", HelpText = "Clears the screen. Has no effect if output is redirected to a file.")]
     class ClearScreen : ICommand
     {

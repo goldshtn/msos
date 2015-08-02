@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 
 namespace msos
 {
+    [SupportedTargets(TargetType.DumpFile, TargetType.DumpFileNoHeap, TargetType.LiveProcess)]
     [Verb("db", HelpText="Display memory at the specified address.")]
     class DB : ICommand
     {

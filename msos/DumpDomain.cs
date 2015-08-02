@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 
 namespace msos
 {
+    [SupportedTargets(TargetType.DumpFile, TargetType.LiveProcess)]
     [Verb("!DumpDomain", HelpText = "Displays the application domains in the current target.")]
     class DumpDomain : ICommand
     {

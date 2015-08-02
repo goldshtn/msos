@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 
 namespace msos
 {
+    [SupportedTargets(TargetType.DumpFile, TargetType.DumpFileNoHeap, TargetType.LiveProcess)]
     [Verb("!StackTree", HelpText = "Display a stack tree of all the target's threads.")]
     class StackTree : ICommand
     {

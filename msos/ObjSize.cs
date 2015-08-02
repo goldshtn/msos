@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 
 namespace msos
 {
+    [SupportedTargets(TargetType.DumpFile, TargetType.LiveProcess)]
     [Verb("!ObjSize", HelpText = "Displays the size of the object graph referenced by the specified object, and including it.")]
     class ObjSize : ICommand
     {

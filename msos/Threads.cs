@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 
 namespace msos
 {
+    [SupportedTargets(TargetType.DumpFile, TargetType.DumpFileNoHeap, TargetType.LiveProcess)]
     [Verb("!Threads", HelpText = "Display all threads.")]
     class Threads : ICommand
     {

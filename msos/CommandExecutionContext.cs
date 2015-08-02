@@ -28,6 +28,7 @@ namespace msos
         public List<string> Defines { get; private set; }
         public string SymbolPath { get; set; }
         public ClrInfo ClrVersion { get; set; }
+        public TargetType TargetType { get; set; }
 
         private Parser _commandParser;
         private Type[] _allCommandTypes;
@@ -55,14 +56,6 @@ namespace msos
             get
             {
                 return Runtime.Threads.FirstOrDefault(t => t.ManagedThreadId == CurrentManagedThreadId);
-            }
-        }
-
-        public TargetType TargetType
-        {
-            get
-            {
-                return String.IsNullOrEmpty(DumpFile) ? TargetType.LiveProcess : TargetType.DumpFile;
             }
         }
 
@@ -139,7 +132,14 @@ namespace msos
             {
                 try
                 {
-                    commandToExecute.Execute(this);
+                    if (!IsCommandIsSupportedForThisTarget(commandToExecute.GetType()))
+                    {
+                        WriteError("This command is not supported for the current target type: '{0}'", TargetType);
+                    }
+                    else
+                    {
+                        commandToExecute.Execute(this);
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -346,12 +346,22 @@ namespace msos
             return alias;
         }
 
-        private static Type[] GetAllCommandTypes()
+        private Type[] GetAllCommandTypes()
         {
             return (from type in Assembly.GetExecutingAssembly().GetTypes()
                     where typeof(ICommand).IsAssignableFrom(type)
+                    where IsCommandIsSupportedForThisTarget(type)
                     select type
                     ).ToArray();
+        }
+
+        private bool IsCommandIsSupportedForThisTarget(Type type)
+        {
+            var supportedTargetsAttr = type.GetCustomAttribute<SupportedTargetsAttribute>();
+            if (supportedTargetsAttr == null)
+                return false;
+
+            return supportedTargetsAttr.SupportedTargets.Contains(TargetType);
         }
     }
 }

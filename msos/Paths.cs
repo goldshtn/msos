@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 
 namespace msos
 {
+    [SupportedTargets(TargetType.DumpFile, TargetType.LiveProcess)]
     [Verb("!paths", HelpText =
         "Display paths from GC roots leading to the specified object. Requires a heap index, " +
         "which you can build using !bhi. To work without a heap index, use !GCRoot, which can be much slower.")]

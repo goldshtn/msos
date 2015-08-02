@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 
 namespace msos
 {
+    [SupportedTargets(TargetType.DumpFile, TargetType.LiveProcess)]
     [Verb("!frq", HelpText = "Display objects ready for finalization.")]
     class FReachableQueue : ICommand
     {

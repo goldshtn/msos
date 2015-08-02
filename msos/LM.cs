@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 
 namespace msos
 {
+    [SupportedTargets(TargetType.DumpFile, TargetType.DumpFileNoHeap, TargetType.LiveProcess)]
     [Verb("!lm", HelpText = "Displays the loaded modules.")]
     class LM : ICommand
     {

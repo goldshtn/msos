@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 
 namespace msos
 {
+    [SupportedTargets(TargetType.DumpFile, TargetType.LiveProcess)]
     [Verb("!DumpObj", HelpText = "Display object contents.")]
     class DumpObject : ICommand
     {
@@ -151,6 +152,7 @@ namespace msos
         }
     }
 
+    [SupportedTargets(TargetType.DumpFile, TargetType.LiveProcess)]
     [Verb("!do", HelpText = "Display object contents.")]
     class DO : DumpObject
     {

@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 
 namespace msos
 {
+    [SupportedTargets(TargetType.DumpFile, TargetType.LiveProcess)]
     [Verb("!ThreadPool", HelpText = "Displays information about the CLR thread pool.")]
     class ThreadPool : ICommand
     {

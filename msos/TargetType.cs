@@ -9,6 +9,7 @@ namespace msos
     enum TargetType
     {
         DumpFile,
+        DumpFileNoHeap,
         LiveProcess
     }
 }

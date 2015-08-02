@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 
 namespace msos
 {
+    [SupportedTargets(TargetType.DumpFile, TargetType.DumpFileNoHeap, TargetType.LiveProcess)]
     [Verb("q", HelpText = "Quit the debugger, or leave DbgEng native mode.")]
     class Quit : ICommand
     {

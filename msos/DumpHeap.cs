@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 
 namespace msos
 {
+    [SupportedTargets(TargetType.DumpFile, TargetType.LiveProcess)]
     [Verb("!DumpHeap", HelpText = "List heap objects and statistics.")]
     class DumpHeap : ICommand
     {

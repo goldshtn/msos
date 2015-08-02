@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 
 namespace msos
 {
+    [SupportedTargets(TargetType.DumpFile, TargetType.LiveProcess)]
     [Verb("!hq", HelpText = "Runs a query over heap objects and prints the results. Useful helpers include AllObjects(), ObjectsOfType(\"TypeName\"), AllClasses(), and Class(\"TypeName\"). Special properties on objects include __Type and __Size; special properties on classes include __Fields and __StaticFields.")]
     class HeapQuery : ICommand
     {

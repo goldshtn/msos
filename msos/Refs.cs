@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 
 namespace msos
 {
+    [SupportedTargets(TargetType.DumpFile, TargetType.LiveProcess)]
     [Verb("!refs", HelpText =
         "Display all objects that have a reference to and from the specified object. " +
         "Requires a heap index, which you can build using !bhi.")]

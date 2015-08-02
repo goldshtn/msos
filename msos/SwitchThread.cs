@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 
 namespace msos
 {
+    [SupportedTargets(TargetType.DumpFile, TargetType.DumpFileNoHeap, TargetType.LiveProcess)]
     [Verb("~", HelpText = "Switch to the thread that has the specified managed thread ID.")]
     class SwitchThread : ICommand
     {

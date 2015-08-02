@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 
 namespace msos
 {
+    [SupportedTargets(TargetType.DumpFile, TargetType.DumpFileNoHeap, TargetType.LiveProcess)]
     [Verb("!CLRStack", HelpText="Displays the managed call stack of the current thread.")]
     class CLRStack : ICommand
     {

@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 
 namespace msos
 {
+    [SupportedTargets(TargetType.DumpFile, TargetType.DumpFileNoHeap, TargetType.LiveProcess)]
     [Verb(".hyperlinks", HelpText = "Configures hyperlink options in command output.")]
     class HyperlinkSettings : ICommand
     {
@@ -29,7 +30,7 @@ namespace msos
         }
     }
 
-
+    [SupportedTargets(TargetType.DumpFile, TargetType.DumpFileNoHeap, TargetType.LiveProcess)]
     [Verb(".paging", HelpText = "Configures command output paging.")]
     class PagingSettings : ICommand
     {

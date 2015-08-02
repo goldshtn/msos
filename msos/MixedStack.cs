@@ -10,6 +10,7 @@ using System.Text;
 
 namespace msos
 {
+    [SupportedTargets(TargetType.DumpFile, TargetType.DumpFileNoHeap)]
     [Verb("!mk", HelpText =
         "Display the managed and unmanaged call stack.")]
     class MixedStack : ICommand

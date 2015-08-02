@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 
 namespace msos
 {
+    [SupportedTargets(TargetType.DumpFile, TargetType.DumpFileNoHeap, TargetType.LiveProcess)]
     [Verb(".lastevent", HelpText =
         "Displays the last event in the dump file. If there was an exception, it will be the last event.")]
     class LastEvent : ICommand

@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 
 namespace msos
 {
+    [SupportedTargets(TargetType.DumpFile, TargetType.LiveProcess)]
     [Verb("!bhi", HelpText =
         "Builds a heap index that can be used for efficient object queries and stores it to the specified file. " +
         "Use the --nofile switch to store the index in memory only, if you do not plan to reuse it.")]
@@ -66,6 +67,7 @@ namespace msos
         }
     }
 
+    [SupportedTargets(TargetType.DumpFile, TargetType.LiveProcess)]
     [Verb("!chi", HelpText = "Clears the heap index from memory. The on-disk file is not affected.")]
     class ClearHeapIndex : ICommand
     {
@@ -75,6 +77,7 @@ namespace msos
         }
     }
 
+    [SupportedTargets(TargetType.DumpFile, TargetType.LiveProcess)]
     [Verb("!lhi", HelpText = "Loads a heap index from the specified file.")]
     class LoadHeapIndex : ICommand
     {

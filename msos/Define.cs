@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 
 namespace msos
 {
+    [SupportedTargets(TargetType.DumpFile, TargetType.DumpFileNoHeap, TargetType.LiveProcess)]
     [Verb(".define", HelpText = "Define a helper method to be used in heap queries.")]
     class Define : ICommand
     {
@@ -22,6 +23,7 @@ namespace msos
         }
     }
 
+    [SupportedTargets(TargetType.DumpFile, TargetType.DumpFileNoHeap, TargetType.LiveProcess)]
     [Verb(".listdefines", HelpText = "List the available helper methods.")]
     class ListDefines : ICommand
     {
@@ -40,6 +42,7 @@ namespace msos
         }
     }
 
+    [SupportedTargets(TargetType.DumpFile, TargetType.DumpFileNoHeap, TargetType.LiveProcess)]
     [Verb(".undefine", HelpText = "Undefine a specific helper method.")]
     class Undefine : ICommand
     {
@@ -59,6 +62,4 @@ namespace msos
             context.Defines.RemoveAt(HelperIndex);
         }
     }
-
-
 }

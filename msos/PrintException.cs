@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 
 namespace msos
 {
+    [SupportedTargets(TargetType.DumpFile, TargetType.DumpFileNoHeap, TargetType.LiveProcess)]
     [Verb("!PrintException", HelpText = "Display the current exception or the specified exception object.")]
     class PrintException : ICommand
     {

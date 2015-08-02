@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 
 namespace msos
 {
+    [SupportedTargets(TargetType.DumpFile, TargetType.DumpFileNoHeap, TargetType.LiveProcess)]
     [Verb(".newalias", HelpText =
         "Creates a new command alias. The alias itself can accept parameters specified as " + 
         "$1, $2, ... in the command body. For example: .newalias dt !dumpheap --stat --type $1")]
@@ -29,6 +30,7 @@ namespace msos
         }
     }
 
+    [SupportedTargets(TargetType.DumpFile, TargetType.DumpFileNoHeap, TargetType.LiveProcess)]
     [Verb("%", HelpText = "Executes an existing command alias.")]
     class ExecuteAlias : ICommand
     {
@@ -56,6 +58,7 @@ namespace msos
         }
     }
 
+    [SupportedTargets(TargetType.DumpFile, TargetType.DumpFileNoHeap, TargetType.LiveProcess)]
     [Verb(".rmalias", HelpText = "Removes the specified alias.")]
     class RemoveAlias : ICommand
     {
@@ -72,6 +75,7 @@ namespace msos
         }
     }
 
+    [SupportedTargets(TargetType.DumpFile, TargetType.DumpFileNoHeap, TargetType.LiveProcess)]
     [Verb(".clearalias", HelpText = "Removes all registered aliases.")]
     class RemoveAllAliases : ICommand
     {
@@ -91,7 +95,7 @@ namespace msos
         }
     }
 
-
+    [SupportedTargets(TargetType.DumpFile, TargetType.DumpFileNoHeap, TargetType.LiveProcess)]
     [Verb(".listalias", HelpText = "Lists all the aliases.")]
     class ListAliases : ICommand
     {

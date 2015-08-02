@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 
 namespace msos
 {
+    [SupportedTargets(TargetType.DumpFile, TargetType.LiveProcess)]
     [Verb("!SyncBlk", HelpText = "Display information on blocking objects, their owners, and their waiters.")]
     class SyncBlk : ICommand
     {
