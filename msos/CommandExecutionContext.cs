@@ -350,7 +350,6 @@ namespace msos
         {
             return (from type in Assembly.GetExecutingAssembly().GetTypes()
                     where typeof(ICommand).IsAssignableFrom(type)
-                    where IsCommandIsSupportedForThisTarget(type)
                     select type
                     ).ToArray();
         }
