@@ -118,7 +118,7 @@ namespace Microsoft.Diagnostics.Runtime.Desktop
 
             for (int i = 0; i < map.Length; ++i)
             {
-                if (map[i].StartAddress <= m_ip && m_ip <= map[i].EndAddress)
+                if (map[i].StartAddress <= nativeOffset && nativeOffset <= map[i].EndAddress)
                 {
                     ilOffset = map[i].ILOffset;
                     break;
