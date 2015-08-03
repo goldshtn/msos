@@ -129,6 +129,7 @@
     <Compile Include="DbgEngInterfaces.cs" />
     <Compile Include="Decompile.cs" />
     <Compile Include="Define.cs" />
+    <Compile Include="Disassemble.cs" />
     <Compile Include="DumpArray.cs" />
     <Compile Include="DumpCollection.cs" />
     <Compile Include="DumpDomain.cs" />
