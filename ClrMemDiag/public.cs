@@ -3243,6 +3243,10 @@ namespace Microsoft.Diagnostics.Runtime
         /// </summary>
         public event RuntimeFlushedCallback RuntimeFlushed;
 
+        public abstract bool OutOfMemoryExceptionOccurred { get; }
+
+        public abstract ClrOomInformation OutOfMemoryInformation { get; }
+
         /// <summary>
         /// Call when flushing the runtime.
         /// </summary>
@@ -3324,6 +3328,14 @@ namespace Microsoft.Diagnostics.Runtime
                     return null;
             }
         }
+    }
+
+    public abstract class ClrOomInformation
+    {
+        public abstract string Reason { get; }
+        public abstract ulong AllocationSize { get; }
+        public abstract bool LargeObjectHeap { get; }
+        public abstract ulong GCNumber { get; }
     }
 
     /// <summary>

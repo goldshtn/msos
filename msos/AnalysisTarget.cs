@@ -49,6 +49,26 @@ namespace msos
             VerifyCLRVersion();
             SetupSymPath();
             CreateRuntime();
+            PerformAutomaticAnalysis();
+        }
+
+        private void PerformAutomaticAnalysis()
+        {
+            var threadToSwitchTo = _context.Runtime.ThreadWithActiveExceptionOrFirstThread();
+            if (threadToSwitchTo.CurrentException != null)
+            {
+                _context.WriteInfo("The current thread has an exception; use !pe to view it.");
+            }
+            new SwitchThread() { ManagedThreadId = threadToSwitchTo.ManagedThreadId }.Execute(_context);
+
+            if (_context.Runtime.OutOfMemoryExceptionOccurred)
+            {
+                _context.WriteInfo("There was an out-of-memory condition in this target:");
+                var oomInfo = _context.Runtime.OutOfMemoryInformation;
+                _context.WriteInfo("\tAn OOM occurred after GC {0} when trying to allocate {1}",
+                    oomInfo.GCNumber, oomInfo.AllocationSize.ToMemoryUnits());
+                _context.WriteInfo("\t" + oomInfo.Reason);
+            }
         }
 
         private void Bail(string format, params object[] args)

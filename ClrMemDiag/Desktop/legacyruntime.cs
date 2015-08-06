@@ -1973,6 +1973,11 @@ namespace Microsoft.Diagnostics.Runtime.Desktop
         {
             get { return generation_table1.AllocationStart; }
         }
+
+        public IOomData OomData
+        {
+            get { return null; }
+        }
     }
 
     #endregion
@@ -2432,6 +2437,12 @@ namespace Microsoft.Diagnostics.Runtime.Desktop
         public ulong highest_address;
         public ulong card_table;
 
+        // This is not actually filled by the DAC functions; filled separately when returning
+        // heap details in V45Runtime.Get*HeapDetails and getting the OOM information. Because 
+        // this field is at the end of the structure, it's pass-through as far as the marshaler
+        // should be concerned.
+        public V45OomData oom_data;
+
         public ulong FirstHeapSegment
         {
             get { return generation_table2.StartSegment; }
@@ -2528,6 +2539,11 @@ namespace Microsoft.Diagnostics.Runtime.Desktop
         public ulong Gen2Stop
         {
             get { return generation_table1.AllocationStart; }
+        }
+
+        public IOomData OomData
+        {
+            get { return oom_data.Reason != OomReason.NoFailure ? (IOomData)oom_data : null; }
         }
     }
     #endregion

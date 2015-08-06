@@ -390,6 +390,11 @@ namespace Microsoft.Diagnostics.Runtime.Redhawk
         {
             get { return generation_table1.AllocationStart; }
         }
+
+        public IOomData OomData
+        {
+            get { return null; }
+        }
     }
 }
 #endif

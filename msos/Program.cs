@@ -72,9 +72,6 @@ namespace msos
 
         private void RunMainLoop()
         {
-            var threadToSwitchTo = _context.Runtime.ThreadWithActiveExceptionOrFirstThread();
-            new SwitchThread() { ManagedThreadId = threadToSwitchTo.ManagedThreadId }.Execute(_context);
-
             ExecuteInitialCommand();
 
             while (!_context.ShouldQuit)

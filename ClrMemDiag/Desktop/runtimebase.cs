@@ -27,6 +27,7 @@ namespace Microsoft.Diagnostics.Runtime.Desktop
         List<ClrThread> m_threads;
         private DesktopGCHeap m_heap;
         DesktopThreadPool m_threadpool;
+        DesktopOomInformation m_oomInformation;
         internal int Revision { get; set; }
         #endregion
 
@@ -789,6 +790,30 @@ namespace Microsoft.Diagnostics.Runtime.Desktop
             return result;
         }
 
+        public override bool OutOfMemoryExceptionOccurred
+        {
+            get
+            {
+                return ((DesktopOomInformation)OutOfMemoryInformation).OomOccurred;
+            }
+        }
+
+        public override ClrOomInformation OutOfMemoryInformation
+        {
+            get
+            {
+                if (m_oomInformation == null)
+                {
+                    SubHeap[] heaps;
+                    if (!GetHeaps(out heaps))
+                        return null;
+
+                    m_oomInformation = new DesktopOomInformation(heaps);
+                }
+                return m_oomInformation;
+            }
+        }
+
         #endregion
 
         #region Abstract Functions
@@ -843,6 +868,37 @@ namespace Microsoft.Diagnostics.Runtime.Desktop
         #endregion
 
 
+    }
+
+    class DesktopOomInformation : ClrOomInformation
+    {
+        private string m_reason;
+        private ulong m_allocationSize;
+        private bool m_LOH;
+        private ulong m_gcNumber;
+
+        public DesktopOomInformation(SubHeap[] heaps)
+        {
+            foreach (var heap in heaps)
+            {
+                // There could be multiple OOMs in multiple heaps, but let's take the first.
+                if (heap.OomData != null)
+                {
+                    OomOccurred = true;
+                    m_reason = heap.OomData.Reason;
+                    m_allocationSize = heap.OomData.AllocationSize;
+                    m_LOH = heap.OomData.LargeObjectHeap;
+                    m_gcNumber = heap.OomData.GCNumber;
+                    break;
+                }
+            }
+        }
+
+        public bool OomOccurred { get; private set; }
+        public override string Reason { get { return m_reason; } }
+        public override Address AllocationSize { get { return m_allocationSize; } }
+        public override bool LargeObjectHeap { get { return m_LOH; } }
+        public override ulong GCNumber { get { return m_gcNumber; } }
     }
 
     class MemoryRegion : ClrMemoryRegion
@@ -1124,6 +1180,8 @@ namespace Microsoft.Diagnostics.Runtime.Desktop
         internal ulong FQLiveStart { get { return ActualHeap.FQRootsStart; } }
         internal ulong FQLiveStop { get { return ActualHeap.FQRootsEnd; } }
 
+        internal IOomData OomData { get { return ActualHeap.OomData; } }
+
         internal SubHeap(IHeapDetails heap, int heapNum)
         {
             ActualHeap = heap;
@@ -1236,6 +1294,17 @@ namespace Microsoft.Diagnostics.Runtime.Desktop
         ulong FQAllObjectsStop { get; }
         ulong FQRootsStart { get; }
         ulong FQRootsEnd { get; }
+
+        // null if there is no OOM information
+        IOomData OomData { get; }
+    }
+
+    interface IOomData
+    {
+        string Reason { get; }
+        ulong AllocationSize { get; }
+        bool LargeObjectHeap { get; }
+        ulong GCNumber { get; }
     }
 
     interface IGCInfo

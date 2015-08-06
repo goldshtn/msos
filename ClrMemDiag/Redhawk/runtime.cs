@@ -388,6 +388,10 @@ namespace Microsoft.Diagnostics.Runtime.Redhawk
         {
             throw new NotImplementedException();
         }
+    
+        public override bool OutOfMemoryExceptionOccurred { get { return false; } }
+
+        public override ClrOomInformation OutOfMemoryInformation { get { return null; } }
     }
 }
 #endif
