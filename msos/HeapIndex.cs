@@ -105,6 +105,8 @@ namespace msos
 
             context.HeapIndex = new HeapIndex(context);
             context.HeapIndex.Load(HeapIndexFileName);
+            
+            context.WriteLine("Loaded heap index from file '{0}'", HeapIndexFileName);
         }
     }
 
