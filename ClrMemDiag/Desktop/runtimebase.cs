@@ -794,7 +794,8 @@ namespace Microsoft.Diagnostics.Runtime.Desktop
         {
             get
             {
-                return ((DesktopOomInformation)OutOfMemoryInformation).OomOccurred;
+                var oomInfo = (DesktopOomInformation)OutOfMemoryInformation;
+                return oomInfo == null ? false : oomInfo.OomOccurred;
             }
         }
 
