@@ -1055,8 +1055,6 @@ namespace Microsoft.Diagnostics.Runtime.Desktop
                         break;
                 }
             }
-
-            Debug.Assert(count == 14);
         }
 
         internal BaseDesktopHeapType GetArrayType(ClrElementType clrElementType, int ranks, string nameHint)
