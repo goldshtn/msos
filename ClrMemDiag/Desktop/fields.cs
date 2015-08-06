@@ -138,7 +138,7 @@ namespace Microsoft.Diagnostics.Runtime.Desktop
             int count = 0;
             foreach (var domain in domains)
             {
-                object value = GetFieldValue(domain);
+                object value = GetValue(domain);
                 if (value != null && value is ulong && ((ulong)value != 0))
                 {
                     types[count++] = heap.GetObjectType((ulong)value);
@@ -205,7 +205,7 @@ namespace Microsoft.Diagnostics.Runtime.Desktop
             if (!HasSimpleValue)
                 return null;
 
-            Address addr = GetFieldAddress(appDomain);
+            Address addr = GetAddress(appDomain);
 
             if (ElementType == ClrElementType.String)
             {
@@ -314,7 +314,7 @@ namespace Microsoft.Diagnostics.Runtime.Desktop
             if (!HasSimpleValue)
                 return null;
 
-            Address addr = GetFieldAddress(appDomain, thread);
+            Address addr = GetAddress(appDomain, thread);
             if (addr == 0)
                 return null;
 

@@ -318,7 +318,7 @@ namespace Microsoft.Diagnostics.Runtime.Desktop
                                 // We must manually get the value, as strings will not be returned as an object address.
                                 try // If this fails for whatever reasion, don't fail completely.  
                                 {
-                                    addr = staticField.GetFieldAddress(ad);
+                                    addr = staticField.GetAddress(ad);
                                 }
                                 catch (Exception e)
                                 {
@@ -347,7 +347,7 @@ namespace Microsoft.Diagnostics.Runtime.Desktop
                                 foreach (var thread in m_runtime.Threads)
                                 {
                                     // We must manually get the value, as strings will not be returned as an object address.
-                                    ulong addr = tsf.GetFieldAddress(ad, thread);
+                                    ulong addr = tsf.GetAddress(ad, thread);
                                     ulong value = 0;
 
                                     if (m_runtime.ReadPointer(addr, out value) && value != 0)

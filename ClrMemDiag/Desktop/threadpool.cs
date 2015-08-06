@@ -92,7 +92,7 @@ namespace Microsoft.Diagnostics.Runtime.Desktop
                     {
                         foreach (var appDomain in m_runtime.AppDomains)
                         {
-                            ulong workQueue = (ulong)workQueueField.GetFieldValue(appDomain);
+                            ulong workQueue = (ulong)workQueueField.GetValue(appDomain);
                             ClrType workQueueType = m_heap.GetObjectType(workQueue);
 
                             if (workQueue == 0 || workQueueType == null)
@@ -134,7 +134,7 @@ namespace Microsoft.Diagnostics.Runtime.Desktop
                     {
                         foreach (ClrAppDomain domain in m_runtime.AppDomains)
                         {
-                            ulong threadQueue = (ulong)threadQueuesField.GetFieldValue(domain);
+                            ulong threadQueue = (ulong)threadQueuesField.GetValue(domain);
                             if (threadQueue == 0)
                                 continue;
 

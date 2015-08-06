@@ -757,20 +757,6 @@ namespace Microsoft.Diagnostics.Runtime
         abstract public ClrStaticField GetStaticFieldByName(string name);
 
         /// <summary>
-        /// Convenience function which dereferences fields.  For example, if you wish to dereference m_foo.m_bar.m_baz, you can pass:
-        /// { "m_foo", "m_bar", "m_baz" } into this function's second parameter to dereference those fields to get the value.
-        /// Throws Exception if a field you expect does not exist.
-        /// </summary>
-        [Obsolete("This method will be removed 1.0 RTM, you will need to reimplement it if you use it.")]
-        virtual public object GetFieldValue(Address obj, ICollection<string> fields) { throw new NotImplementedException(); }
-
-        /// <summary>
-        /// Same as GetFieldValue but returns true on success, false on failure, and does not throw.
-        /// </summary>
-        [Obsolete("This method will be removed 1.0 RTM, you will need to reimplement it if you use it.")]
-        virtual public bool TryGetFieldValue(Address obj, ICollection<string> fields, out object value) { value = null; return false; }
-
-        /// <summary>
         /// If this type inherits from another type, this is that type.  Can return null if it does not inherit (or is unknown)
         /// </summary>
         abstract public ClrType BaseType { get; }
@@ -3243,8 +3229,16 @@ namespace Microsoft.Diagnostics.Runtime
         /// </summary>
         public event RuntimeFlushedCallback RuntimeFlushed;
 
+        /// <summary>
+        /// Returns whether an out-of-memory condition occurred in the target. If this is true, use
+        /// <see cref="OutOfMemoryInformation"/> to get the OOM details.
+        /// </summary>
         public abstract bool OutOfMemoryExceptionOccurred { get; }
 
+        /// <summary>
+        /// Returns detailed information about the out-of-memory condition that occurred in the target.
+        /// If there was no out-of-memory condition, returns <code>null</code>.
+        /// </summary>
         public abstract ClrOomInformation OutOfMemoryInformation { get; }
 
         /// <summary>
@@ -3330,11 +3324,29 @@ namespace Microsoft.Diagnostics.Runtime
         }
     }
 
+    /// <summary>
+    /// Proivdes information about the out-of-memory condition that occurred.
+    /// </summary>
     public abstract class ClrOomInformation
     {
+        /// <summary>
+        /// The reason for this out-of-memory condition (a detailed string).
+        /// </summary>
         public abstract string Reason { get; }
+
+        /// <summary>
+        /// The size of the allocation that led to this out-of-memory condition.
+        /// </summary>
         public abstract ulong AllocationSize { get; }
+
+        /// <summary>
+        /// Whether this out-of-memory condition occurred in the large object heap.
+        /// </summary>
         public abstract bool LargeObjectHeap { get; }
+
+        /// <summary>
+        /// The garbage collection number during which this out-of-memory condition occurred.
+        /// </summary>
         public abstract ulong GCNumber { get; }
     }
 
