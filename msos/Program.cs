@@ -160,8 +160,18 @@ namespace msos
             Console.BackgroundColor = ConsoleColor.Black;
             _context.Printer = new ConsolePrinter();
 
-            string args = String.Join(" ", Environment.GetCommandLineArgs().Skip(1) /*exe path*/);
-            var parseResult = new CmdLineParser().Parse<CommandLineOptions>(args);
+            // Strip the leading executable name from the command line.
+            string commandLine = Environment.CommandLine;
+            if (commandLine[0] == '"')
+            {
+                commandLine = commandLine.Substring(commandLine.IndexOf('"', 1) + 1);
+            }
+            else
+            {
+                commandLine = commandLine.Substring(commandLine.IndexOf(' ') + 1);
+            }
+
+            var parseResult = new CmdLineParser().Parse<CommandLineOptions>(commandLine);
             if (!parseResult.Success)
             {
                 Bail(parseResult.Error);
