@@ -36,7 +36,7 @@ namespace CmdLine
             StringBuilder result = new StringBuilder();
             if (verbAttr != null)
             {
-                result.AppendLine(verbAttr.HelpText.SplitToLines(80, 0) + Environment.NewLine);
+                result.AppendLine(verbAttr.HelpText.SplitToLines(LineWidth, 0) + Environment.NewLine);
             }
             foreach (var option in options.Values)
             {
