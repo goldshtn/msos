@@ -64,7 +64,8 @@ namespace msos
             }
             else
             {
-                Bail("One of the -z, --pid, or --pn options must be specified. Try --help.");
+                _context.WriteLine(new CmdLineParser().Usage<CommandLineOptions>());
+                Bail("One of the -z, --pid, or --pn options must be specified.");
             }
 
             RunMainLoop();
@@ -160,17 +161,7 @@ namespace msos
             Console.BackgroundColor = ConsoleColor.Black;
             _context.Printer = new ConsolePrinter();
 
-            // Strip the leading executable name from the command line.
-            string commandLine = Environment.CommandLine;
-            if (commandLine[0] == '"')
-            {
-                commandLine = commandLine.Substring(commandLine.IndexOf('"', 1) + 1);
-            }
-            else
-            {
-                commandLine = commandLine.Substring(commandLine.IndexOf(' ') + 1);
-            }
-
+            string commandLine = CommandLineNoExecutableName();
             var parseResult = new CmdLineParser().Parse<CommandLineOptions>(commandLine);
             if (!parseResult.Success)
             {
@@ -190,6 +181,28 @@ namespace msos
                     Bail("Error creating output file: {0}", ex.Message);
                 }
             }
+        }
+
+        private static string CommandLineNoExecutableName()
+        {
+            string commandLine = Environment.CommandLine;
+            if (commandLine[0] == '"')
+            {
+                commandLine = commandLine.Substring(commandLine.IndexOf('"', 1) + 1);
+            }
+            else
+            {
+                int firstSpace = commandLine.IndexOf(' ');
+                if (firstSpace == -1)
+                {
+                    commandLine = "";
+                }
+                else
+                {
+                    commandLine = commandLine.Substring(firstSpace + 1);
+                }
+            }
+            return commandLine;
         }
 
         public void Dispose()

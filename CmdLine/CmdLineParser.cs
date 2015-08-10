@@ -334,7 +334,7 @@ namespace CmdLine
         {
             if (tokenizer == null || tokenizer.AtEnd)
             {
-                _helpWriter.Write(Usage(verbs.Values));
+                _helpWriter.Write(Usage(verbs.Values.Distinct()));
             }
             else
             {
