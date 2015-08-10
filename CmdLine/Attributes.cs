@@ -24,6 +24,7 @@ namespace CmdLine
     {
         public string HelpText { get; set; }
         public bool Required { get; set; }
+        public object Default { get; set; }
 
         // For numeric types only
         public bool Hexadecimal { get; set; }
@@ -47,7 +48,11 @@ namespace CmdLine
                 {
                     range += " max:" + Max;
                 }
-                return String.Format("{0} ({1} {2}{3})", HelpText, TargetProperty.PropertyType.Name, required, range);
+                if (Default != null)
+                {
+                    range += " default:" + Default;
+                }
+                return String.Format("{0} ({1} {2} {3}{4})", HelpText, TargetProperty.PropertyType.Name, TargetProperty.Name, required, range);
             }
         }
     }
@@ -86,5 +91,16 @@ namespace CmdLine
     public class RestOfInputAttribute : Attribute
     {
         public string HelpText { get; set; }
+        public bool Required { get; set; }
+
+        internal PropertyInfo TargetProperty { get; set; }
+
+        public string Description
+        {
+            get
+            {
+                return String.Format("{0} ({1} {2})", HelpText, TargetProperty.Name, Required ? "required" : "optional");
+            }
+        }
     }
 }

@@ -19,17 +19,11 @@ namespace msos
             return true;
         }
 
-        public static bool ParseAndVerifyValidObjectAddress(
-            CommandExecutionContext context, string objectAddress, out ulong objPtr)
+        public static bool VerifyValidObjectAddress(
+            CommandExecutionContext context, ulong objectAddress)
         {
-            if (!ulong.TryParse(objectAddress, NumberStyles.HexNumber, null, out objPtr))
-            {
-                context.WriteError("The specified object address format is invalid.");
-                return false;
-            }
-
             var heap = context.Runtime.GetHeap();
-            var type = heap.GetObjectType(objPtr);
+            var type = heap.GetObjectType(objectAddress);
             
             if (type == null || String.IsNullOrEmpty(type.Name))
             {

@@ -1,4 +1,4 @@
-﻿using CommandLine;
+﻿using CmdLine;
 using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.Runtime.Interop;
 using System;

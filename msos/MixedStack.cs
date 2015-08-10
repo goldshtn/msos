@@ -1,4 +1,4 @@
-﻿using CommandLine;
+﻿using CmdLine;
 using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.Runtime.Interop;
 using System;
@@ -17,15 +17,13 @@ namespace msos
     {
         [Option("osid", Default = 0, HelpText =
             "The OS thread ID of the thread whose stack is to be displayed. Defaults to the current thread.")]
-        public int OSThreadId { get; set; }
+        public uint OSThreadId { get; set; }
 
         public void Execute(CommandExecutionContext context)
         {
-            // The [Option]-parsing engine doesn't work well with uint properties, so we convert here.
-            uint osThreadId = (uint)OSThreadId;
-            if (osThreadId == 0)
+            if (OSThreadId == 0)
             {
-                osThreadId = context.CurrentThread.OSThreadId;
+                OSThreadId = context.CurrentThread.OSThreadId;
             }
 
             context.WriteLine("{0,-10} {1,-20} {2}", "Type", "IP", "Function");
@@ -34,7 +32,7 @@ namespace msos
                 var stackTracer = new UnifiedStackTrace(target.DebuggerInterface, context);
                 var stackTrace = stackTracer.GetStackTrace(
                     (from thr in stackTracer.Threads
-                     where thr.OSThreadId == osThreadId
+                     where thr.OSThreadId == OSThreadId
                      select thr.Index).Single());
                 foreach (var frame in stackTrace)
                 {

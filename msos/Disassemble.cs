@@ -1,4 +1,4 @@
-﻿using CommandLine;
+﻿using CmdLine;
 using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.Runtime.Interop;
 using Mono.Cecil;
@@ -18,8 +18,8 @@ namespace msos
         "Displays an IL and machine code listing for the method that contains the specified instruction pointer.")]
     class Disassemble : ICommand
     {
-        [Value(0, Required = true)]
-        public string InstructionPointer { get; set; }
+        [Value(0, Required = true, Hexadecimal = true)]
+        public ulong InstructionPointer { get; set; }
 
         private CommandExecutionContext _context;
         private IDebugControl _control;
@@ -29,17 +29,10 @@ namespace msos
         {
             _context = context;
 
-            ulong instructionPointer;
-            if (!ulong.TryParse(InstructionPointer, NumberStyles.HexNumber, null, out instructionPointer))
-            {
-                context.WriteError("The instruction pointer format is invalid.");
-                return;
-            }
-
-            ClrMethod method = context.Runtime.GetMethodByAddress(instructionPointer);
+            ClrMethod method = context.Runtime.GetMethodByAddress(InstructionPointer);
             if (method == null)
             {
-                context.WriteError("There is no managed method at the address {0:x16}.", instructionPointer);
+                context.WriteError("There is no managed method at the address {0:x16}.", InstructionPointer);
                 return;
             }
 

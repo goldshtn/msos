@@ -1,4 +1,4 @@
-﻿using CommandLine;
+﻿using CmdLine;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -14,8 +14,8 @@ namespace msos
         "which you can build using !bhi. To work without a heap index, use !GCRoot, which can be much slower.")]
     class Paths : ICommand
     {
-        [Value(0, Required = true)]
-        public string ObjectAddress { get; set; }
+        [Value(0, Required = true, Hexadecimal = true)]
+        public ulong ObjectAddress { get; set; }
 
         [Option("maxPaths", Default = 5, HelpText = "The maximum number of different paths to display.")]
         public int MaxResults { get; set; }
@@ -40,12 +40,11 @@ namespace msos
             if (!CommandHelpers.VerifyHasHeapIndex(context))
                 return;
 
-            ulong objPtr;
-            if (!CommandHelpers.ParseAndVerifyValidObjectAddress(context, ObjectAddress, out objPtr))
+            if (!CommandHelpers.VerifyValidObjectAddress(context, ObjectAddress))
                 return;
 
             int pathsDisplayed = 0;
-            foreach (var path in context.HeapIndex.FindPaths(objPtr, MaxResults, MaxLocalRoots, MaxDepth, RunInParallel))
+            foreach (var path in context.HeapIndex.FindPaths(ObjectAddress, MaxResults, MaxLocalRoots, MaxDepth, RunInParallel))
             {
                 context.WriteLine("{0:x16} -> {1:x16} {2}", path.Root.Address, path.Root.Object, path.Root.DisplayText);
                 foreach (var obj in path.Chain)

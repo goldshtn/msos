@@ -1,4 +1,4 @@
-﻿using CommandLine;
+﻿using CmdLine;
 using Microsoft.Diagnostics.Runtime;
 using System;
 using System.Collections.Generic;
@@ -10,33 +10,24 @@ using System.Threading.Tasks;
 
 namespace msos
 {
+    enum HeapQueryOutputFormat
+    {
+        Tabular,
+        Json
+    }
+
     [SupportedTargets(TargetType.DumpFile, TargetType.LiveProcess)]
     [Verb("!hq", HelpText = "Runs a query over heap objects and prints the results. Useful helpers include AllObjects(), ObjectsOfType(\"TypeName\"), AllClasses(), and Class(\"TypeName\"). Special properties on objects include __Type and __Size; special properties on classes include __Fields and __StaticFields.")]
     class HeapQuery : ICommand
     {
-        public const string TabularOutputFormat = "tabular";
-        public const string JsonOutputFormat = "json";
+        [Value(0, Required = true)]
+        public HeapQueryOutputFormat OutputFormat { get; set; }
 
-        private static string[] OutputFormats = { "--" + TabularOutputFormat, "--" + JsonOutputFormat };
-
-        // This is done in a round-about way (instead of using [Option]) because we are parsing the arguments
-        // manually at this point. The CommandLineParser isn't flexible enough. See comment in
-        // CommandExecutionContext.ExecuteOneCommand for an explanation.
-        [Value(0, Required = true, HelpText = "The output format.")]
-        public string OutputFormat { get; set; }
-
-        [Value(1, Required = true)]
-        public IEnumerable<string> Query { get; set; }
+        [RestOfInput(Required = true)]
+        public string Query { get; set; }
 
         public void Execute(CommandExecutionContext context)
         {
-            if (!OutputFormats.Contains(OutputFormat))
-            {
-                context.WriteError("Unknown output format '{0}'. Output format must be one of the following: {1}",
-                    OutputFormat, String.Join(", ", OutputFormats));
-                return;
-            }
-
             AppDomainSetup setupInfo = new AppDomainSetup();
             setupInfo.ApplicationBase = AppDomain.CurrentDomain.BaseDirectory;
             setupInfo.PrivateBinPath = "bin";
@@ -62,8 +53,10 @@ namespace msos
             {
                 try
                 {
-                    compilationOutputDirectory = 
-                        runner.RunQuery(OutputFormat.Substring(2), String.Join(" ", Query.ToArray()), context.Defines);
+                    compilationOutputDirectory = runner.RunQuery(
+                        OutputFormat.ToString(),
+                        Query,
+                        context.Defines);
                 }
                 catch (Exception ex)
                 {

@@ -1,4 +1,4 @@
-﻿using CommandLine;
+﻿using CmdLine;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,7 +11,7 @@ namespace msos
     [Verb("~", HelpText = "Switch to the thread that has the specified managed thread ID.")]
     class SwitchThread : ICommand
     {
-        [Value(0, Required = true)]
+        [Value(0, Required = true, HelpText = "The managed thread id of the thread to switch to.")]
         public int ManagedThreadId { get; set; }
 
         public void Execute(CommandExecutionContext context)

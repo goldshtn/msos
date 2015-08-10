@@ -1,4 +1,4 @@
-﻿using CommandLine;
+﻿using CmdLine;
 using Microsoft.Diagnostics.Runtime;
 using System;
 using System.Collections.Generic;
@@ -13,26 +13,25 @@ namespace msos
     [Verb("!ObjSize", HelpText = "Displays the size of the object graph referenced by the specified object, and including it.")]
     class ObjSize : ICommand
     {
-        [Value(0, Required = true)]
-        public string ObjectAddress { get; set; }
+        [Value(0, Required = true, Hexadecimal = true)]
+        public ulong ObjectAddress { get; set; }
 
         [Option("flat", HelpText = "Counts only referenced objects that do not contain further references.")]
         public bool Flat { get; set; }
 
         public void Execute(CommandExecutionContext context)
         {
-            ulong objPtr;
-            if (!CommandHelpers.ParseAndVerifyValidObjectAddress(context, ObjectAddress, out objPtr))
+            if (!CommandHelpers.VerifyValidObjectAddress(context, ObjectAddress))
                 return;
 
             IEnumerable<Tuple<ulong, ClrType>> subgraph;
             if (Flat)
             {
-                subgraph = context.Heap.FlatSubgraphOf(objPtr);
+                subgraph = context.Heap.FlatSubgraphOf(ObjectAddress);
             }
             else
             {
-                subgraph = context.Heap.SubgraphOf(objPtr);
+                subgraph = context.Heap.SubgraphOf(ObjectAddress);
             }
 
             ulong count = 0, size = 0;
@@ -43,7 +42,7 @@ namespace msos
             }
 
             context.WriteLine("{0:x16} graph size is {1} objects, {2} bytes ({3})",
-                objPtr, count, size, size.ToMemoryUnits());
+                ObjectAddress, count, size, size.ToMemoryUnits());
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿using CommandLine;
+﻿using CmdLine;
 using Microsoft.Diagnostics.Runtime;
 using System;
 using System.Collections.Generic;
@@ -11,10 +11,11 @@ namespace msos
 {
     [SupportedTargets(TargetType.DumpFile, TargetType.LiveProcess)]
     [Verb("!DumpObj", HelpText = "Display object contents.")]
+    [Verb("!do", HelpText = "Display object contents.")]
     class DumpObject : ICommand
     {
-        [Value(0, Required = true)]
-        public string ObjectAddress { get; set; }
+        [Value(0, Required = true, Hexadecimal = true)]
+        public ulong ObjectAddress { get; set; }
 
         [Option("nofields", HelpText = "Do not display the object's fields.")]
         public bool NoFields { get; set; }
@@ -33,13 +34,6 @@ namespace msos
         {
             _context = context;
 
-            ulong objPtr;
-            if (!ulong.TryParse(ObjectAddress, NumberStyles.HexNumber, null, out objPtr))
-            {
-                context.WriteError("Invalid object address format specified.");
-                return;
-            }
-
             ClrType type;
             if (!String.IsNullOrEmpty(TypeName))
             {
@@ -52,7 +46,7 @@ namespace msos
             }
             else
             {
-                type = context.Heap.GetObjectType(objPtr);
+                type = context.Heap.GetObjectType(ObjectAddress);
                 if (type == null || String.IsNullOrEmpty(type.Name))
                 {
                     context.WriteError("The specified address is not an object.");
@@ -61,12 +55,12 @@ namespace msos
             }
 
             ulong mt = 0;
-            if (type.IsObjectReference && !context.Runtime.ReadPointer(objPtr, out mt))
+            if (type.IsObjectReference && !context.Runtime.ReadPointer(ObjectAddress, out mt))
             {
                 context.WriteWarning("Unable to retrieve MT for object.");
             }
 
-            var size = type.GetSize(objPtr);
+            var size = type.GetSize(ObjectAddress);
 
             context.WriteLine("Name:     {0}", type.Name);
             if (mt != 0)
@@ -77,13 +71,13 @@ namespace msos
             if (type.IsArray)
             {
                 context.WriteLine("Array:    size {0}, element type {1}",
-                    type.GetArrayLength(objPtr),
+                    type.GetArrayLength(ObjectAddress),
                     type.ArrayComponentType != null ? type.ArrayComponentType.Name : "<unknown");
             }
             context.WriteLine("Assembly: {0}", type.Module.FileName);
             if (type.HasSimpleValue)
             {
-                context.WriteLine("Value:    {0}", type.GetValue(objPtr));
+                context.WriteLine("Value:    {0}", type.GetValue(ObjectAddress));
             }
 
             if (!NoFields && type.Fields.Count > 0)
@@ -93,7 +87,7 @@ namespace msos
                     "Offset", "Type", "VT", "Attr", "Value", "Name");
                 foreach (var field in type.Fields)
                 {
-                    DisplayFieldRecursively(field, new InstanceFieldValueForDisplayRetriever(objPtr), field.Offset, depth: type.IsValueClass ? 1 : 0);
+                    DisplayFieldRecursively(field, new InstanceFieldValueForDisplayRetriever(ObjectAddress), field.Offset, depth: type.IsValueClass ? 1 : 0);
                 }
                 foreach (var field in type.ThreadStaticFields)
                 {
@@ -150,11 +144,5 @@ namespace msos
                 }
             }
         }
-    }
-
-    [SupportedTargets(TargetType.DumpFile, TargetType.LiveProcess)]
-    [Verb("!do", HelpText = "Display object contents.")]
-    class DO : DumpObject
-    {
     }
 }

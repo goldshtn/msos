@@ -248,12 +248,12 @@ internal class RunQuery : IRunQuery
             object result = runQuery.Run();
 
             IObjectPrinter printer = null;
-            switch (outputFormat)
+            switch ((HeapQueryOutputFormat)Enum.Parse(typeof(HeapQueryOutputFormat), outputFormat))
             {
-                case HeapQuery.TabularOutputFormat:
+                case HeapQueryOutputFormat.Tabular:
                     printer = new TabularObjectPrinter(_printer);
                     break;
-                case HeapQuery.JsonOutputFormat:
+                case HeapQueryOutputFormat.Json:
                     printer = new JsonObjectPrinter(_printer);
                     break;
                 default:

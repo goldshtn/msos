@@ -1,4 +1,4 @@
-﻿using CommandLine;
+﻿using CmdLine;
 using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.Runtime.Interop;
 using System;
@@ -30,7 +30,7 @@ namespace msos
         public ClrInfo ClrVersion { get; set; }
         public TargetType TargetType { get; set; }
 
-        private Parser _commandParser;
+        private CmdLineParser _commandParser;
         private Type[] _allCommandTypes;
         private Dictionary<Tuple<string, int>, List<ClrType>> _typesByModuleAndMDToken;
         private DataTarget _dbgEngDataTarget;
@@ -43,11 +43,7 @@ namespace msos
             Aliases = new Dictionary<string, string>();
             Defines = new List<string>();
             HyperlinkOutput = true;
-            _commandParser = new Parser(ps =>
-            {
-                ps.CaseSensitive = false;
-                ps.HelpWriter = helpWriter ?? Console.Out;
-            });
+            _commandParser = new CmdLineParser(helpWriter);
             _allCommandTypes = GetAllCommandTypes();
         }
 
@@ -92,40 +88,21 @@ namespace msos
 
             ICommand commandToExecute;
 
-            // The IgnoreUnknownArguments option is not yet available in the parser, so it tries
-            // to eagerly parse alias commands. If the alias command itself contains things that look
-            // like arguments, such as --type, the parser will erroneously think that it's an 
-            // argument to the .newalias command, and not to the alias command. The same thing is
-            // going on with the !hq command, where the query could contain -- and - symbols and it
-            // crashes the parser, and with the .dec and .define commands. So, we give these commands
-            // special treatment here, with the hope there will be a more decent solution in the future.
             if (IsInDbgEngNativeMode && parts[0] != "q")
             {
-                commandToExecute = new DbgEngCommand() { Command = parts };
-            }
-            else if (parts[0] == "!hq" && parts.Length >= 2)
-            {
-                commandToExecute = new HeapQuery() { OutputFormat = parts[1], Query = parts.Skip(2) };
-            }
-            else if (parts[0] == ".define")
-            {
-                commandToExecute = new Define() { Declaration = parts.Skip(1) };
-            }
-            else if (parts[0] == ".newalias" && parts.Length >= 2)
-            {
-                commandToExecute = new CreateAlias() { AliasName = parts[1], AliasCommand = parts.Skip(2) };
-            }
-            else if (parts[0] == ".dec" && parts.Length >= 2)
-            {
-                commandToExecute = new DbgEngCommand() { Command = parts.Skip(1) };
+                commandToExecute = new DbgEngCommand() { Command = command };
             }
             else
             {
-                var parseResult = _commandParser.ParseArguments(parts, _allCommandTypes);
-                var parsed = parseResult as Parsed<object>;
-                if (parsed == null)
+                var parseResult = _commandParser.Parse(_allCommandTypes, command);
+                if (!parseResult.Success)
+                {
+                    WriteError(parseResult.Error);
                     return;
-                commandToExecute = (ICommand)parsed.Value;
+                }
+                if (parseResult.Value == null)
+                    return;
+                commandToExecute = (ICommand)parseResult.Value;
             }
 
             using (new TimeAndMemory(displayDiagnosticInformation, Printer))
@@ -349,7 +326,7 @@ namespace msos
         private Type[] GetAllCommandTypes()
         {
             return (from type in Assembly.GetExecutingAssembly().GetTypes()
-                    where typeof(ICommand).IsAssignableFrom(type)
+                    where typeof(ICommand).IsAssignableFrom(type) && type != typeof(ICommand)
                     select type
                     ).ToArray();
         }

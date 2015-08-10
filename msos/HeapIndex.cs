@@ -1,4 +1,4 @@
-﻿using CommandLine;
+﻿using CmdLine;
 using Microsoft.Diagnostics.Runtime;
 using System;
 using System.Collections.Concurrent;
@@ -19,10 +19,10 @@ namespace msos
         "Use the --nofile switch to store the index in memory only, if you do not plan to reuse it.")]
     class BuildHeapIndex : ICommand
     {
-        [Option('f', HelpText = "The file name in which to store the index. Load later with !lhi.")]
+        [Option('f', MutuallyExclusiveSet = "file", HelpText = "The file name in which to store the index. Load later with !lhi.")]
         public string HeapIndexFileName { get; set; }
 
-        [Option("nofile", Default = false, HelpText = "Store the index in memory only.")]
+        [Option("nofile", MutuallyExclusiveSet = "file", Default = false, HelpText = "Store the index in memory only.")]
         public bool InMemoryOnly { get; set; }
 
         [Option("fast", Default = false, HelpText = 

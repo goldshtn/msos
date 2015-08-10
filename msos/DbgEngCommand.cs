@@ -1,4 +1,4 @@
-﻿using CommandLine;
+﻿using CmdLine;
 using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.Runtime.Interop;
 using System;
@@ -19,22 +19,20 @@ namespace msos
         "commands by using '.dem'.")]
     class DbgEngCommand : ICommand
     {
-        [Value(0, Required = true)]
-        public IEnumerable<string> Command { get; set; }
-
-        private string RealCommand { get { return String.Join(" ", Command.ToArray()); } }
+        [RestOfInput(Required = true)]
+        public string Command { get; set; }
 
         public void Execute(CommandExecutionContext context)
         {
             if (context.IsInDbgEngNativeMode)
             {
-                context.NativeDbgEngTarget.ExecuteDbgEngCommand(RealCommand, context);
+                context.NativeDbgEngTarget.ExecuteDbgEngCommand(Command, context);
             }
             else
             {
                 using (var target = context.CreateTemporaryDbgEngTarget())
                 {
-                    target.ExecuteDbgEngCommand(RealCommand, context);
+                    target.ExecuteDbgEngCommand(Command, context);
                 }
             }
         }

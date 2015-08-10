@@ -1,4 +1,4 @@
-﻿using CommandLine;
+﻿using CmdLine;
 using ICSharpCode.Decompiler;
 using ICSharpCode.Decompiler.Ast;
 using Microsoft.Diagnostics.Runtime;

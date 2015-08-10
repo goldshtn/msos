@@ -28,10 +28,16 @@ namespace CmdLine
 
         private string Usage(Type type)
         {
+            VerbAttribute verbAttr = type.GetCustomAttributes<VerbAttribute>().FirstOrDefault();
             var options = OptionsClassProcessor.GetOptions(type);
             var values = OptionsClassProcessor.GetValues(type);
+            var restOfInput = OptionsClassProcessor.GetRestOfInputProperty(type);
 
             StringBuilder result = new StringBuilder();
+            if (verbAttr != null)
+            {
+                result.AppendLine(verbAttr.HelpText.SplitToLines(80, 0) + Environment.NewLine);
+            }
             foreach (var option in options.Values)
             {
                 result.AppendFormat("{0,-20} {1}" + Environment.NewLine,
@@ -43,6 +49,12 @@ namespace CmdLine
                 result.AppendFormat("#{0,-19} {1}" + Environment.NewLine,
                     value.Index,
                     value.Description.SplitToLines(LineWidth, PrepadSpaces));
+            }
+            if (restOfInput != null)
+            {
+                result.AppendFormat("{0,-20} {1}" + Environment.NewLine,
+                    "rest of input",
+                    restOfInput.Item2.Description.SplitToLines(LineWidth, PrepadSpaces));
             }
             return result.ToString();
         }
@@ -78,6 +90,8 @@ namespace CmdLine
 
         private ParseResult<object> Parse(Type type, string input)
         {
+            // TODO Refactor this whole thing to use exception handling and store common objects in a class
+
             object instance = Activator.CreateInstance(type);
 
             Dictionary<string, OptionAttribute> options = OptionsClassProcessor.GetOptions(type);
@@ -138,6 +152,12 @@ namespace CmdLine
                         }
                         else
                         {
+                            if (nextValueToFill >= values.Count)
+                            {
+                                // There are no more values to fill, just options
+                                return ParseResult<object>.WithError("Unexpected plain value '" + token.Value + "'");
+                            }
+
                             ValueAttribute valueAttr = values[nextValueToFill];
                             string error = SetPropertyValue(valueAttr, instance, token.Value);
                             if (error != null)
@@ -154,13 +174,29 @@ namespace CmdLine
                 }
             }
 
+            SetDefaultValues(instance, options, values);
+
             var errorResult = FindUnsatisfiedOptionsAndValues(options, values);
             if (errorResult != null)
                 return errorResult;
 
-            SetRestOfInputPropertyIfAvailable(type, instance, tokenizer);
+            errorResult = SetRestOfInputPropertyIfAvailable(type, instance, tokenizer);
+            if (errorResult != null)
+                return errorResult;
 
             return ParseResult<object>.WithValue(instance);
+        }
+
+        private void SetDefaultValues(object instance, Dictionary<string, OptionAttribute> options, Dictionary<int, ValueAttribute> values)
+        {
+            foreach (var option in from o in options.Values where !o.Satisfied && o.Default != null select o)
+            {
+                option.TargetProperty.SetValue(instance, option.Default);
+            }
+            foreach (var value in from v in values.Values where !v.Satisfied && v.Default != null select v)
+            {
+                value.TargetProperty.SetValue(instance, value.Default);
+            }
         }
 
         private static OptionAttribute FirstAlreadySatisfiedMutuallyExclusiveOption(Dictionary<string, OptionAttribute> options, OptionAttribute optionAttr)
@@ -172,13 +208,18 @@ namespace CmdLine
                     select option).FirstOrDefault();
         }
 
-        private static void SetRestOfInputPropertyIfAvailable(Type type, object instance, Tokenizer tokenizer)
+        private static ParseResult<object> SetRestOfInputPropertyIfAvailable(Type type, object instance, Tokenizer tokenizer)
         {
             var restOfInputProp = OptionsClassProcessor.GetRestOfInputProperty(type);
             if (restOfInputProp != null)
             {
-                restOfInputProp.SetValue(instance, tokenizer.RestOfInput);
+                if (restOfInputProp.Item2.Required && tokenizer.AtEnd)
+                {
+                    return ParseResult<object>.WithError("A value for the property '" + restOfInputProp.Item1.Name + "' is missing");
+                }
+                restOfInputProp.Item1.SetValue(instance, tokenizer.RestOfInput);
             }
+            return null; // No error
         }
 
         private static ParseResult<object> FindUnsatisfiedOptionsAndValues(Dictionary<string, OptionAttribute> options, Dictionary<int, ValueAttribute> values)
@@ -207,7 +248,14 @@ namespace CmdLine
             object value = null;
             try
             {
-                value = Convert.ChangeType(valueString, attr.TargetProperty.PropertyType);
+                if (attr.TargetProperty.PropertyType.IsEnum)
+                {
+                    value = Enum.Parse(attr.TargetProperty.PropertyType, valueString, ignoreCase: true);
+                }
+                else
+                {
+                    value = Convert.ChangeType(valueString, attr.TargetProperty.PropertyType);
+                }
             }
             catch (Exception)
             {
@@ -274,7 +322,12 @@ namespace CmdLine
                 return ParseResult<object>.WithError("Could not find a match for verb '" + token.Value  + "'");
             }
 
-            return Parse(type, tokenizer.RestOfInput);
+            var result = Parse(type, tokenizer.RestOfInput);
+            if (!result.Success)
+            {
+                _helpWriter.Write(Usage(type));
+            }
+            return result;
         }
 
         private void DisplayHelp(Dictionary<string, Type> verbs, Tokenizer tokenizer)

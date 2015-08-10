@@ -1,4 +1,4 @@
-﻿using CommandLine;
+﻿using CmdLine;
 using Microsoft.Diagnostics.Runtime;
 using System;
 using System.Collections.Generic;
@@ -11,31 +11,25 @@ namespace msos
 {
     [SupportedTargets(TargetType.DumpFile, TargetType.DumpFileNoHeap, TargetType.LiveProcess)]
     [Verb("!PrintException", HelpText = "Display the current exception or the specified exception object.")]
+    [Verb("!pe", HelpText = "Display the current exception or the specified exception object.")]
     class PrintException : ICommand
     {
-        [Value(0)]
-        public string ExceptionAddress { get; set; }
+        [Value(0, Hexadecimal = true)]
+        public ulong ExceptionAddress { get; set; }
 
         public void Execute(CommandExecutionContext context)
         {
-            if (!String.IsNullOrEmpty(ExceptionAddress))
+            if (ExceptionAddress != 0)
             {
-                ulong exceptionPtr;
-                if (!ulong.TryParse(ExceptionAddress, NumberStyles.HexNumber, null, out exceptionPtr))
-                {
-                    context.WriteError("The specified exception address has an invalid format.");
-                    return;
-                }
-
                 var heap = context.Runtime.GetHeap();
-                var type = heap.GetObjectType(exceptionPtr);
+                var type = heap.GetObjectType(ExceptionAddress);
                 if (type == null || !type.IsException)
                 {
                     context.WriteError("The specified address is not the address of an Exception-derived object.");
                     return;
                 }
 
-                DisplayException(heap.GetExceptionObject(exceptionPtr), context);
+                DisplayException(heap.GetExceptionObject(ExceptionAddress), context);
             }
             else
             {
@@ -71,11 +65,5 @@ namespace msos
             context.WriteLine("Stack trace:");
             ClrThreadExtensions.WriteStackTraceToContext(null, exception.StackTrace, context, displayArgumentsAndLocals: false);
         }
-    }
-
-    [SupportedTargets(TargetType.DumpFile, TargetType.DumpFileNoHeap, TargetType.LiveProcess)]
-    [Verb("!pe", HelpText = "Display the current exception or the specified exception object.")]
-    class PE : PrintException
-    {
     }
 }

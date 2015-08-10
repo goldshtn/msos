@@ -1,4 +1,4 @@
-﻿using CommandLine;
+﻿using CmdLine;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -12,34 +12,23 @@ namespace msos
     [Verb("!DumpArray", HelpText = "Display all the elements in an array.")]
     class DumpArray : ICommand
     {
-        [Value(0, Required = true)]
-        public string ObjectAddress { get; set; }
+        [Value(0, Required = true, Hexadecimal = true)]
+        public ulong ObjectAddress { get; set; }
 
         public void Execute(CommandExecutionContext context)
         {
-            ulong objPtr;
-            if (!ulong.TryParse(ObjectAddress, NumberStyles.HexNumber, null, out objPtr))
-            {
-                context.WriteError("The specified object format is invalid.");
+            if (!CommandHelpers.VerifyValidObjectAddress(context, ObjectAddress))
                 return;
-            }
 
-            var heap = context.Runtime.GetHeap();
-            var type = heap.GetObjectType(objPtr);
-            if (type == null)
-            {
-                context.WriteError("The specified address does not point to a valid object.");
-                return;
-            }
-
+            var type = context.Heap.GetObjectType(ObjectAddress);
             if (!type.IsArray)
             {
                 context.WriteError("The object at the specified address is not an array.");
                 return;
             }
 
-            var size = type.GetSize(objPtr);
-            var length = type.GetArrayLength(objPtr);
+            var size = type.GetSize(ObjectAddress);
+            var length = type.GetArrayLength(ObjectAddress);
             context.WriteLine("Name:  {0}", type.Name);
             context.WriteLine("Size:  {0}(0x{1:x}) bytes", size, size);
             context.WriteLine("Array: Number of elements {0}, Type {1} {2}",
@@ -53,7 +42,7 @@ namespace msos
                 object value;
                 if (type.ArrayComponentType.IsValueClass)
                 {
-                    value = type.GetArrayElementAddress(objPtr, i);
+                    value = type.GetArrayElementAddress(ObjectAddress, i);
                     if (value != null)
                     {
                         context.WriteLink(
@@ -68,8 +57,8 @@ namespace msos
                 }
                 else
                 {
-                    value = type.GetArrayElementValue(objPtr, i);
-                    ulong elementAddr = type.GetArrayElementAddress(objPtr, i);
+                    value = type.GetArrayElementValue(ObjectAddress, i);
+                    ulong elementAddr = type.GetArrayElementAddress(ObjectAddress, i);
                     ulong elementRef;
                     if (context.Runtime.ReadPointer(elementAddr, out elementRef))
                     {

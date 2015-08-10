@@ -1,4 +1,4 @@
-﻿using CommandLine;
+﻿using CmdLine;
 using Microsoft.Diagnostics.Runtime;
 using System;
 using System.Collections.Generic;
@@ -39,14 +39,14 @@ namespace msos
         private AnalysisTarget _target;
         private CommandExecutionContext _context = new CommandExecutionContext();
 
-        private void Run(string[] args)
+        private void Run()
         {
             const int ConsoleBufferSize = 4096;
             Console.SetIn(new StreamReader(
                 Console.OpenStandardInput(bufferSize: ConsoleBufferSize), Console.InputEncoding, false, ConsoleBufferSize)
                 );
 
-            ParseCommandLineArguments(args);
+            ParseCommandLineArguments();
 
             if (!String.IsNullOrEmpty(_options.DumpFile))
             {
@@ -154,19 +154,19 @@ namespace msos
             _target = new AnalysisTarget(processes[0].Id, _context, _options.ClrVersion);
         }
 
-        private void ParseCommandLineArguments(string[] args)
+        private void ParseCommandLineArguments()
         {
             // Start with the default console printer before parsing any arguments.
             Console.BackgroundColor = ConsoleColor.Black;
             _context.Printer = new ConsolePrinter();
 
-            var parseResult = Parser.Default.ParseArguments<CommandLineOptions>(args);
-            var parsed = parseResult as Parsed<CommandLineOptions>;
-            if (parsed == null)
+            string args = String.Join(" ", Environment.GetCommandLineArgs().Skip(1) /*exe path*/);
+            var parseResult = new CmdLineParser().Parse<CommandLineOptions>(args);
+            if (!parseResult.Success)
             {
-                Bail();
+                Bail(parseResult.Error);
             }
-            _options = parsed.Value;
+            _options = parseResult.Value;
 
             if (!String.IsNullOrEmpty(_options.OutputFileName))
             {
@@ -187,11 +187,11 @@ namespace msos
             Exit(SUCCESS_EXIT_CODE);
         }
 
-        private void RunWrapper(string[] args)
+        private void RunWrapper()
         {
             try
             {
-                Run(args);
+                Run();
             }
             catch (AnalysisFailedException)
             {
@@ -205,11 +205,11 @@ namespace msos
             }
         }
 
-        static void Main(string[] args)
+        static void Main()
         {
             using (var program = new Program())
             {
-                program.RunWrapper(args);
+                program.RunWrapper();
             }
         }
     }

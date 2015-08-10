@@ -15,6 +15,18 @@ namespace CmdLine.Tests
         public string Rest { get; set; }
     }
 
+    public class RestRequired
+    {
+        [RestOfInput(Required = true)]
+        public string Rest { get; set; }
+    }
+
+    public class WithDefault
+    {
+        [Option('a', Default = 42)]
+        public int Value { get; set; }
+    }
+
     public class StructuredOptions
     {
         [Option('a', Required = true)]
@@ -102,5 +114,17 @@ namespace CmdLine.Tests
 
         [Value(2)]
         public int Value2 { get; set; }
+    }
+
+    public enum VariousOptions
+    {
+        FirstOption,
+        SecondOption
+    }
+
+    public class WithEnum
+    {
+        [Option('a')]
+        public VariousOptions Options { get; set; }
     }
 }

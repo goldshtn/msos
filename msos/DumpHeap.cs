@@ -1,4 +1,4 @@
-﻿using CommandLine;
+﻿using CmdLine;
 using Microsoft.Diagnostics.Runtime;
 using System;
 using System.Collections.Generic;
@@ -16,16 +16,16 @@ namespace msos
         [Option("type", HelpText = "A regular expression specifying the types of objects to display.")]
         public string TypeRegex { get; set; }
 
-        [Option("mt", HelpText = "A method table address specifying the objects to display.")]
-        public string MethodTable { get; set; }
+        [Option("mt", HelpText = "A method table address specifying the objects to display.", Hexadecimal=true)]
+        public ulong MethodTable { get; set; }
 
         [Option("stat", HelpText="Display only type statistics and not individual objects.")]
         public bool StatisticsOnly { get; set; }
 
-        [Option("min", Default = -1, HelpText = "Display only objects whose size is greater than the value specified.")]
+        [Option("min", Default = -1L, HelpText = "Display only objects whose size is greater than the value specified.")]
         public long MinSize { get; set; }
 
-        [Option("max", Default = -1, HelpText = "Display only objects whose size is less than the value specified.")]
+        [Option("max", Default = -1L, HelpText = "Display only objects whose size is less than the value specified.")]
         public long MaxSize { get; set; }
 
         struct TypeInfo
@@ -36,7 +36,6 @@ namespace msos
         }
 
         private ClrHeap _heap;
-        private ulong _methodTable;
 
         private bool FilterObject(ulong obj, ulong mt)
         {
@@ -67,9 +66,9 @@ namespace msos
                 match = (long)type.GetSize(obj) <= MaxSize;
             }
 
-            if (match && !String.IsNullOrEmpty(MethodTable))
+            if (match && MethodTable != 0)
             {
-                match = _methodTable == mt;
+                match = MethodTable == mt;
             }
 
             return match;
@@ -77,14 +76,6 @@ namespace msos
 
         public void Execute(CommandExecutionContext context)
         {
-            if (!String.IsNullOrEmpty(MethodTable))
-            {
-                if (!ulong.TryParse(MethodTable, System.Globalization.NumberStyles.HexNumber, null, out _methodTable))
-                {
-                    context.WriteError("Method table provided is not in a valid format.");
-                    return;
-                }
-            }
             if (!String.IsNullOrEmpty(TypeRegex))
             {
                 try

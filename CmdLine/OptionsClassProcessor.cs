@@ -66,6 +66,12 @@ namespace CmdLine
             if (attr.Hexadecimal && !attr.TargetProperty.PropertyType.IsNumeric())
                 throw new ParserException("Hexadecimal inputs are allowed only for numeric types");
 
+            if (attr.Default != null && attr.Required)
+                throw new ParserException("A required value cannot have a default");
+
+            if (attr.Default != null && attr.Default.GetType() != attr.TargetProperty.PropertyType)
+                throw new ParserException("The default value must be of type '" + attr.TargetProperty.PropertyType.Name + "'");
+
             if ((attr.Min != null || attr.Max != null) && !attr.TargetProperty.PropertyType.IsNumeric())
                 throw new ParserException("Minimum and maximum values are allowed only for numeric types");
 
@@ -81,16 +87,20 @@ namespace CmdLine
                 throw new ParserException("The minimum value must be smaller than the maximum value");
         }
 
-        public static PropertyInfo GetRestOfInputProperty(Type type)
+        public static Tuple<PropertyInfo, RestOfInputAttribute> GetRestOfInputProperty(Type type)
         {
-            var propertyInfo = (from prop in type.GetProperties()
-                                where prop.GetCustomAttributes<RestOfInputAttribute>().Any()
-                                select prop).FirstOrDefault();
-            if (propertyInfo != null && propertyInfo.PropertyType != typeof(string))
+            var info = (from prop in type.GetProperties()
+                        let attr = prop.GetCustomAttribute<RestOfInputAttribute>()
+                        where attr != null
+                        select new { prop, attr }).FirstOrDefault();
+            if (info != null && info.prop.PropertyType != typeof(string))
             {
                 throw new ParserException("The property decorated with [RestOfInput] must be of type string");
             }
-            return propertyInfo;
+            if (info == null)
+                return null;
+            info.attr.TargetProperty = info.prop;
+            return new Tuple<PropertyInfo, RestOfInputAttribute>(info.prop, info.attr);
         }
 
         public static Dictionary<string, Type> GetVerbs(IEnumerable<Type> verbTypes)
@@ -101,7 +111,7 @@ namespace CmdLine
                 var verbs = type.GetCustomAttributes<VerbAttribute>();
                 if (!verbs.Any())
                 {
-                    throw new ParserException("The type '" + type.FullName + " does not have a [Verb] attribute");
+                    throw new ParserException("The type '" + type.FullName + "' does not have a [Verb] attribute");
                 }
                 foreach (var verb in verbs)
                 {

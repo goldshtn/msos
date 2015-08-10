@@ -1,4 +1,4 @@
-﻿using CommandLine;
+﻿using CmdLine;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,15 +11,14 @@ namespace msos
     [Verb(".define", HelpText = "Define a helper method to be used in heap queries.")]
     class Define : ICommand
     {
-        [Value(0, Min = 1, HelpText =
+        [RestOfInput(HelpText =
             "The full declaration of the helper method to define, including the parameters and " +
             "return type. For example: void Foo(ulong o) { return Object(o); }")]
-        public IEnumerable<string> Declaration { get; set; }
+        public string Declaration { get; set; }
 
         public void Execute(CommandExecutionContext context)
         {
-            string helperText = String.Join(" ", Declaration.ToArray());
-            context.Defines.Add(helperText);
+            context.Defines.Add(Declaration);
         }
     }
 

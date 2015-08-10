@@ -1,4 +1,4 @@
-﻿using CommandLine;
+﻿using CmdLine;
 using Microsoft.Diagnostics.Runtime;
 using System;
 using System.Collections.Generic;
@@ -15,8 +15,8 @@ namespace msos
     [Verb("!GCRoot", HelpText = "Display paths from GC roots leading to the specified object. For large dumps or many repetitions, consider building a heap index (!bhi) and using the !paths command instead.")]
     class GCRoot : ICommand
     {
-        [Value(0, Required = true)]
-        public string ObjectAddress { get; set; }
+        [Value(0, Required = true, Hexadecimal = true)]
+        public ulong ObjectAddress { get; set; }
 
         private HashSet<ClrRoot> _visitedRoots = new HashSet<ClrRoot>();
         private Dictionary<ulong, List<ClrRoot>> _rootsByObject = new Dictionary<ulong, List<ClrRoot>>();
@@ -30,12 +30,8 @@ namespace msos
         {
             _context = context;
 
-            ulong objPtr;
-            if (!ulong.TryParse(ObjectAddress, NumberStyles.HexNumber, null, out objPtr))
-            {
-                context.WriteError("The specified object address format is invalid.");
+            if (!CommandHelpers.VerifyValidObjectAddress(context, ObjectAddress))
                 return;
-            }
 
             _heap = context.Heap;
             if (!_heap.CanWalkHeap)
@@ -44,15 +40,10 @@ namespace msos
                 return;
             }
 
-            var type = _heap.GetObjectType(objPtr);
-            if (type == null)
-            {
-                context.WriteError("The specified address does not point to a valid object.");
-                return;
-            }
+            var type = _heap.GetObjectType(ObjectAddress);
 
             _visitedObjects = new ObjectSet(_heap);
-            _targets[objPtr] = new Node(objPtr, type);
+            _targets[ObjectAddress] = new Node(ObjectAddress, type);
             FillRootDictionary();
 
             foreach (var root in _roots)

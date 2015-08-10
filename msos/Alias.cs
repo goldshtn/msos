@@ -1,4 +1,4 @@
-﻿using CommandLine;
+﻿using CmdLine;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,8 +16,8 @@ namespace msos
         [Value(0, Required = true)]
         public string AliasName { get; set; }
 
-        [Value(1, Required = true, Min = 1)]
-        public IEnumerable<string> AliasCommand { get; set; }
+        [RestOfInput(Required = true)]
+        public string AliasCommand { get; set; }
 
         public void Execute(CommandExecutionContext context)
         {
@@ -26,7 +26,7 @@ namespace msos
                 context.WriteError("The specified alias already exists. Clear it first with .rmalias.");
                 return;
             }
-            context.Aliases.Add(AliasName, String.Join(" ", AliasCommand.ToArray()));
+            context.Aliases.Add(AliasName, AliasCommand);
         }
     }
 
@@ -37,8 +37,8 @@ namespace msos
         [Value(0, Required = true)]
         public string AliasName { get; set; }
 
-        [Value(1, Required = false)]
-        public IEnumerable<string> AliasParameters { get; set; }
+        [RestOfInput]
+        public string AliasParameters { get; set; }
 
         public void Execute(CommandExecutionContext context)
         {
@@ -49,7 +49,7 @@ namespace msos
                 return;
             }
             int index = 1;
-            foreach (var paramValue in AliasParameters)
+            foreach (var paramValue in AliasParameters.Split(' '))
             {
                 aliasCommand = aliasCommand.Replace("$" + index, paramValue);
             }

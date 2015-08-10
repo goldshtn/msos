@@ -1,4 +1,4 @@
-﻿using CommandLine;
+﻿using CmdLine;
 using Microsoft.Diagnostics.RuntimeExt;
 using System;
 using System.Collections.Generic;
@@ -13,17 +13,16 @@ namespace msos
     [Verb("!DumpCollection", HelpText = "Displays the contents of a collection. Arrays, lists, and dictionaries are supported at present.")]
     class DumpCollection : ICommand
     {
-        [Value(0, Required = true)]
-        public string ObjectAddress { get; set; }
+        [Value(0, Required = true, Hexadecimal = true)]
+        public ulong ObjectAddress { get; set; }
 
         public void Execute(CommandExecutionContext context)
         {
-            ulong objPtr;
-            if (!CommandHelpers.ParseAndVerifyValidObjectAddress(context, ObjectAddress, out objPtr))
+            if (!CommandHelpers.VerifyValidObjectAddress(context, ObjectAddress))
                 return;
 
-            var type = context.Heap.GetObjectType(objPtr);
-            var dynamicObj = context.Heap.GetDynamicObject(objPtr);
+            var type = context.Heap.GetObjectType(ObjectAddress);
+            var dynamicObj = context.Heap.GetDynamicObject(ObjectAddress);
             context.WriteLine("Type:   {0}", type.Name);
             if (type.IsArray || dynamicObj.IsList())
             {

@@ -1,4 +1,4 @@
-﻿using CommandLine;
+﻿using CmdLine;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,7 +9,7 @@ namespace msos
 {
     [SupportedTargets(TargetType.DumpFile, TargetType.LiveProcess)]
     [Verb("!dso", HelpText =
-        "Dump stack objects for the specified thread. Not all objects displayed are actually " +
+        "Dump stack objects for the current thread. Not all objects displayed are actually " +
         "referenced by live local variables.")]
     class DumpStackObjects : ICommand
     {

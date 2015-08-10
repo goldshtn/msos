@@ -206,5 +206,30 @@ namespace CmdLine.Tests
             Assert.IsInstanceOfType(result.Value, typeof(Verb1));
             Assert.AreEqual("blah", ((Verb1)result.Value).Input1);
         }
+
+        [TestMethod]
+        public void ParseEnum()
+        {
+            ParseResult<WithEnum> result = _parser.Parse<WithEnum>("-a SecondOption");
+            Assert.IsTrue(result.Success);
+            Assert.IsNotNull(result.Value);
+            Assert.AreEqual(VariousOptions.SecondOption, result.Value.Options);
+        }
+
+        [TestMethod]
+        public void ParserRestRequired()
+        {
+            ParseResult<RestRequired> result = _parser.Parse<RestRequired>("");
+            Assert.IsFalse(result.Success);
+        }
+
+        [TestMethod]
+        public void ParserDefault()
+        {
+            ParseResult<WithDefault> result = _parser.Parse<WithDefault>("");
+            Assert.IsTrue(result.Success);
+            Assert.IsNotNull(result.Value);
+            Assert.AreEqual(42, result.Value.Value);
+        }
     }
 }
