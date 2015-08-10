@@ -86,7 +86,11 @@ namespace CmdLine
                 return;
             }
 
-            if (CurrentChar == '-')
+            if (CurrentChar == '"')
+            {
+                EatQuotedValue();
+            }
+            else if (CurrentChar == '-')
             {
                 if (CanPeek && Char.IsDigit(PeekNextChar))
                 {
@@ -104,6 +108,21 @@ namespace CmdLine
             }
 
             EatWhitespace();
+        }
+
+        private void EatQuotedValue()
+        {
+            string quotedValue = "";
+            ++_position;
+            while (!AtEnd && CurrentChar != '"')
+            {
+                quotedValue += CurrentChar;
+                ++_position;
+            }
+            if (CurrentChar == '"')
+                ++_position; // Skip trailing " if we saw it (might be we skipped the loop completely)
+
+            _currentToken = new Token(TokenKind.Value, quotedValue, _position);
         }
 
         private void EatOption()

@@ -122,6 +122,14 @@ namespace CmdLine.Tests
             AssertTokenEqual(TokenKind.Value, "-12", tokenizer.NextToken);
         }
 
+        [TestMethod]
+        public void TokenizeQuotedOption()
+        {
+            var tokenizer = new Tokenizer("-c \"foo; goo; moo\"");
+            AssertTokenEqual(TokenKind.ShortOption, "c", tokenizer.NextToken);
+            AssertTokenEqual(TokenKind.Value, "foo; goo; moo", tokenizer.NextToken);
+        }
+
         private void AssertTokenEqual(TokenKind expectedKind, string expectedValue, Token token)
         {
             Assert.IsNotNull(token);
