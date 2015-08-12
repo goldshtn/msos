@@ -40,6 +40,7 @@ namespace CmdLine
                 throw new ArgumentNullException("input");
             
             _input = input;
+            EatWhitespace();
         }
 
         public Token NextToken

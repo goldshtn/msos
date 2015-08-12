@@ -37,14 +37,12 @@ namespace msos
         private List<string> _temporaryAliases = new List<string>();
         private const int WarnThresholdCountOfTemporaryAliases = 100;
 
-        public CommandExecutionContext(TextWriter helpWriter = null)
+        public CommandExecutionContext()
         {
             SymbolCache = new SymbolCache();
             Aliases = new Dictionary<string, string>();
             Defines = new List<string>();
             HyperlinkOutput = true;
-            _commandParser = new CmdLineParser(helpWriter);
-            _allCommandTypes = GetAllCommandTypes();
         }
 
         public ClrThread CurrentThread
@@ -79,6 +77,8 @@ namespace msos
 
         public void ExecuteOneCommand(string command, bool displayDiagnosticInformation = false)
         {
+            InitParserIfNecessary();
+
             string[] parts = command.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length == 0)
                 return;
@@ -338,6 +338,15 @@ namespace msos
                 return false;
 
             return supportedTargetsAttr.SupportedTargets.Contains(TargetType);
+        }
+
+        private void InitParserIfNecessary()
+        {
+            if (_commandParser == null)
+            {
+                _commandParser = new CmdLineParser(new PrinterTextWriter(Printer));
+                _allCommandTypes = GetAllCommandTypes();
+            }
         }
     }
 }

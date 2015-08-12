@@ -153,6 +153,7 @@
     <Compile Include="ObjectExtensions.cs" />
     <Compile Include="ObjectSet.cs" />
     <Compile Include="ObjSize.cs" />
+    <Compile Include="PrinterTextWriter.cs" />
     <Compile Include="SessionSettings.cs" />
     <Compile Include="Paths.cs" />
     <Compile Include="PrinterBase.cs" />

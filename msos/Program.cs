@@ -38,6 +38,7 @@ namespace msos
         private CommandLineOptions _options;
         private AnalysisTarget _target;
         private CommandExecutionContext _context = new CommandExecutionContext();
+        private CmdLineParser _parser;
 
         private void Run()
         {
@@ -45,6 +46,10 @@ namespace msos
             Console.SetIn(new StreamReader(
                 Console.OpenStandardInput(bufferSize: ConsoleBufferSize), Console.InputEncoding, false, ConsoleBufferSize)
                 );
+
+            Console.BackgroundColor = ConsoleColor.Black;
+            _context.Printer = new ConsolePrinter();
+            _parser = new CmdLineParser(new PrinterTextWriter(_context.Printer));
 
             ParseCommandLineArguments();
 
@@ -64,11 +69,17 @@ namespace msos
             }
             else
             {
-                _context.WriteLine(new CmdLineParser().Usage<CommandLineOptions>());
+                PrintUsage();
                 Bail("One of the -z, --pid, or --pn options must be specified.");
             }
 
             RunMainLoop();
+        }
+
+        private void PrintUsage()
+        {
+            _context.WriteLine(_parser.Banner());
+            _context.WriteLine(_parser.Usage<CommandLineOptions>());
         }
 
         private void RunMainLoop()
@@ -157,12 +168,8 @@ namespace msos
 
         private void ParseCommandLineArguments()
         {
-            // Start with the default console printer before parsing any arguments.
-            Console.BackgroundColor = ConsoleColor.Black;
-            _context.Printer = new ConsolePrinter();
-
             string commandLine = CommandLineNoExecutableName();
-            var parseResult = new CmdLineParser().Parse<CommandLineOptions>(commandLine);
+            var parseResult = _parser.Parse<CommandLineOptions>(commandLine);
             if (!parseResult.Success)
             {
                 Bail(parseResult.Error);

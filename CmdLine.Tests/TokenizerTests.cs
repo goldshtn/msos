@@ -130,6 +130,20 @@ namespace CmdLine.Tests
             AssertTokenEqual(TokenKind.Value, "foo; goo; moo", tokenizer.NextToken);
         }
 
+        [TestMethod]
+        public void TokenizeEmptyString()
+        {
+            var tokenizer = new Tokenizer("");
+            Assert.IsTrue(tokenizer.AtEnd);
+        }
+
+        [TestMethod]
+        public void TokenizeWhitespaceString()
+        {
+            var tokenizer = new Tokenizer("  ");
+            Assert.IsTrue(tokenizer.AtEnd);
+        }
+
         private void AssertTokenEqual(TokenKind expectedKind, string expectedValue, Token token)
         {
             Assert.IsNotNull(token);

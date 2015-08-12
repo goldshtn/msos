@@ -105,7 +105,7 @@ namespace CmdLine
 
         public static Dictionary<string, Type> GetVerbs(IEnumerable<Type> verbTypes)
         {
-            var result = new Dictionary<string, Type>();
+            var result = new Dictionary<string, Type>(StringComparer.InvariantCultureIgnoreCase);
             foreach (var type in verbTypes)
             {
                 var verbs = type.GetCustomAttributes<VerbAttribute>();

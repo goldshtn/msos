@@ -361,5 +361,29 @@ namespace CmdLine
                 }
             }
         }
+
+        public string Banner(Assembly assembly = null)
+        {
+            if (assembly == null)
+            {
+                assembly = Assembly.GetCallingAssembly();
+            }
+
+            StringBuilder result = new StringBuilder();
+
+            var titleAttr = assembly.GetCustomAttribute<AssemblyTitleAttribute>();
+            var versionAttr = assembly.GetCustomAttribute<AssemblyVersionAttribute>();
+            result.AppendFormat("{0} {1}" + Environment.NewLine,
+                titleAttr != null ? titleAttr.Title : assembly.GetName().Name,
+                versionAttr != null ? versionAttr.Version.ToString() : "");
+
+            var copyrightAttr = assembly.GetCustomAttribute<AssemblyCopyrightAttribute>();
+            if (copyrightAttr != null)
+            {
+                result.AppendLine(copyrightAttr.Copyright);
+            }
+
+            return result.ToString();
+        }
     }
 }
