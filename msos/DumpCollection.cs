@@ -13,7 +13,7 @@ namespace msos
     [Verb("!DumpCollection", HelpText = "Displays the contents of a collection. Arrays, lists, and dictionaries are supported at present.")]
     class DumpCollection : ICommand
     {
-        [Value(0, Required = true, Hexadecimal = true)]
+        [Value(0, Required = true, Hexadecimal = true, HelpText = "The address of the collection to display.")]
         public ulong ObjectAddress { get; set; }
 
         public void Execute(CommandExecutionContext context)

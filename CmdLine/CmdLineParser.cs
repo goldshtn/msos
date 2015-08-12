@@ -36,7 +36,7 @@ namespace CmdLine
             StringBuilder result = new StringBuilder();
             if (verbAttr != null)
             {
-                result.AppendLine(verbAttr.HelpText.SplitToLines(LineWidth, 0) + Environment.NewLine);
+                result.AppendLine(verbAttr.HelpText.SplitToLines(LineWidth + 20, 0) + Environment.NewLine);
             }
             foreach (var option in options.Values)
             {
@@ -284,11 +284,11 @@ namespace CmdLine
 
             if (attr.Min != null && ((IComparable)attr.Min).CompareTo(value) > 0)
             {
-                return "The provided value '" + valueString + "' is smaller than the minimum value " + attr.Min;
+                return "The provided value '" + valueString + "' is smaller than the minimum value '" + attr.Min + "'";
             }
             if (attr.Max != null && ((IComparable)attr.Max).CompareTo(value) < 0)
             {
-                return "The provided value '" + valueString + "' is greater than the maximum value " + attr.Max;
+                return "The provided value '" + valueString + "' is greater than the maximum value '" + attr.Max + "'";
             }
 
             attr.TargetProperty.SetValue(instance, value);

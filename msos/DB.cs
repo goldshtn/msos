@@ -12,7 +12,7 @@ namespace msos
     [Verb("db", HelpText="Display memory at the specified address.")]
     class DB : ICommand
     {
-        [Value(0, Required = true, Hexadecimal = true)]
+        [Value(0, Required = true, Hexadecimal = true, HelpText = "The memory address to display.")]
         public ulong Address { get; set; }
 
         [Option('l', HelpText="The number of bytes to display.", Default = 128, Min = 1)]

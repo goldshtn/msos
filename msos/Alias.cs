@@ -13,10 +13,10 @@ namespace msos
         "$1, $2, ... in the command body. For example: .newalias dt !dumpheap --stat --type $1")]
     class CreateAlias : ICommand
     {
-        [Value(0, Required = true)]
+        [Value(0, Required = true, HelpText = "The alias name.")]
         public string AliasName { get; set; }
 
-        [RestOfInput(Required = true)]
+        [RestOfInput(Required = true, HelpText = "The alias command. May contain parameter placeholders: $1, $2, etc.")]
         public string AliasCommand { get; set; }
 
         public void Execute(CommandExecutionContext context)
@@ -34,10 +34,10 @@ namespace msos
     [Verb("%", HelpText = "Executes an existing command alias.")]
     class ExecuteAlias : ICommand
     {
-        [Value(0, Required = true)]
+        [Value(0, Required = true, HelpText = "The name of the alias to execute.")]
         public string AliasName { get; set; }
 
-        [RestOfInput]
+        [RestOfInput(HelpText = "Alias parameters that replace parameter placeholders ($1, $2, ...) in the alias definition.")]
         public string AliasParameters { get; set; }
 
         public void Execute(CommandExecutionContext context)
@@ -62,7 +62,7 @@ namespace msos
     [Verb(".rmalias", HelpText = "Removes the specified alias.")]
     class RemoveAlias : ICommand
     {
-        [Value(0, Required = true)]
+        [Value(0, Required = true, HelpText = "The name of the alias to remove.")]
         public string AliasName { get; set; }
 
         public void Execute(CommandExecutionContext context)

@@ -15,7 +15,7 @@ namespace msos
     [Verb("!GCRoot", HelpText = "Display paths from GC roots leading to the specified object. For large dumps or many repetitions, consider building a heap index (!bhi) and using the !paths command instead.")]
     class GCRoot : ICommand
     {
-        [Value(0, Required = true, Hexadecimal = true)]
+        [Value(0, Required = true, Hexadecimal = true, HelpText = "The object whose roots are to be displayed.")]
         public ulong ObjectAddress { get; set; }
 
         private HashSet<ClrRoot> _visitedRoots = new HashSet<ClrRoot>();

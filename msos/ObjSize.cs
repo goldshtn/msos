@@ -13,7 +13,7 @@ namespace msos
     [Verb("!ObjSize", HelpText = "Displays the size of the object graph referenced by the specified object, and including it.")]
     class ObjSize : ICommand
     {
-        [Value(0, Required = true, Hexadecimal = true)]
+        [Value(0, Required = true, Hexadecimal = true, HelpText = "The object whose size is to be displayed.")]
         public ulong ObjectAddress { get; set; }
 
         [Option("flat", HelpText = "Counts only referenced objects that do not contain further references.")]

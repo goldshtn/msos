@@ -14,7 +14,7 @@ namespace msos
         "Requires a heap index, which you can build using !bhi.")]
     class Refs : ICommand
     {
-        [Value(0, Required = true, Hexadecimal = true)]
+        [Value(0, Required = true, Hexadecimal = true, HelpText = "The object whose references are desired.")]
         public ulong ObjectAddress { get; set; }
 
         public void Execute(CommandExecutionContext context)

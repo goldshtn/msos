@@ -14,7 +14,7 @@ namespace msos
         "which you can build using !bhi. To work without a heap index, use !GCRoot, which can be much slower.")]
     class Paths : ICommand
     {
-        [Value(0, Required = true, Hexadecimal = true)]
+        [Value(0, Required = true, Hexadecimal = true, HelpText = "The object whose root paths are desired.")]
         public ulong ObjectAddress { get; set; }
 
         [Option("maxPaths", Default = 5, HelpText = "The maximum number of different paths to display.")]

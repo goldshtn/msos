@@ -14,7 +14,9 @@ namespace msos
     [Verb("!pe", HelpText = "Display the current exception or the specified exception object.")]
     class PrintException : ICommand
     {
-        [Value(0, Hexadecimal = true)]
+        [Value(0, Hexadecimal = true, HelpText =
+            "The exception object to display. If not specified, the current thread's current " +
+            "exception object is displayed if available.")]
         public ulong ExceptionAddress { get; set; }
 
         public void Execute(CommandExecutionContext context)

@@ -18,7 +18,8 @@ namespace msos
         "Displays an IL and machine code listing for the method that contains the specified instruction pointer.")]
     class Disassemble : ICommand
     {
-        [Value(0, Required = true, Hexadecimal = true)]
+        [Value(0, Required = true, Hexadecimal = true,
+            HelpText = "The instruction pointer in the method that needs to be disassembled.")]
         public ulong InstructionPointer { get; set; }
 
         private CommandExecutionContext _context;

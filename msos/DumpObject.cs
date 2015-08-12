@@ -14,7 +14,7 @@ namespace msos
     [Verb("!do", HelpText = "Display object contents.")]
     class DumpObject : ICommand
     {
-        [Value(0, Required = true, Hexadecimal = true)]
+        [Value(0, Required = true, Hexadecimal = true, HelpText = "The address of the object to display.")]
         public ulong ObjectAddress { get; set; }
 
         [Option("nofields", HelpText = "Do not display the object's fields.")]

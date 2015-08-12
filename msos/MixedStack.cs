@@ -15,7 +15,7 @@ namespace msos
         "Display the managed and unmanaged call stack.")]
     class MixedStack : ICommand
     {
-        [Option("osid", Default = 0, HelpText =
+        [Option("osid", Default = 0U, HelpText =
             "The OS thread ID of the thread whose stack is to be displayed. Defaults to the current thread.")]
         public uint OSThreadId { get; set; }
 

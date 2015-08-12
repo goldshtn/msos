@@ -12,7 +12,7 @@ namespace msos
     [Verb("!DumpArray", HelpText = "Display all the elements in an array.")]
     class DumpArray : ICommand
     {
-        [Value(0, Required = true, Hexadecimal = true)]
+        [Value(0, Required = true, Hexadecimal = true, HelpText = "The address of the array to display.")]
         public ulong ObjectAddress { get; set; }
 
         public void Execute(CommandExecutionContext context)

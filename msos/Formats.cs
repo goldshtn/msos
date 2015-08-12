@@ -12,7 +12,7 @@ namespace msos
     [Verb(".formats", HelpText = "Formats a hexadecimal 64-bit value in multiple representations.")]
     class Formats : ICommand
     {
-        [Value(0, Required = true, Hexadecimal = true)]
+        [Value(0, Required = true, Hexadecimal = true, HelpText = "The value to format.")]
         public ulong Value { get; set; }
 
         public void Execute(CommandExecutionContext context)
