@@ -13,12 +13,12 @@
          }; _
 }
 
-.newalias detailedhttprequests !hq --json from hr in HttpRequests() _
+.newalias detailedhttprequests !hq json from hr in HttpRequests() _
 where !hr.Thread.IsNull() _
 let thread = GetRuntime().Threads.SingleOrDefault(t => t.ManagedThreadId == (int)hr.Thread) _
 select new { Request = hr, StackTrace = String.Join(Environment.NewLine + "\t\t", thread.StackTrace.Select(f => f.DisplayString)) }
 
-.newalias httprequests !hq --tabular HttpRequests()
+.newalias httprequests !hq tabular HttpRequests()
 
 # This is an example of a helper function that you can use in all subsequent queries
 .define IEnumerable<dynamic> NonEmptyXmlSections() _
@@ -26,13 +26,13 @@ select new { Request = hr, StackTrace = String.Join(Environment.NewLine + "\t\t"
   return ObjectsOfType("System.Configuration.SectionXmlInfo").Where(s => !s._rawXml.IsNull()); _
 }
 
-.newalias configs !hq --json from s in NonEmptyXmlSections() _
+.newalias configs !hq json from s in NonEmptyXmlSections() _
 where !s._rawXml.IsNull() select new { _
   Key = s._configKey, ConfigPath = s._definitionConfigPath, _
   File = s._filename, Line = s._lineNumber, Xml = s._rawXml _
 }
 
-.newalias httpruntimes !hq --json from o in ObjectsOfType("System.Web.HttpRuntime") _
+.newalias httpruntimes !hq json from o in ObjectsOfType("System.Web.HttpRuntime") _
 where !(bool)o._beforeFirstRequest select new { _
   Address = o.__Address, _
   FirstRequestTime = o._firstRequestStartTime.dateData, _
@@ -42,7 +42,7 @@ where !(bool)o._beforeFirstRequest select new { _
   Path = o._appDomainAppPath _
 }
 
-.newalias httprequest !hq --json from hr in ObjectEn(0x$1) _
+.newalias httprequest !hq json from hr in ObjectEn(0x$1) _
 select new { _
   Request = hr._httpMethod + " " + hr._url.m_String, _
   ContentType = hr._contentType, _

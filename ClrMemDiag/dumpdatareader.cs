@@ -185,9 +185,9 @@ namespace Microsoft.Diagnostics.Runtime
         {
             var raw = module.Raw;
             var version = raw.VersionInfo;
-            int minor = (ushort)version.dwFileVersionMS;
+            int minor = unchecked((ushort)version.dwFileVersionMS);
             int major = (ushort)(version.dwFileVersionMS >> 16);
-            int patch = (ushort)version.dwFileVersionLS;
+            int patch = unchecked((ushort)version.dwFileVersionLS);
             int rev = (ushort)(version.dwFileVersionLS >> 16);
 
             var versionInfo = new VersionInfo(major, minor, rev, patch);

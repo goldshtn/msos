@@ -27,20 +27,20 @@ MT                   Count      TotalSize  Class Name
 Total 14751 objects
 Elapsed: 121ms
 
-1> !hq --tabular from o in ObjectsOfType("System.IO.StreamReader") select new { SR = o.GetValue(), CP = o.encoding.m_codePage }
+1> !hq tabular from o in ObjectsOfType("System.IO.StreamReader") select new { SR = o.GetValue(), CP = o.encoding.m_codePage }
 SR                                                  CP
 33307512                                            437
 Rows: 1
 Time: 604 ms, Memory start: 124.930kb, Memory end: 157.840kb, Memory delta: +32.910kb
 
-1> !hq --tabular Class("System.String").__Fields
+1> !hq tabular Class("System.String").__Fields
 Name                                                Type
 m_stringLength                                      System.Int32
 m_firstChar                                         System.Char
 Rows: 2
 Time: 530 ms, Memory start: 124.145kb, Memory end: 157.254kb, Memory delta: +33.109kb
 
-1> !hq --tabular from s in ObjectsOfType("System.String") where s.__Size > 100 select new { Str = (string)s, Size = s.__Size }
+1> !hq tabular from s in ObjectsOfType("System.String") where s.__Size > 100 select new { Str = (string)s, Size = s.__Size }
 Str                                                 Size
 ...C:\Temp\VSDebugging\bin\Debug\VSDebugging.exe.C  118
 C:\Temp\VSDebugging\bin\Debug\VSDebugging.exe       104

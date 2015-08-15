@@ -59,12 +59,12 @@ namespace Microsoft.Diagnostics.Runtime.Utilities
     unsafe struct DumpPointer
     {
         // This is dangerous because its lets you create a new arbitary dump pointer.
-        static public DumpPointer DangerousMakeDumpPointer(IntPtr rawPointer, uint size)
+        static public DumpPointer DangerousMakeDumpPointer(IntPtr rawPointer, ulong size)
         {
             return new DumpPointer(rawPointer, size);
         }
         // Private ctor used to create new pointers from existing ones.
-        DumpPointer(IntPtr rawPointer, uint size)
+        DumpPointer(IntPtr rawPointer, ulong size)
         {
             m_pointer = rawPointer;
             m_size = size;
@@ -76,7 +76,7 @@ namespace Microsoft.Diagnostics.Runtime.Utilities
         /// </summary>
         /// <param name="size">smaller size to shrink the pointer to.</param>
         /// <returns>new DumpPointer</returns>
-        public DumpPointer Shrink(uint size)
+        public DumpPointer Shrink(ulong size)
         {
             // Can't use this to grow.
             EnsureSizeRemaining(size);
@@ -84,22 +84,13 @@ namespace Microsoft.Diagnostics.Runtime.Utilities
             return new DumpPointer(m_pointer, m_size - size);
         }
 
-        public DumpPointer Adjust(uint delta)
-        {
-            EnsureSizeRemaining(delta);
-            IntPtr pointer = new IntPtr(m_pointer.ToInt64() + delta);
-
-            return new DumpPointer(pointer, m_size - delta);
-        }
-
         public DumpPointer Adjust(ulong delta64)
         {
-            uint delta = (uint)delta64;
-            EnsureSizeRemaining(delta);
-            ulong ptr = unchecked((ulong)m_pointer.ToInt64()) + delta;
+            EnsureSizeRemaining(delta64);
+            ulong ptr = unchecked((ulong)m_pointer.ToInt64()) + delta64;
             IntPtr pointer = new IntPtr(unchecked((long)ptr));
 
-            return new DumpPointer(pointer, m_size - delta);
+            return new DumpPointer(pointer, m_size - delta64);
         }
         #endregion // Transforms
 
@@ -236,7 +227,7 @@ namespace Microsoft.Diagnostics.Runtime.Utilities
 
         #endregion Data access
 
-        void EnsureSizeRemaining(uint requestedSize)
+        void EnsureSizeRemaining(ulong requestedSize)
         {
             if (requestedSize > m_size)
                 throw new ClrDiagnosticsException("The given crash dump is in an incorrect format.", ClrDiagnosticsException.HR.CrashDumpError);
@@ -264,15 +255,9 @@ namespace Microsoft.Diagnostics.Runtime.Utilities
         // return corrupted data, but never read outside the dump-file.
         IntPtr m_pointer;
 
-        // This is a 4-byte integer, which limits the dump operations to 4 gb. If we want to
-        // handle dumps larger than that, we need to make this a 8-byte integer, (ulong), but that
-        // then widens all of the DumpPointer structures.
-        // Alternatively, we could make this an IntPtr so that it's 4-bytes on 32-bit and 8-bytes on
-        // 64-bit OSes. 32-bit OS can't load 4gb+ dumps anyways, so that may give us the best of
-        // both worlds.
         // We explictly keep the size private because clients should not need to access it. Size
         // expectations are already described by the minidump format.
-        uint m_size;
+        ulong m_size;
     }
 
     /// <summary>
@@ -1751,7 +1736,7 @@ namespace Microsoft.Diagnostics.Runtime.Utilities
                 Marshal.ThrowExceptionForHR(error, new IntPtr(-1));
             }
 
-            m_base = DumpPointer.DangerousMakeDumpPointer(m_View.BaseAddress, (uint)length);
+            m_base = DumpPointer.DangerousMakeDumpPointer(m_View.BaseAddress, (ulong)length);
 
             //
             // Cache stuff

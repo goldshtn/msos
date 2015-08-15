@@ -175,7 +175,7 @@ namespace msos
                     segment.IsLarge ? "LOH" : "SOH");
                 _context.WriteLink(
                     "",
-                    String.Format("!hq --tabular from o in ObjectsInSegment({0}) " +
+                    String.Format("!hq tabular from o in ObjectsInSegment({0}) " +
                                   "group (long)o.__Size by o.__Type into g " +
                                   "let totalSize = g.Sum() " + 
                                   "orderby totalSize ascending " +
