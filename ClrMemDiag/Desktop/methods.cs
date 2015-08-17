@@ -93,7 +93,7 @@ namespace Microsoft.Diagnostics.Runtime.Desktop
             if (type == null)
                 return null;
 
-            DesktopModule module = (DesktopModule)type.Module;
+            DesktopModule module = type.Module as DesktopModule;
             if (module == null)
                 return null;
 
