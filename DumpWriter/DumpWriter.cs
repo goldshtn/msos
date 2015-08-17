@@ -286,10 +286,10 @@ namespace DumpWriter
             _logger = logger ?? TextWriter.Null;
         }
 
-        public void Dump(int pid, string fileName, string dumpComment = null)
+        public void Dump(int pid, DumpType dumpType, string fileName, string dumpComment = null)
         {
             _pid = pid;
-            _dumpType = DumpType.MinimalWithFullCLRHeap;
+            _dumpType = dumpType;
             dumpComment = dumpComment ?? ("DumpWriter: " + _dumpType.ToString());
 
             IntPtr hProcess = DumpNativeMethods.OpenProcess(
@@ -311,7 +311,7 @@ namespace DumpWriter
                 callbackParam.CallbackRoutine = CallbackRoutine;
             }
 
-            MINIDUMP_TYPE dumpType =
+            MINIDUMP_TYPE nativeDumpType =
                 (_dumpType == DumpType.FullMemory || _dumpType == DumpType.FullMemoryExcludingSafeRegions) ?
                 MINIDUMP_TYPE.MiniDumpWithFullMemory | MINIDUMP_TYPE.MiniDumpWithHandleData | MINIDUMP_TYPE.MiniDumpWithFullMemoryInfo :
                 MINIDUMP_TYPE.MiniDumpWithHandleData | MINIDUMP_TYPE.MiniDumpWithFullMemoryInfo;
@@ -319,7 +319,7 @@ namespace DumpWriter
                 hProcess,
                 (uint)_pid,
                 dumpFileStream.SafeFileHandle.DangerousGetHandle(),
-                dumpType,
+                nativeDumpType,
                 ref exceptionParam,
                 ref userStreamParam,
                 ref callbackParam
@@ -330,8 +330,6 @@ namespace DumpWriter
             userStreamParam.Delete();
             DumpNativeMethods.CloseHandle(hProcess);
             dumpFileStream.Close();
-
-            _logger.WriteLine("Resulting dump size: {0:N0} bytes", new FileInfo(fileName).Length);
         }
 
         private static MINIDUMP_USER_STREAM_INFORMATION PrepareUserStream(string dumpComment)

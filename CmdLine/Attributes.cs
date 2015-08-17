@@ -42,15 +42,21 @@ namespace CmdLine
                 string range = "";
                 if (Min != null)
                 {
-                    range += " min:" + Min;
+                    range += " min: " + Min;
                 }
                 if (Max != null)
                 {
-                    range += " max:" + Max;
+                    range += " max: " + Max;
                 }
                 if (Default != null)
                 {
-                    range += " default:" + Default;
+                    range += " default: " + Default;
+                }
+                if (TargetProperty.PropertyType.IsEnum)
+                {
+                    range += " values:";
+                    foreach (string name in Enum.GetNames(TargetProperty.PropertyType))
+                        range += " " + name;
                 }
                 return String.Format("{0} ({1} {2} {3}{4})", HelpText, TargetProperty.PropertyType.Name, TargetProperty.Name, required, range);
             }

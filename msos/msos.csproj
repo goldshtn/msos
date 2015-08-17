@@ -127,6 +127,7 @@
     <Compile Include="Decompile.cs" />
     <Compile Include="Define.cs" />
     <Compile Include="Disassemble.cs" />
+    <Compile Include="Dump.cs" />
     <Compile Include="DumpArray.cs" />
     <Compile Include="DumpCollection.cs" />
     <Compile Include="DumpDomain.cs" />
