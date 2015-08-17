@@ -193,6 +193,10 @@
       <Project>{f634ed9d-3a0f-4fc4-988c-bb319bb69fa6}</Project>
       <Name>CmdLine</Name>
     </ProjectReference>
+    <ProjectReference Include="..\DumpWriter\DumpWriter.csproj">
+      <Project>{1c19b4d7-e6a6-4a9a-8495-8231fa167d1c}</Project>
+      <Name>DumpWriter</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup Condition="'$(Platform)' == 'x86'">
     <EmbeddedResource Include="costura32\msdia120.dll" />
