@@ -40,16 +40,32 @@ namespace DumpWriter
             if (_dumpType == DumpType.Minimal)
                 return;
 
-            var sw = Stopwatch.StartNew();
-
             var readerType = typeof(DataTarget).Assembly.GetType("Microsoft.Diagnostics.Runtime.LiveDataReader");
             var reader = (IDataReader)Activator.CreateInstance(readerType, _pid);
             var readerLogger = new DumpReaderLogger(reader);
             var target = DataTarget.CreateFromDataReader(readerLogger);
-            var runtime = target.CreateRuntime(target.ClrVersions[0].TryDownloadDac());
 
-            AddCLRRegions(runtime);
+            foreach (var clrVersion in target.ClrVersions)
+            {
+                var runtime = target.CreateRuntime(clrVersion.TryDownloadDac());
 
+                AddCLRRegions(runtime);
+
+                TouchOtherRegions(readerLogger, runtime);
+
+                _logger.WriteLine("{0} ranges requested by the DAC, total size {1:N0}",
+                    _otherClrRegions.Count,
+                    _otherClrRegions.Sum(r => (long)(r.Key - r.Value))
+                    );
+                _logger.WriteLine("{0} CLR regions, total size {1:N0}",
+                    _majorClrRegions.Count,
+                    _majorClrRegions.Sum(r => (long)(r.Key - r.Value))
+                    );
+            }
+        }
+
+        private void TouchOtherRegions(DumpReaderLogger readerLogger, ClrRuntime runtime)
+        {
             // Touch all threads, stacks, frames
             foreach (var t in runtime.Threads)
             {
@@ -68,20 +84,9 @@ namespace DumpWriter
             heap.EnumerateRoots(enumerateStatics: false).Count();
             heap.EnumerateTypes().Count();
 
-            _logger.WriteLine("Preparation took {0:N2} ms", sw.Elapsed.TotalMilliseconds);
-
             // TODO Check if it's faster to construct sorted inside ReaderWrapper
             foreach (var kvp in readerLogger.Ranges)
                 _otherClrRegions.Add(kvp.Key, kvp.Value);
-
-            _logger.WriteLine("{0} ranges requested by the DAC, total size {1:N0}",
-                _otherClrRegions.Count,
-                _otherClrRegions.Sum(r => (long)(r.Key - r.Value))
-                );
-            _logger.WriteLine("{0} CLR regions, total size {1:N0}",
-                _majorClrRegions.Count,
-                _majorClrRegions.Sum(r => (long)(r.Key - r.Value))
-                );
         }
 
         private void AddCLRRegions(ClrRuntime runtime)
