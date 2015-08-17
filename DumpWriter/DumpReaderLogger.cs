@@ -79,6 +79,14 @@ namespace DumpWriter
             }
         }
 
+        public bool IsHeapAvailable
+        {
+            get
+            {
+                return _impl.IsHeapAvailable;
+            }
+        }
+
         public void Close()
         {
             _impl.Close();

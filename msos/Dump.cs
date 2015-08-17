@@ -29,7 +29,8 @@ namespace msos
             var writer = new DumpWriter.DumpWriter(
                 Verbose ? new PrinterTextWriter(context.Printer) : null
                 );
-            writer.Dump(context.ProcessId, DumpType, FileName /*TODO comment*/);
+            // TODO Try to make the string shared between here and the DumpNative class in CLRMD
+            writer.Dump(context.ProcessId, DumpType, FileName, "DumpWriter dump: has heap");
             context.WriteLine("Resulting dump size: {0:N0} bytes", new FileInfo(FileName).Length);
         }
     }

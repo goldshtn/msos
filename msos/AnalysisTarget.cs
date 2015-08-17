@@ -89,15 +89,20 @@ namespace msos
             _context.WriteInfo("Opened dump file '{0}', architecture {1}, {2} CLR versions detected.",
                 _dumpFile, _target.Architecture, _target.ClrVersions.Count);
             _context.DumpFile = _dumpFile;
-            _context.TargetType = _target.IsMinidump ? TargetType.DumpFileNoHeap : TargetType.DumpFile;
-            
-            if (_target.IsMinidump)
+            _context.TargetType = _target.IsHeapAvailable ? TargetType.DumpFile : TargetType.DumpFileNoHeap;
+
+            if (!_target.IsHeapAvailable)
             {
                 _context.WriteWarning(
                     "This dump does not have heap information present. Most commands will not work. " + 
-                    "Basic triage commands such as !pe, !clrstack, !threads are still available. " +
-                    "To get good information, make sure to put your modules (.exe/.dll files) on " +
-                    "the symbol path, not just the symbols (.pdb files).");
+                    "Basic triage commands such as !pe, !clrstack, !threads are still available.");
+            }
+            if (_target.IsMinidump)
+            {
+                _context.WriteWarning(
+                    "This dump is a minidump, which means it's possible that module contents were " +
+                    "not included in the file. To get good information, make sure to put your modules " +
+                    "(.exe/.dll files) on the symbol path, not just the symbols (.pdb files).");
             }
         }
 

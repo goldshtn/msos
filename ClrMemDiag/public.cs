@@ -2674,10 +2674,17 @@ namespace Microsoft.Diagnostics.Runtime
         AsyncMemoryReadResult ReadMemoryAsync(ulong address, int bytesRequested);
 
         /// <summary>
-        /// Returns true if the data target is a minidump (or otherwise may not contain full heap data).
+        /// Returns true if the data target is a minidump. A minidump might still have heap information
+        /// available; if that's what you intend to check, use <see cref="IsHeapAvailable"/>.
         /// </summary>
-        /// <returns>True if the data target is a minidump (or otherwise may not contain full heap data).</returns>
+        /// <returns>True if the data target is a minidump.</returns>
         bool IsMinidump { get; }
+
+        /// <summary>
+        /// Returns true if the data target has heap information available, so heap-related  
+        /// features can work.
+        /// </summary>
+        bool IsHeapAvailable { get; }
 
         /// <summary>
         /// Gets the TEB of the specified thread.
@@ -2885,6 +2892,12 @@ namespace Microsoft.Diagnostics.Runtime
         /// the application/crash dump you are debugging.
         /// </summary>
         public abstract bool IsMinidump { get; }
+
+        /// <summary>
+        /// Returns true if the target has heap information available. If it returns false, functions that rely on 
+        /// heap information (such as roots, objects, types) may fail to return data.
+        /// </summary>
+        public abstract bool IsHeapAvailable { get; }
 
         /// <summary>
         /// Sets the symbol path for ClrMD.

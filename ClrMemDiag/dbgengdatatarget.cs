@@ -128,6 +128,14 @@ namespace Microsoft.Diagnostics.Runtime
             }
         }
 
+        public bool IsHeapAvailable
+        {
+            get
+            {
+                return !IsMinidump;
+            }
+        }
+
         public Architecture GetArchitecture()
         {
             SetClientInstance();

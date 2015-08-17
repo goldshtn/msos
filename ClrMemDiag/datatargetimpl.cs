@@ -49,6 +49,11 @@ namespace Microsoft.Diagnostics.Runtime
             get { return m_dataReader.IsMinidump; }
         }
 
+        public override bool IsHeapAvailable
+        {
+            get { return m_dataReader.IsHeapAvailable; }
+        }
+
         public override void SetSymbolPath(string path)
         {
             m_symPath.Set(path);

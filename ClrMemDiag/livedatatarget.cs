@@ -44,6 +44,14 @@ namespace Microsoft.Diagnostics.Runtime
             }
         }
 
+        public bool IsHeapAvailable
+        {
+            get
+            {
+                return false;
+            }
+        }
+
         public void Close()
         {
         }
