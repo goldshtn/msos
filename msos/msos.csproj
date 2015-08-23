@@ -137,6 +137,7 @@
     <Compile Include="EnumerableExtensions.cs" />
     <Compile Include="FieldValueForDisplayRetriever.cs" />
     <Compile Include="FilePrinter.cs" />
+    <Compile Include="FindStack.cs" />
     <Compile Include="Formats.cs" />
     <Compile Include="FReachableQueue.cs" />
     <Compile Include="GCRoot.cs" />
