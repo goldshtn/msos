@@ -26,9 +26,6 @@ namespace msos
         }
     }
 
-    // TODO This must be in a DLL. In fact, it's time for a split. The msos core should be a 
-    // DLL, and msos.exe should be just the Program class.
-    // Motivation: can't LoadLibrary an .exe and then use it as code...
     static class Exports
     {
         [DllExport("CreateMsos", CallingConvention = CallingConvention.StdCall)]

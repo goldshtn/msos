@@ -1,6 +1,8 @@
 #include "engextcpp.hpp"
 
-#import "..\msos\bin\x86\Debug\msos.tlb" auto_rename
+// TODO All hardcoded paths...
+
+#import "C:\dev\msos\msoscore\bin\x86\Debug\msoscore.tlb" auto_rename
 
 class EXT_CLASS : public ExtExtension
 {
@@ -8,19 +10,19 @@ public:
 	EXT_CLASS();
 	EXT_COMMAND_METHOD(msos);
 private:
-	Msos::IMsosPtr msos_ptr_;
+	msoscore::IMsosPtr msos_ptr_;
 };
 
 EXT_DECLARE_GLOBALS();
 
 EXT_CLASS::EXT_CLASS()
 {
-	using create_msos_t = void(__stdcall *)(Msos::IMsos**);
+	using create_msos_t = void(__stdcall *)(msoscore::IMsos**);
 
 	// TODO Do we need this?
 	CoInitializeEx(nullptr, COINIT_MULTITHREADED);
 
-	HMODULE hMsosLib = LoadLibrary(L"C:\\dev\\msos\\msos\\bin\\x86\\Debug\\msos.exe");
+	HMODULE hMsosLib = LoadLibrary(L"C:\\dev\\msos\\msoscore\\bin\\x86\\Debug\\msoscore.dll");
 	create_msos_t create_msos = (create_msos_t)GetProcAddress(hMsosLib, "CreateMsos");
 	create_msos(&msos_ptr_);
 
