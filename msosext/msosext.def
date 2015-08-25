@@ -1,0 +1,11 @@
+EXPORTS
+
+; engextcpp exports
+    DebugExtensionInitialize
+	DebugExtensionUninitialize
+	KnownStructOutputEx
+	DebugExtensionNotify
+	help
+
+; our exports
+    msos
