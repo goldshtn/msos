@@ -1,0 +1,11 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Weavers>
+  <Costura>
+    <PreloadOrder>
+      dbghelp
+      dbgeng
+      symsrv
+      msdia120
+    </PreloadOrder>
+  </Costura>
+</Weavers>

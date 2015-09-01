@@ -13,7 +13,7 @@
     <FileAlignment>512</FileAlignment>
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
     <RestorePackages>true</RestorePackages>
-    <NuGetPackageImportStamp>be5de6d7</NuGetPackageImportStamp>
+    <NuGetPackageImportStamp>5c0b7164</NuGetPackageImportStamp>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x86'">
     <DebugSymbols>true</DebugSymbols>
@@ -77,22 +77,11 @@
     <None Include="App.config" />
     <None Include="packages.config" />
   </ItemGroup>
-  <ItemGroup Condition="'$(Platform)' == 'x86'">
-    <EmbeddedResource Include="costura32\msdia120.dll" />
-    <EmbeddedResource Include="costura32\dbgeng.dll" />
-    <EmbeddedResource Include="costura32\dbghelp.dll" />
-    <EmbeddedResource Include="costura32\symsrv.dll" />
-  </ItemGroup>
-  <ItemGroup Condition="'$(Platform)' == 'x64'">
-    <EmbeddedResource Include="costura64\msdia120.dll" />
-    <EmbeddedResource Include="costura64\dbgeng.dll" />
-    <EmbeddedResource Include="costura64\dbghelp.dll" />
-    <EmbeddedResource Include="costura64\symsrv.dll" />
-  </ItemGroup>
   <ItemGroup>
-    <Content Include="FodyWeavers.xml" />
-  </ItemGroup>
-  <ItemGroup>
+    <ProjectReference Include="..\ClrMemDiag\ClrMemDiag.csproj">
+      <Project>{a82126ca-23aa-41f1-8586-a5938d44d0a7}</Project>
+      <Name>ClrMemDiag</Name>
+    </ProjectReference>
     <ProjectReference Include="..\CmdLine\CmdLine.csproj">
       <Project>{f634ed9d-3a0f-4fc4-988c-bb319bb69fa6}</Project>
       <Name>CmdLine</Name>
@@ -101,6 +90,11 @@
       <Project>{4dbbdc25-cce7-4e21-9166-90d8c5268efd}</Project>
       <Name>msoscore</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="FodyWeavers.xml">
+      <SubType>Designer</SubType>
+    </Content>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
@@ -111,6 +105,10 @@
     <Error Condition="!Exists('$(SolutionDir)\.nuget\NuGet.targets')" Text="$([System.String]::Format('$(ErrorText)', '$(SolutionDir)\.nuget\NuGet.targets'))" />
     <Error Condition="!Exists('..\packages\Fody.1.26.1\build\Fody.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Fody.1.26.1\build\Fody.targets'))" />
   </Target>
+  <PropertyGroup>
+    <PostBuildEvent>call "C:\Program Files (x86)\Microsoft Visual Studio 12.0\Common7\Tools\vsvars32.bat"
+editbin /largeaddressaware "$(TargetPath)"</PostBuildEvent>
+  </PropertyGroup>
   <Import Project="..\packages\Fody.1.26.1\build\Fody.targets" Condition="Exists('..\packages\Fody.1.26.1\build\Fody.targets')" />
   <UsingTask TaskName="CosturaCleanup" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.v4.0.dll" TaskFactory="CodeTaskFactory">
     <ParameterGroup>
@@ -148,10 +146,6 @@ foreach (var item in filesToCleanup)
   <Target Name="CleanReferenceCopyLocalPaths" AfterTargets="AfterBuild;NonWinFodyTarget">
     <CosturaCleanup Config="FodyWeavers.xml" Files="@(ReferenceCopyLocalPaths->'$(OutDir)%(DestinationSubDirectory)%(Filename)%(Extension)')" />
   </Target>
-  <PropertyGroup>
-    <PostBuildEvent>call "C:\Program Files (x86)\Microsoft Visual Studio 12.0\Common7\Tools\vsvars32.bat"
-editbin /largeaddressaware "$(TargetPath)"</PostBuildEvent>
-  </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

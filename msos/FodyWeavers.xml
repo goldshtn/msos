@@ -1,11 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Weavers>
-  <Costura CreateTemporaryAssemblies="true">
-    <PreloadOrder>
-      dbghelp
-      dbgeng
-      symsrv
-      msdia120
-    </PreloadOrder>
-  </Costura>
+	<Costura/>
+  
 </Weavers>
