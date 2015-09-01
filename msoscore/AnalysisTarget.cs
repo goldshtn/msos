@@ -1,4 +1,5 @@
 ﻿using Microsoft.Diagnostics.Runtime;
+using Microsoft.Diagnostics.Runtime.Interop;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -41,6 +42,21 @@ namespace msos
             AttachToProcess();
 
             SharedInit();
+        }
+
+        public AnalysisTarget(IDebugClient debugClient, CommandExecutionContext context, int clrVersionIndex = 0)
+        {
+            _context = context;
+            _clrVersionIndex = clrVersionIndex;
+
+            CreateFromDebugClient(debugClient);
+            SharedInit();
+        }
+
+        private void CreateFromDebugClient(IDebugClient debugClient)
+        {
+            _target = DataTarget.CreateFromDebuggerInterface(debugClient);
+            // TODO Figure out if it's a live target or a dump, what kind, etc.
         }
 
         private void SharedInit()
