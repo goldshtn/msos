@@ -194,24 +194,20 @@
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
-  <ItemGroup>
+  <ItemGroup Condition="'$(Platform)' == 'x86'">
     <EmbeddedResource Include="costura32\dbgeng.dll" />
-  </ItemGroup>
-  <ItemGroup>
     <EmbeddedResource Include="costura32\dbghelp.dll" />
-  </ItemGroup>
-  <ItemGroup>
     <EmbeddedResource Include="costura32\msdia120.dll" />
-  </ItemGroup>
-  <ItemGroup>
     <EmbeddedResource Include="costura32\symsrv.dll" />
   </ItemGroup>
+  <ItemGroup Condition="'$(Platform)' == 'x64'">
+    <EmbeddedResource Include="costura64\dbgeng.dll" />
+    <EmbeddedResource Include="costura64\dbghelp.dll" />
+    <EmbeddedResource Include="costura64\msdia120.dll" />
+    <EmbeddedResource Include="costura64\symsrv.dll" />
+  </ItemGroup>
   <ItemGroup>
-    <Content Include="costura64\dbgeng.dll" />
-    <Content Include="costura64\dbghelp.dll" />
-    <Content Include="costura64\msdia120.dll" />
-    <Content Include="costura64\symsrv.dll" />
-    <Content Include="FodyWeavers.xml" />
+	<Content Include="FodyWeavers.xml" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
