@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.Remoting;
 using System.Text;
 using System.Threading.Tasks;
@@ -29,8 +30,11 @@ namespace msos
         public void Execute(CommandExecutionContext context)
         {
             AppDomainSetup setupInfo = new AppDomainSetup();
-            setupInfo.ApplicationBase = AppDomain.CurrentDomain.BaseDirectory;
-            setupInfo.PrivateBinPath = "bin";
+            // NOTE: The ApplicationBase is important here. The assemblies required for the separate
+            // AppDomain are extracted at runtime by Costura (by the CreateTemporaryAssemblies setting
+            // in FodyWeavers.xml) and placed in a temporary directory. By configuring the ApplicatioBase,
+            // the secondary AppDomain can automatically find its dependencies there.
+            setupInfo.ApplicationBase = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
             AppDomain appDomain = AppDomain.CreateDomain("RunQueryAppDomain", null, setupInfo);
 
             string compilationOutputDirectory = null;

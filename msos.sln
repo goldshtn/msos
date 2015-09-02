@@ -35,6 +35,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "msosext", "msosext\msosext.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "msoscore", "msoscore\msoscore.csproj", "{4DBBDC25-CCE7-4E21-9166-90D8C5268EFD}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "msoscoru", "msoscoru\msoscoru.csproj", "{635D9940-8944-4121-B6C0-0A0761140AA1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -104,6 +106,14 @@ Global
 		{4DBBDC25-CCE7-4E21-9166-90D8C5268EFD}.Release|x64.Build.0 = Release|x64
 		{4DBBDC25-CCE7-4E21-9166-90D8C5268EFD}.Release|x86.ActiveCfg = Release|x86
 		{4DBBDC25-CCE7-4E21-9166-90D8C5268EFD}.Release|x86.Build.0 = Release|x86
+		{635D9940-8944-4121-B6C0-0A0761140AA1}.Debug|x64.ActiveCfg = Debug|x64
+		{635D9940-8944-4121-B6C0-0A0761140AA1}.Debug|x64.Build.0 = Debug|x64
+		{635D9940-8944-4121-B6C0-0A0761140AA1}.Debug|x86.ActiveCfg = Debug|x86
+		{635D9940-8944-4121-B6C0-0A0761140AA1}.Debug|x86.Build.0 = Debug|x86
+		{635D9940-8944-4121-B6C0-0A0761140AA1}.Release|x64.ActiveCfg = Release|x64
+		{635D9940-8944-4121-B6C0-0A0761140AA1}.Release|x64.Build.0 = Release|x64
+		{635D9940-8944-4121-B6C0-0A0761140AA1}.Release|x86.ActiveCfg = Release|x86
+		{635D9940-8944-4121-B6C0-0A0761140AA1}.Release|x86.Build.0 = Release|x86
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

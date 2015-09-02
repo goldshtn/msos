@@ -115,7 +115,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using msos;
 
-[assembly: InternalsVisibleTo(""msos"")]
+[assembly: InternalsVisibleTo(""msoscore"")]
 
 internal class RunQuery : IRunQuery
 {

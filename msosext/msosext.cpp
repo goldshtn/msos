@@ -2,7 +2,7 @@
 
 // TODO All hardcoded paths...
 
-#import "C:\dev\msos\msoscore\bin\x86\Debug\msoscore.tlb" auto_rename
+#import "C:\dev\msos\msoscoru\bin\x86\Debug\msoscoru.tlb" auto_rename
 
 class EXT_CLASS : public ExtExtension
 {
@@ -10,7 +10,7 @@ public:
 	EXT_COMMAND_METHOD(msos);
 private:
 	void init_msos();
-	msoscore::IMsosPtr msos_ptr_;
+	msoscoru::IMsosPtr msos_ptr_;
 };
 
 EXT_DECLARE_GLOBALS();
@@ -22,13 +22,13 @@ void EXT_CLASS::init_msos()
 
 	using create_msos_t = void(__stdcall *)(
 		IDebugClient*,
-		msoscore::IMsos**
+		msoscoru::IMsos**
 		);
 
 	// TODO Do we need this?
 	CoInitializeEx(nullptr, COINIT_MULTITHREADED);
 
-	HMODULE hMsosLib = LoadLibrary(L"C:\\dev\\msos\\msoscore\\bin\\x86\\Debug\\msoscore.dll");
+	HMODULE hMsosLib = LoadLibrary(L"C:\\dev\\msos\\msoscoru\\bin\\x86\\Debug\\msoscoru.dll");
 	create_msos_t create_msos = (create_msos_t)GetProcAddress(hMsosLib, "CreateMsos");
 	create_msos(m_Client, &msos_ptr_);
 }
