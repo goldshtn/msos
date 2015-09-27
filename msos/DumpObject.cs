@@ -1,5 +1,6 @@
 ﻿using CmdLine;
 using Microsoft.Diagnostics.Runtime;
+using Microsoft.Diagnostics.RuntimeExt;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -62,7 +63,13 @@ namespace msos
 
             var size = type.GetSize(ObjectAddress);
 
-            context.WriteLine("Name:     {0}", type.Name);
+            context.Write("Name:     {0}", type.Name);
+            var dynamicObj = context.Heap.GetDynamicObject(ObjectAddress);
+            if (type.IsArray || dynamicObj.IsList() || dynamicObj.IsDictionary())
+            {
+                context.WriteLink("   <display elements>", String.Format("!dumpcollection {0:x16}", ObjectAddress));
+            }
+            context.WriteLine();
             if (mt != 0)
             {
                 context.WriteLine("MT:       {0:x16}", mt);
