@@ -13,7 +13,8 @@
     <FileAlignment>512</FileAlignment>
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
     <RestorePackages>true</RestorePackages>
-    <NuGetPackageImportStamp>be5de6d7</NuGetPackageImportStamp>
+    <NuGetPackageImportStamp>
+    </NuGetPackageImportStamp>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x86'">
     <DebugSymbols>true</DebugSymbols>
@@ -222,9 +223,8 @@
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Enable NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
     <Error Condition="!Exists('$(SolutionDir)\.nuget\NuGet.targets')" Text="$([System.String]::Format('$(ErrorText)', '$(SolutionDir)\.nuget\NuGet.targets'))" />
-    <Error Condition="!Exists('..\packages\Fody.1.26.1\build\Fody.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Fody.1.26.1\build\Fody.targets'))" />
+    <Error Condition="!Exists('..\packages\Fody.1.29.3\build\portable-net+sl+win+wpa+wp\Fody.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Fody.1.29.3\build\portable-net+sl+win+wpa+wp\Fody.targets'))" />
   </Target>
-  <Import Project="..\packages\Fody.1.26.1\build\Fody.targets" Condition="Exists('..\packages\Fody.1.26.1\build\Fody.targets')" />
   <UsingTask TaskName="CosturaCleanup" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.v4.0.dll" TaskFactory="CodeTaskFactory">
     <ParameterGroup>
       <Config Output="false" Required="true" ParameterType="Microsoft.Build.Framework.ITaskItem" />
@@ -262,9 +262,10 @@ foreach (var item in filesToCleanup)
     <CosturaCleanup Config="FodyWeavers.xml" Files="@(ReferenceCopyLocalPaths->'$(OutDir)%(DestinationSubDirectory)%(Filename)%(Extension)')" />
   </Target>
   <PropertyGroup>
-    <PostBuildEvent>call "C:\Program Files (x86)\Microsoft Visual Studio 12.0\Common7\Tools\vsvars32.bat"
+    <PostBuildEvent>call "C:\Program Files (x86)\Microsoft Visual Studio 14.0\Common7\Tools\vsvars32.bat"
 editbin /largeaddressaware "$(TargetPath)"</PostBuildEvent>
   </PropertyGroup>
+  <Import Project="..\packages\Fody.1.29.3\build\portable-net+sl+win+wpa+wp\Fody.targets" Condition="Exists('..\packages\Fody.1.29.3\build\portable-net+sl+win+wpa+wp\Fody.targets')" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

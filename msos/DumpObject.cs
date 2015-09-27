@@ -72,7 +72,7 @@ namespace msos
             {
                 context.WriteLine("Array:    size {0}, element type {1}",
                     type.GetArrayLength(ObjectAddress),
-                    type.ArrayComponentType != null ? type.ArrayComponentType.Name : "<unknown");
+                    type.ArrayComponentType != null ? type.ArrayComponentType.Name : "<unknown>");
             }
             context.WriteLine("Assembly: {0}", type.Module.FileName);
             if (type.HasSimpleValue)
@@ -124,7 +124,7 @@ namespace msos
             var address = retriever.GetFieldAddress(field, inner);
             
             _context.Write(retriever.GetDisplayString(field, offset, baseName, inner));
-            if (field.ElementType == ClrElementType.Object)
+            if (field.IsObjectReferenceNotString())
             {
                 _context.WriteLink("", String.Format("!do {0}", retriever.GetFieldValue(field, inner)));
             }

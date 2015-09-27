@@ -18,5 +18,10 @@ namespace msos
             }
             return fieldTypeName;
         }
+
+        public static bool IsObjectReferenceNotString(this ClrField field)
+        {
+            return (field.ElementType != ClrElementType.String) && field.IsObjectReference();
+        }
     }
 }
