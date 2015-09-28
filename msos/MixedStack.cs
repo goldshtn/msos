@@ -281,9 +281,8 @@ namespace msos
             return unifiedStackTrace;
         }
 
-        public void PrintStackTrace(CommandExecutionContext context, uint index)
+        public void PrintStackTrace(CommandExecutionContext context, IEnumerable<UnifiedStackFrame> stackTrace)
         {
-            var stackTrace = GetStackTrace(index);
             foreach (var frame in stackTrace)
             {
                 if (frame.Type == UnifiedStackFrameType.Special)
@@ -305,6 +304,12 @@ namespace msos
                         frame.SourceLineNumber, frame.SourceColumnNumber);
                 }
             }
+        }
+
+        public void PrintStackTrace(CommandExecutionContext context, uint index)
+        {
+            var stackTrace = GetStackTrace(index);
+            PrintStackTrace(context, stackTrace);
         }
     }
 }

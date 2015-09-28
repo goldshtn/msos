@@ -10,32 +10,82 @@ using System.Threading.Tasks;
 
 namespace msos
 {
+    class TriageInformation
+    {
+        public int ModuleCount { get; set; }
+        public ulong CommittedMemoryBytes { get; set; }
+        public ulong ReservedMemoryBytes { get; set; }
+        public ulong GCHeapMemoryBytes { get; set; }
+        public int ManagedThreadCount { get; set; }
+        public int TotalThreadCount { get; set; }        
+        public uint FaultingThreadOSID { get; set; }        
+        public bool IsFaultingThreadManaged { get; set; }
+        public string EventDescription { get; set; }
+        public uint ExceptionCode { get; set; }
+        public string ManagedExceptionType { get; set; }
+        public string FaultingModule { get; set; }
+        public string FaultingMethod { get; set; }
+    }
+
     [Verb("triage", HelpText = "Performs basic triage of the dump file and displays results in a condensed form.")]
     [SupportedTargets(TargetType.DumpFile, TargetType.DumpFileNoHeap)]
     class Triage : ICommand
     {
-        private CommandExecutionContext _context;
+        private static readonly HashSet<string> WellKnownMicrosoftModules = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase)
+        {
+            /* Windows */ "ntdll", "kernelbase", "advapi32", "gdi32", "kernel32",
+            /* CLR     */ "clr", "mscorlib", "clrjit", "protojit", "mscorwks", "mscorsvr",
+            /* BCL     */ "System", "System.Core"
+            // TODO Add more
+        };
+
         private DataTarget _dbgEngTarget;
+        private TriageInformation _triageInformation = new TriageInformation();
+
+        [Option('s', Required = false, HelpText = "Show the faulting call stack if available.")]
+        public bool ShowFaultingStack { get; set; }
 
         public void Execute(CommandExecutionContext context)
         {
             // TODO: Create a command-line option too, for running this on multiple dumps and getting a summary table
 
-            _context = context;
-            using (_dbgEngTarget = context.CreateTemporaryDbgEngTarget())
-            {
-                GetModuleInformation();
-                GetMemoryUsageInformation();
-                GetFaultingThreadAndModuleInformation();
-            }
+            TriageInformation triageInformation = GetTriageInformation(context);
+            PrintTriageInformation(context, triageInformation);
         }
 
-        private void GetFaultingThreadAndModuleInformation()
+        private void PrintTriageInformation(CommandExecutionContext context, TriageInformation triageInformation)
         {
-            UnifiedStackTrace stackTrace = new UnifiedStackTrace(_dbgEngTarget.DebuggerInterface, _context);
-            int totalThreads = (int)stackTrace.NumThreads;
-            int managedThreads = stackTrace.Threads.Count(t => t.IsManagedThread);
-            _context.WriteLine("THREADS  {0} total threads, {1} managed threads", totalThreads, managedThreads);
+            context.WriteLine("MODULES  {0} modules loaded", triageInformation.ModuleCount);
+            context.WriteLine("THREADS  {0} total threads, {1} managed threads", triageInformation.TotalThreadCount, triageInformation.ManagedThreadCount);
+            context.WriteLine("MEMORY   {0} committed, {1} reserved, {2} GC heap",
+                triageInformation.CommittedMemoryBytes.ToMemoryUnits(),
+                triageInformation.ReservedMemoryBytes.ToMemoryUnits(),
+                triageInformation.GCHeapMemoryBytes.ToMemoryUnits());
+
+            context.WriteLine("EVENT    Last event in thread OSID = {0}, managed = {1}",
+                _triageInformation.FaultingThreadOSID, _triageInformation.IsFaultingThreadManaged);
+            context.WriteLine("EVENT    {0}", _triageInformation.EventDescription);
+            context.WriteLine("EVENT    Exception {0:X8}", _triageInformation.ExceptionCode);
+            context.WriteLine("EVENT    Managed exception {0}", _triageInformation.ManagedExceptionType);
+            context.WriteLine("EVENT    Faulting module {0}, method {1}", _triageInformation.FaultingModule, _triageInformation.FaultingMethod);
+        }
+
+        public TriageInformation GetTriageInformation(CommandExecutionContext context)
+        {
+            using (_dbgEngTarget = context.CreateTemporaryDbgEngTarget())
+            {
+                FillModuleInformation();
+                FillMemoryUsageInformation(context);
+                FillFaultingThreadAndModuleInformation(context);
+            }
+            return _triageInformation;
+        }
+
+        private void FillFaultingThreadAndModuleInformation(CommandExecutionContext context)
+        {
+            UnifiedStackTrace stackTrace = new UnifiedStackTrace(_dbgEngTarget.DebuggerInterface, context);
+            _triageInformation.TotalThreadCount = (int)stackTrace.NumThreads;
+            _triageInformation.ManagedThreadCount = stackTrace.Threads.Count(t => t.IsManagedThread);
 
             LastEventInformation lastEventInformation = _dbgEngTarget.GetLastEventInformation();
             if (lastEventInformation == null)
@@ -45,46 +95,46 @@ namespace msos
             if (faultingThread == null)
                 return;
 
-            _context.WriteLine(
-                "EVENT    Last event in thread OSID = {0}, managed = {1}",
-                faultingThread.OSThreadId, faultingThread.IsManagedThread);
-            _context.WriteLine("Event {0} - {1}", lastEventInformation.EventType, lastEventInformation.EventDescription);
+            _triageInformation.FaultingThreadOSID = faultingThread.OSThreadId;
+            _triageInformation.IsFaultingThreadManaged = faultingThread.IsManagedThread;
+            _triageInformation.EventDescription = lastEventInformation.EventDescription;
+
             if (lastEventInformation.ExceptionRecord.HasValue)
             {
-                _context.WriteLine(
-                    "EVENT    Exception {0:X8} at {1:x16}",
-                    lastEventInformation.ExceptionRecord.Value.ExceptionCode,
-                    lastEventInformation.ExceptionRecord.Value.ExceptionAddress);
+                _triageInformation.ExceptionCode = lastEventInformation.ExceptionRecord.Value.ExceptionCode;
             }
             if (faultingThread.IsManagedThread && faultingThread.ManagedThread.CurrentException != null)
             {
-                _context.WriteLine(
-                    "EVENT    Managed exception {0} - {1}",
-                    faultingThread.ManagedThread.CurrentException.Type.Name,
-                    faultingThread.ManagedThread.CurrentException.Message);
+                _triageInformation.ManagedExceptionType = faultingThread.ManagedThread.CurrentException.Type.Name;
             }
 
-            _context.WriteLine("EVENT    Faulting call stack:");
-            stackTrace.PrintStackTrace(_context, faultingThread.Index);
+            var frames = stackTrace.GetStackTrace(faultingThread.Index);
+
+            UnifiedStackFrame faultingFrame = frames.FirstOrDefault(f => f.Module != null && !WellKnownMicrosoftModules.Contains(f.Module));
+            if (faultingFrame != null)
+            {
+                _triageInformation.FaultingModule = faultingFrame.Module;
+                _triageInformation.FaultingMethod = faultingFrame.Method;
+            }
+
+            if (ShowFaultingStack)
+            {
+                context.WriteLine("Faulting call stack:");
+                stackTrace.PrintStackTrace(context, frames);
+            }
         }
 
-        private void GetMemoryUsageInformation()
+        private void FillMemoryUsageInformation(CommandExecutionContext context)
         {
             var vmRegions = _dbgEngTarget.EnumerateVMRegions().ToList();
-            ulong totalCommittedBytes = (ulong)vmRegions.Sum(r => r.State == MEM.COMMIT ? (long)r.RegionSize : 0L);
-            ulong totalReservedBytes = (ulong)vmRegions.Sum(r => r.State == MEM.RESERVE ? (long)r.RegionSize : 0L);
-            ulong totalGCBytes = _context.Heap.TotalHeapSize;
-            _context.WriteLine(
-                "MEMORY   {0} committed, {1} reserved, {2} GC heap",
-                totalCommittedBytes.ToMemoryUnits(),
-                totalReservedBytes.ToMemoryUnits(),
-                totalGCBytes.ToMemoryUnits());
+            _triageInformation.CommittedMemoryBytes = (ulong)vmRegions.Sum(r => r.State == MEM.COMMIT ? (long)r.RegionSize : 0L);
+            _triageInformation.ReservedMemoryBytes = (ulong)vmRegions.Sum(r => r.State == MEM.RESERVE ? (long)r.RegionSize : 0L);
+            _triageInformation.GCHeapMemoryBytes = context.Heap.TotalHeapSize;
         }
 
-        private void GetModuleInformation()
+        private void FillModuleInformation()
         {
-            int modules = _dbgEngTarget.EnumerateModules().Count();
-            _context.WriteLine("MODULES   {0} modules loaded", modules);
+            _triageInformation.ModuleCount = _dbgEngTarget.EnumerateModules().Count();
         }
     }
 }
