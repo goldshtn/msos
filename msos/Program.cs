@@ -67,13 +67,56 @@ namespace msos
                 _target = new AnalysisTarget(_options.ProcessId, _context, _options.ClrVersion);
                 Console.Title = "msos - attached to pid " + _options.ProcessId;
             }
+            else if (!String.IsNullOrEmpty(_options.TriagePattern))
+            {
+                RunTriage();
+                return; // Do not proceed to the main loop
+            }
             else
             {
                 PrintUsage();
-                Bail("One of the -z, --pid, or --pn options must be specified.");
+                Bail("One of the -z, --pid, --pn, or --triage options must be specified.");
             }
 
             RunMainLoop();
+        }
+
+        private void RunTriage()
+        {
+            string directory = Path.GetDirectoryName(_options.TriagePattern);
+            string pattern = Path.GetFileName(_options.TriagePattern);
+            string[] dumpFiles = Directory.GetFiles(directory, pattern /* TODO: recursively enumerate? */);
+            _context.WriteInfo("Triage: enumerated {0} dump files in directory '{1}'", dumpFiles.Length, directory);
+            Dictionary<string, TriageInformation> triages = new Dictionary<string, TriageInformation>();
+            for (int i = 0; i < dumpFiles.Length; ++i)
+            {
+                string dumpFile = dumpFiles[i];
+                string analysisProgressMessage = String.Format("Analyzing dump file '{0}' ({1}/{2})", dumpFile, i + 1, dumpFiles.Length);
+                _context.WriteInfo(analysisProgressMessage);
+                Console.Title = analysisProgressMessage;
+
+                _target = new AnalysisTarget(dumpFile, _context);
+                TriageInformation triageInformation = new Triage().GetTriageInformation(_context);
+                triages.Add(dumpFile, triageInformation);
+            }
+
+            _context.WriteLine("{0,-30} {1,-30} {2,-20} {3,-30} {4,-30}", "Dump", "Event", "Module", "Method", "Mem (Cmt/Rsv/Mgd)");
+            foreach (var kvp in triages)
+            {
+                string dumpFile = kvp.Key;
+                TriageInformation triageInformation = kvp.Value;
+                _context.WriteLine("{0,-30} {1,-30} {2,-20} {3,-30} {4,-30}",
+                    dumpFile.TrimStartToLength(30),
+                    (triageInformation.ManagedExceptionType ?? triageInformation.EventDescription.Replace(" (first/second chance not available)", "")).TrimStartToLength(30),
+                    (triageInformation.FaultingModule ?? "N/A").TrimStartToLength(20),
+                    (triageInformation.FaultingMethod ?? "N/A").TrimStartToLength(30),
+                    String.Format("{0}/{1}/{2}",
+                        triageInformation.CommittedMemoryBytes.ToMemoryUnits(),
+                        triageInformation.ReservedMemoryBytes.ToMemoryUnits(),
+                        triageInformation.GCHeapMemoryBytes.ToMemoryUnits()
+                        )
+                    );
+            }
         }
 
         private void PrintUsage()

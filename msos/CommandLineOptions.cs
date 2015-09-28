@@ -18,6 +18,9 @@ namespace msos
         [Option("pid", MutuallyExclusiveSet = "target", HelpText = "The process id to attach to.")]
         public int ProcessId { get; set; }
 
+        [Option("triage", MutuallyExclusiveSet = "target", HelpText = "The path pattern for dump files to automatically load, triage, and report statistics for. Example pattern: C:\\Dumps\\MyApp*.dmp")]
+        public string TriagePattern { get; set; }
+
         [Option("diag", HelpText = "Display diagnostic information after executing each command.")]
         public bool DisplayDiagnosticInformation { get; set; }
 

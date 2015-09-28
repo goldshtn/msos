@@ -47,8 +47,6 @@ namespace msos
 
         public void Execute(CommandExecutionContext context)
         {
-            // TODO: Create a command-line option too, for running this on multiple dumps and getting a summary table
-
             TriageInformation triageInformation = GetTriageInformation(context);
             PrintTriageInformation(context, triageInformation);
         }
