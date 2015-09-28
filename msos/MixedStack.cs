@@ -30,31 +30,9 @@ namespace msos
             using (var target = context.CreateTemporaryDbgEngTarget())
             {
                 var stackTracer = new UnifiedStackTrace(target.DebuggerInterface, context);
-                var stackTrace = stackTracer.GetStackTrace(
-                    (from thr in stackTracer.Threads
-                     where thr.OSThreadId == OSThreadId
-                     select thr.Index).Single());
-                foreach (var frame in stackTrace)
-                {
-                    if (frame.Type == UnifiedStackFrameType.Special)
-                    {
-                        context.WriteLine("{0,-10}", "Special");
-                        continue;
-                    }
-                    if (String.IsNullOrEmpty(frame.SourceFileName))
-                    {
-                        context.WriteLine("{0,-10} {1,-20:x16} {2}!{3}+0x{4:x}",
-                            frame.Type, frame.InstructionPointer,
-                            frame.Module, frame.Method, frame.OffsetInMethod);
-                    }
-                    else
-                    {
-                        context.WriteLine("{0,-10} {1,-20:x16} {2}!{3} [{4}:{5},{6}]",
-                            frame.Type, frame.InstructionPointer,
-                            frame.Module, frame.Method, frame.SourceFileName,
-                            frame.SourceLineNumber, frame.SourceColumnNumber);
-                    }
-                }
+                stackTracer.PrintStackTrace(context, (from thr in stackTracer.Threads
+                                                      where thr.OSThreadId == OSThreadId
+                                                      select thr.Index).Single());
             }
         }
     }
@@ -301,6 +279,32 @@ namespace msos
                 return nativeStackTrace;
             }
             return unifiedStackTrace;
+        }
+
+        public void PrintStackTrace(CommandExecutionContext context, uint index)
+        {
+            var stackTrace = GetStackTrace(index);
+            foreach (var frame in stackTrace)
+            {
+                if (frame.Type == UnifiedStackFrameType.Special)
+                {
+                    context.WriteLine("{0,-10}", "Special");
+                    continue;
+                }
+                if (String.IsNullOrEmpty(frame.SourceFileName))
+                {
+                    context.WriteLine("{0,-10} {1,-20:x16} {2}!{3}+0x{4:x}",
+                        frame.Type, frame.InstructionPointer,
+                        frame.Module, frame.Method, frame.OffsetInMethod);
+                }
+                else
+                {
+                    context.WriteLine("{0,-10} {1,-20:x16} {2}!{3} [{4}:{5},{6}]",
+                        frame.Type, frame.InstructionPointer,
+                        frame.Module, frame.Method, frame.SourceFileName,
+                        frame.SourceLineNumber, frame.SourceColumnNumber);
+                }
+            }
         }
     }
 }

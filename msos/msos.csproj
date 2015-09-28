@@ -177,6 +177,7 @@
     <Compile Include="ThreadPool.cs" />
     <Compile Include="Threads.cs" />
     <Compile Include="TimeAndMemory.cs" />
+    <Compile Include="Triage.cs" />
     <Compile Include="WaitChains.cs" />
   </ItemGroup>
   <ItemGroup>

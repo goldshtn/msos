@@ -17,24 +17,15 @@ namespace msos
         {
             using (var target = context.CreateTemporaryDbgEngTarget())
             {
-                var control = (IDebugControl)target.DebuggerInterface;
-                DEBUG_EVENT eventType;
-                uint procId, threadId;
-                StringBuilder description = new StringBuilder(2048);
-                uint unused;
-                uint descriptionSize;
-                if (0 != control.GetLastEventInformation(
-                    out eventType, out procId, out threadId,
-                    IntPtr.Zero, 0, out unused,
-                    description, description.Capacity, out descriptionSize))
+                LastEventInformation lastEventInformation = target.GetLastEventInformation();
+                if (lastEventInformation == null)
                 {
-                    context.WriteLine("No last event information available.");
+                    context.WriteLine("Last event information is not available");
                     return;
                 }
 
-                var osThreadIds = target.GetOSThreadIds();
-                context.Write("Thread OSID = {0} ", osThreadIds[threadId]);
-                var managedThread = context.Runtime.Threads.SingleOrDefault(t => t.OSThreadId == osThreadIds[threadId]);
+                context.Write("Thread OSID = {0} ", lastEventInformation.OSThreadId);
+                var managedThread = context.Runtime.Threads.SingleOrDefault(t => t.OSThreadId == lastEventInformation.OSThreadId);
                 if (managedThread != null)
                 {
                     context.WriteLine("(managed id = {0})", managedThread.ManagedThreadId);
@@ -43,7 +34,7 @@ namespace msos
                 {
                     context.WriteLine("(unmanaged)");
                 }
-                context.WriteLine("{0} - {1}", eventType, description.ToString());
+                context.WriteLine("{0} - {1}", lastEventInformation.EventType, lastEventInformation.EventDescription);
             }
         }
     }

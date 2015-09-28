@@ -52,51 +52,32 @@ namespace msos
                 ManagedHeapFragmentation();
         }
 
-        private IEnumerable<MEMORY_BASIC_INFORMATION64> EnumerateVMRegions()
-        {
-            using (var target = _context.CreateTemporaryDbgEngTarget())
-            {
-                var dataSpaces = (IDebugDataSpaces4)target.DebuggerInterface;
-                ulong maxAddress = Environment.Is64BitProcess ? uint.MaxValue : ulong.MaxValue;
-                for (ulong address = 0; address < maxAddress; )
-                {
-                    MEMORY_BASIC_INFORMATION64 memInfo;
-                    if (0 != dataSpaces.QueryVirtual(address, out memInfo))
-                        break;
-
-                    if (memInfo.RegionSize == 0)
-                        break;
-
-                    yield return memInfo;
-
-                    address += memInfo.RegionSize;
-                }
-            }
-        }
-
         private void VirtualMemoryStatistics()
         {
             var sizeByType = new Dictionary<MEM, ulong>();
             var sizeByState = new Dictionary<MEM, ulong>();
             ulong largestFreeRegionSize = 0;
-            foreach (var region in EnumerateVMRegions())
+            using (var target = _context.CreateTemporaryDbgEngTarget())
             {
-                if (region.Type != 0)
+                foreach (var region in target.EnumerateVMRegions())
                 {
-                    if (!sizeByType.ContainsKey(region.Type))
-                        sizeByType.Add(region.Type, 0);
+                    if (region.Type != 0)
+                    {
+                        if (!sizeByType.ContainsKey(region.Type))
+                            sizeByType.Add(region.Type, 0);
 
-                    sizeByType[region.Type] += region.RegionSize;
-                }
+                        sizeByType[region.Type] += region.RegionSize;
+                    }
 
-                if (!sizeByState.ContainsKey(region.State))
-                    sizeByState.Add(region.State, 0);
+                    if (!sizeByState.ContainsKey(region.State))
+                        sizeByState.Add(region.State, 0);
 
-                sizeByState[region.State] += region.RegionSize;
+                    sizeByState[region.State] += region.RegionSize;
 
-                if (region.State == MEM.FREE)
-                {
-                    largestFreeRegionSize = Math.Max(largestFreeRegionSize, region.RegionSize);
+                    if (region.State == MEM.FREE)
+                    {
+                        largestFreeRegionSize = Math.Max(largestFreeRegionSize, region.RegionSize);
+                    }
                 }
             }
 
@@ -123,14 +104,17 @@ namespace msos
                 "{0,-20} {1,-20} {2,-12} {3,-20} {4,-12}",
                 "BaseAddr", "Size", "State", "Protect", "Type");
 
-            foreach (var region in EnumerateVMRegions())
+            using (var target = _context.CreateTemporaryDbgEngTarget())
             {
-                _context.WriteLine(
-                    "{0,-20:x16} {1,-20:x16} {2,-12} {3,-20} {4,-12}",
-                    region.BaseAddress, region.RegionSize,
-                    region.State, region.Protect, region.Type);
+                foreach (var region in target.EnumerateVMRegions())
+                {
+                    _context.WriteLine(
+                        "{0,-20:x16} {1,-20:x16} {2,-12} {3,-20} {4,-12}",
+                        region.BaseAddress, region.RegionSize,
+                        region.State, region.Protect, region.Type);
+                }
+                _context.WriteLine();
             }
-            _context.WriteLine();
         }
 
         private void ManagedHeapFragmentation()
