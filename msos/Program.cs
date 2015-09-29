@@ -100,22 +100,43 @@ namespace msos
                 triages.Add(dumpFile, triageInformation);
             }
 
-            _context.WriteLine("{0,-30} {1,-30} {2,-20} {3,-30} {4,-30}", "Dump", "Event", "Module", "Method", "Mem (Cmt/Rsv/Mgd)");
+            _context.WriteLine("{0,-30} {1,-30} {2,-50} {3,-30}", "DUMP", "EVENT", "METHOD", "MEMORY (CMT/RSV/MGD)");
             foreach (var kvp in triages)
             {
                 string dumpFile = kvp.Key;
                 TriageInformation triageInformation = kvp.Value;
-                _context.WriteLine("{0,-30} {1,-30} {2,-20} {3,-30} {4,-30}",
+                _context.WriteLine("{0,-30} {1,-30} {2,-50} {3,-30}",
                     dumpFile.TrimStartToLength(30),
-                    (triageInformation.ManagedExceptionType ?? triageInformation.EventDescription.Replace(" (first/second chance not available)", "")).TrimStartToLength(30),
-                    (triageInformation.FaultingModule ?? "N/A").TrimStartToLength(20),
-                    (triageInformation.FaultingMethod ?? "N/A").TrimStartToLength(30),
+                    triageInformation.GetEventDisplayString().TrimStartToLength(30),
+                    (triageInformation.FaultingMethod ?? "N/A").TrimStartToLength(50),
                     String.Format("{0}/{1}/{2}",
                         triageInformation.CommittedMemoryBytes.ToMemoryUnits(),
                         triageInformation.ReservedMemoryBytes.ToMemoryUnits(),
                         triageInformation.GCHeapMemoryBytes.ToMemoryUnits()
                         )
                     );
+            }
+
+            var groupedByModule = from triage in triages.Values
+                                  group triage by triage.FaultingModule into g
+                                  let count = g.Count()
+                                  select new { Module = g.Key, Count = count };
+            _context.WriteLine();
+            _context.WriteLine("{0,-30} {1,-12}", "MODULE", "COUNT");
+            foreach (var moduleCount in groupedByModule)
+            {
+                _context.WriteLine("{0,-30} {1,-12}", moduleCount.Module, moduleCount.Count);
+            }
+
+            var groupedByEvent = from triage in triages.Values
+                                 group triage by triage.GetEventDisplayString() into g
+                                 let count = g.Count()
+                                 select new { Event = g.Key, Count = count };
+            _context.WriteLine();
+            _context.WriteLine("{0,-50} {1,-12}", "EVENT", "COUNT");
+            foreach (var eventCount in groupedByEvent)
+            {
+                _context.WriteLine("{0,-50} {1,-12}", eventCount.Event, eventCount.Count);
             }
         }
 

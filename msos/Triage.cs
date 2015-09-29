@@ -25,6 +25,11 @@ namespace msos
         public string ManagedExceptionType { get; set; }
         public string FaultingModule { get; set; }
         public string FaultingMethod { get; set; }
+
+        public string GetEventDisplayString()
+        {
+            return ManagedExceptionType ?? EventDescription.Replace(" (first/second chance not available)", "");
+        }
     }
 
     [Verb("triage", HelpText = "Performs basic triage of the dump file and displays results in a condensed form.")]
