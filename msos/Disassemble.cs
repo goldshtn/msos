@@ -110,6 +110,7 @@ namespace msos
                     for (int line = sourceLocation.LineNumber; line <= sourceLocation.LineNumberEnd; ++line)
                     {
                         _context.WriteLine(ReadSourceLine(sourceLocation.FilePath, line));
+                        _context.WriteLine(new string(' ', sourceLocation.ColStart - 1) + new string('^', sourceLocation.ColEnd - sourceLocation.ColStart));
                     }
                 }
                 PrintInstructions(instructions);
