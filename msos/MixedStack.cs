@@ -258,9 +258,9 @@ namespace msos
                             found = true;
                             break;
                         }
-                        else if (managedFrame > 0)
+                        else if(managedFrame == 0)
                         {
-                            // We have already seen at least one managed frame, and we're about
+                            // We're about
                             // to skip a managed frame because we didn't find a matching native
                             // frame. In this case, add the managed frame into the stack anyway.
                             unifiedStackTrace.Add(managedStackTrace[temp]);
