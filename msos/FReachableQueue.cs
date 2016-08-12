@@ -17,7 +17,7 @@ namespace msos
         public void Execute(CommandExecutionContext context)
         {
             var heap = context.Runtime.GetHeap();
-            var readyForFinalization = context.Runtime.EnumerateFinalizerQueue().ToList();
+            var readyForFinalization = context.Runtime.EnumerateFinalizerQueueObjectAddresses().ToList();
             ulong totalCount = 0;
             if (StatisticsOnly)
             {

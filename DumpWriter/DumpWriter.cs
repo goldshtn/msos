@@ -47,7 +47,7 @@ namespace DumpWriter
 
             foreach (var clrVersion in target.ClrVersions)
             {
-                var runtime = target.CreateRuntime(clrVersion.TryDownloadDac());
+                var runtime = clrVersion.CreateRuntime();
 
                 AddCLRRegions(runtime);
 
@@ -77,7 +77,7 @@ namespace DumpWriter
             }
 
             // Touch all modules
-            runtime.EnumerateModules().Count();
+            runtime.Modules.Count();
 
             // Touch all heap regions, roots, types
             var heap = runtime.GetHeap();

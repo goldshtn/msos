@@ -33,7 +33,7 @@ namespace msos
                     return;
                 }
                 if (innerType.IsArray &&
-                    (innerType.ArrayComponentType == null || innerType.ArrayComponentType.ContainsPointers))
+                    (innerType.ComponentType == null || innerType.ComponentType.ContainsPointers))
                 {
                     return;
                 }

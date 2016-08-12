@@ -25,5 +25,16 @@ namespace Microsoft.Diagnostics.RuntimeExt
 
             return new ClrDynamicClass(heap, type);
         }
+
+        public static bool IsOfPrimitiveType(this ClrField field)
+        {
+            return
+                field.ElementType != ClrElementType.Struct &&
+                field.ElementType != ClrElementType.String &&
+                field.ElementType != ClrElementType.Class &&
+                field.ElementType != ClrElementType.Array &&
+                field.ElementType != ClrElementType.SZArray &&
+                field.ElementType != ClrElementType.Object;
+        }
     }
 }

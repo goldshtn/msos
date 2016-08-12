@@ -102,7 +102,7 @@ namespace msos
             {
                 context.WriteLine("{0,-20} {1,-20} {2}", "MT", "Address", "Size");
             }
-            foreach (var obj in _heap.EnumerateObjects())
+            foreach (var obj in _heap.EnumerateObjectAddresses())
             {
                 ulong mt = 0;
                 context.Runtime.ReadPointer(obj, out mt);

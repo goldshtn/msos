@@ -26,7 +26,7 @@ namespace msos
 
         public IEnumerable<dynamic> ObjectsOfType(string typeName)
         {
-            return from obj in Heap.EnumerateObjects()
+            return from obj in Heap.EnumerateObjectAddresses()
                    let type = Heap.GetObjectType(obj)
                    where type != null && typeName == type.Name
                    select Heap.GetDynamicObject(obj);
@@ -75,7 +75,7 @@ namespace msos
 
         public IEnumerable<dynamic> ObjectsInSegment(int segmentIdx)
         {
-            return from obj in Heap.Segments[segmentIdx].EnumerateObjects()
+            return from obj in Heap.Segments[segmentIdx].EnumerateObjectAddresses()
                    select Heap.GetDynamicObject(obj);
         }
     }

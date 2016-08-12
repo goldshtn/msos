@@ -120,11 +120,11 @@ namespace msos
         private void CreateRuntime()
         {
             ClrInfo clrInfo = _target.ClrVersions[_clrVersionIndex];
-            string dacLocation = clrInfo.TryDownloadDac();
+            _context.Runtime = clrInfo.CreateRuntime();
+            string dacLocation = clrInfo.DacInfo.FileName;
             _context.WriteInfo("Using Data Access DLL at: " + dacLocation);
             _context.DacLocation = dacLocation;
             _context.ClrVersion = clrInfo;
-            _context.Runtime = _target.CreateRuntime(dacLocation);
             _context.Heap = _context.Runtime.GetHeap();
             _target.DefaultSymbolNotification = new SymbolNotification(_context);
         }

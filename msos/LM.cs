@@ -21,7 +21,7 @@ namespace msos
         {
             if (!String.IsNullOrEmpty(SpecificModule))
             {
-                var module = context.Runtime.EnumerateModules().FirstOrDefault(
+                var module = context.Runtime.Modules.FirstOrDefault(
                     m => String.Equals(Path.GetFileName(m.Name), SpecificModule, StringComparison.InvariantCultureIgnoreCase));
                 if (module != null)
                 {
