@@ -21,12 +21,23 @@ namespace Microsoft.Diagnostics.RuntimeExt
         public int ColEnd;
     }
 
-    public static class ClrFrameExtensions
+    public static class ClrSourceExtensions
     {
+        // TODO Not sure we want this to be a shared dictionary, especially without
+        //      any synchronization. Probably want to put this hanging off the Context
+        //      somewhere, or inside SymbolCache.
         static Dictionary<PdbInfo, PdbReader> s_pdbReaders = new Dictionary<PdbInfo, PdbReader>();
+
+        public static SourceLocation GetSourceLocation(this ClrMethod method, int ilOffset)
+        {
+            PdbReader reader = GetReaderForMethod(method);
+            PdbFunction function = reader.GetFunctionFromToken(method.MetadataToken);
+            return FindNearestLine(function, ilOffset);
+        }
+
         public static SourceLocation GetSourceLocation(this ClrStackFrame frame)
         {
-            PdbReader reader = GetReaderForFrame(frame);
+            PdbReader reader = GetReaderForMethod(frame.Method);
             if (reader == null)
                 return null;
 
@@ -81,10 +92,9 @@ namespace Microsoft.Diagnostics.RuntimeExt
             return last;
         }
 
-
-        private static PdbReader GetReaderForFrame(ClrStackFrame frame)
+        private static PdbReader GetReaderForMethod(ClrMethod method)
         {
-            ClrModule module = frame.Method?.Type?.Module;
+            ClrModule module = method?.Type?.Module;
             PdbInfo info = module?.Pdb;
 
             PdbReader reader = null;

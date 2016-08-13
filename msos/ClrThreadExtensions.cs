@@ -295,7 +295,7 @@ namespace msos
             {
                 ClrMethod method = _context.Runtime.GetMethodByAddress(instructionPointer);
                 ClrModule module = method.Type.Module;
-                string pdbLocation = module.TryDownloadPdb(null);
+                string pdbLocation = _context.SymbolLocator.FindPdb(module.Pdb);
                 IntPtr iunkMetadataImport = Marshal.GetIUnknownForObject(module.MetadataImport);
                 ISymbolReader reader = null;
                 ISymbolMethod symMethod = null;

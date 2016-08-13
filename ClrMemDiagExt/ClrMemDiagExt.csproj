@@ -70,7 +70,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ClrDynamicClass.cs" />
-    <Compile Include="ClrFrameExtensions.cs" />
+    <Compile Include="ClrSourceExtensions.cs" />
     <Compile Include="ClrMDExt.cs" />
     <Compile Include="ClrNullValue.cs" />
     <Compile Include="ClrObject.cs" />

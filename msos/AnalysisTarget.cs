@@ -124,16 +124,17 @@ namespace msos
             string dacLocation = clrInfo.DacInfo.FileName;
             _context.WriteInfo("Using Data Access DLL at: " + dacLocation);
             _context.DacLocation = dacLocation;
+            _context.ClrVersionIndex = _clrVersionIndex;
             _context.ClrVersion = clrInfo;
             _context.Heap = _context.Runtime.GetHeap();
-            _target.DefaultSymbolNotification = new SymbolNotification(_context);
         }
 
         private void SetupSymPath()
         {
             string symPath = Environment.GetEnvironmentVariable("_NT_SYMBOL_PATH");
             _context.WriteInfo("Symbol path: " + symPath);
-            _target.SymbolLocator.SymbolPath = symPath;
+            _context.SymbolLocator = _target.SymbolLocator;
+            _context.SymbolLocator.SymbolPath = symPath;
             _context.SymbolPath = symPath;
         }
 

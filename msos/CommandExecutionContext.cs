@@ -1,6 +1,7 @@
 ﻿using CmdLine;
 using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.Runtime.Interop;
+using Microsoft.Diagnostics.Runtime.Utilities;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -25,8 +26,10 @@ namespace msos
         public IDictionary<string, string> Aliases { get; private set; }
         public bool HyperlinkOutput { get; set; }
         public SymbolCache SymbolCache { get; private set; }
+        public SymbolLocator SymbolLocator { get; set; }
         public List<string> Defines { get; private set; }
         public string SymbolPath { get; set; }
+        public int ClrVersionIndex { get; set; }
         public ClrInfo ClrVersion { get; set; }
         public TargetType TargetType { get; set; }
 

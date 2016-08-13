@@ -28,7 +28,6 @@ namespace msos
                     var moduleInfo = context.Runtime.DataTarget.EnumerateModules().Single(
                         m => String.Equals(m.FileName, module.FileName, StringComparison.InvariantCultureIgnoreCase));
                     context.WriteLine("Module:     {0}", module.Name);
-                    context.WriteLine("PDB loaded: {0}", module.IsPdbLoaded);
                     context.WriteLine("PDB name:   {0}", moduleInfo.Pdb.FileName);
                     context.WriteLine("Debug mode: {0}", module.DebuggingMode);
                 }
