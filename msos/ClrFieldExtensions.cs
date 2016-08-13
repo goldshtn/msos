@@ -1,4 +1,5 @@
 ﻿using Microsoft.Diagnostics.Runtime;
+using Microsoft.Diagnostics.RuntimeExt;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -21,7 +22,7 @@ namespace msos
 
         public static bool IsObjectReferenceNotString(this ClrField field)
         {
-            return (field.ElementType != ClrElementType.String) && field.IsObjectReference();
+            return (field.ElementType != ClrElementType.String) && field.IsOfObjectReferenceType();
         }
     }
 }

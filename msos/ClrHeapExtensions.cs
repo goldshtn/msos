@@ -55,7 +55,7 @@ namespace msos
                         if (heap.ReadPointer(address, out value))
                         {
                             results.Add(new Tuple<ulong, ClrType>(
-                                value, innerType.ArrayComponentType));
+                                value, innerType.ComponentType));
                         }
                     }
                 }

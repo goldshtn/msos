@@ -34,7 +34,7 @@ namespace msos
 
         public IEnumerable<dynamic> AllObjects()
         {
-            return from obj in Heap.EnumerateObjects()
+            return from obj in Heap.EnumerateObjectAddresses()
                    select Heap.GetDynamicObject(obj);
         }
 

@@ -646,7 +646,7 @@ namespace msos
         {
             foreach (var segment in _heap.Segments)
             {
-                ulong nextObject = segment.EnumerateObjects().FirstOrDefault(obj => !_heap.GetObjectType(obj).IsFree);
+                ulong nextObject = segment.EnumerateObjectAddresses().FirstOrDefault(obj => !_heap.GetObjectType(obj).IsFree);
                 while (nextObject != 0)
                 {
                     ulong startOfChunk = StartOfChunk(nextObject);

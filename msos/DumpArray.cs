@@ -47,7 +47,7 @@ namespace msos
                     {
                         context.WriteLink(
                             String.Format("{0:x16}", value),
-                            String.Format("!do {0:x16} --type {1}", value, type.ArrayComponentType.Name)
+                            String.Format("!do {0:x16} --type {1}", value, type.ComponentType.Name)
                             );
                     }
                     else

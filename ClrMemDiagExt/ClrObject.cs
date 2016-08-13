@@ -478,7 +478,7 @@ namespace Microsoft.Diagnostics.RuntimeExt
 
                 return true;
             }
-            else if (field.ElementType == ClrElementType.Struct)
+            else if (field.IsOfValueClass())
             {
                 ulong addr = field.GetAddress(m_addr, m_inner);
                 result = new ClrObject(m_heap, field.Type, addr, true);

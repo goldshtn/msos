@@ -133,7 +133,7 @@ namespace msos
         {
             string symPath = Environment.GetEnvironmentVariable("_NT_SYMBOL_PATH");
             _context.WriteInfo("Symbol path: " + symPath);
-            _target.AppendSymbolPath(symPath);
+            _target.SymbolLocator.SymbolPath = symPath;
             _context.SymbolPath = symPath;
         }
 

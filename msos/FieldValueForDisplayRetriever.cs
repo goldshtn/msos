@@ -1,4 +1,5 @@
 ﻿using Microsoft.Diagnostics.Runtime;
+using Microsoft.Diagnostics.RuntimeExt;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -44,7 +45,7 @@ namespace msos
             string fieldValueDisplay = GetFieldValue(field, inner);
             return String.Format("{0,-8:x} {1,-20} {2,-3} {3,-10} {4,-20:x16} {5}",
                 offset + field.Offset, field.GetFieldTypeNameTrimmed(),
-                (field.IsPrimitive() || field.IsValueClass()) ? 1 : 0,
+                (field.IsOfPrimitiveType() || field.IsOfValueClass()) ? 1 : 0,
                 "instance", fieldValueDisplay, baseName + field.Name);
         }
     }
