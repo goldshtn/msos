@@ -105,7 +105,21 @@ namespace Microsoft.Diagnostics.RuntimeExt
                     SymbolLocator locator = GetSymbolLocator(module);
                     string pdbPath = locator.FindPdb(info);
                     if (pdbPath != null)
-                        reader = new PdbReader(pdbPath);
+                    {
+                        try
+                        {
+                            reader = new PdbReader(pdbPath);
+                        }
+                        catch (PdbException)
+                        {
+                            // This will typically happen when trying to load information
+                            // from public symbols, which don't have a `name' stream
+                            // apparently. We can ignore this, but there's no need to load
+                            // this PDB anymore, so we will put null in the dictionary and
+                            // be done with it.
+                            reader = null;
+                        }
+                    }
 
                     s_pdbReaders[info] = reader;
                 }
