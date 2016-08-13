@@ -51,5 +51,18 @@ namespace Microsoft.Diagnostics.RuntimeExt
                 field.ElementType != ClrElementType.SZArray &&
                 field.ElementType != ClrElementType.Object;
         }
+
+        public static ClrRuntime CreateRuntimeAndGetDacLocation(this DataTarget target, ClrInfo info, out string dacLocation)
+        {
+            dacLocation = info.LocalMatchingDac;
+            if (dacLocation != null)
+                return info.CreateRuntime();
+
+            dacLocation = target.SymbolLocator.FindBinary(info.DacInfo);
+            if (dacLocation != null)
+                return info.CreateRuntime(dacLocation);
+
+            return null;
+        }
     }
 }

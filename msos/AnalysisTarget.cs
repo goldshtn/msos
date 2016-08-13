@@ -1,4 +1,5 @@
 ﻿using Microsoft.Diagnostics.Runtime;
+using Microsoft.Diagnostics.RuntimeExt;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -120,8 +121,8 @@ namespace msos
         private void CreateRuntime()
         {
             ClrInfo clrInfo = _target.ClrVersions[_clrVersionIndex];
-            _context.Runtime = clrInfo.CreateRuntime();
-            string dacLocation = clrInfo.DacInfo.FileName;
+            string dacLocation;
+            _context.Runtime = _target.CreateRuntimeAndGetDacLocation(clrInfo, out dacLocation);
             _context.WriteInfo("Using Data Access DLL at: " + dacLocation);
             _context.DacLocation = dacLocation;
             _context.ClrVersionIndex = _clrVersionIndex;
