@@ -264,10 +264,10 @@ namespace msos
                 throw new InvalidOperationException("DbgEng targets can be created only for dump files at this point.");
 
             var target = DataTarget.LoadCrashDump(DumpFile, CrashDumpReader.DbgEng);
-            target.AppendSymbolPath(SymbolPath);
+            target.SymbolLocator.SymbolPath = SymbolPath;
 
             var outputCallbacks = new OutputCallbacks(this);
-            msos_IDebugClient5 client = (msos_IDebugClient5)target.DebuggerInterface;
+            IDebugClient5 client = (IDebugClient5)target.DebuggerInterface;
             HR.Verify(client.SetOutputCallbacksWide(outputCallbacks));
 
             return target;

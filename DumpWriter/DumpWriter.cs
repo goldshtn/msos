@@ -1,4 +1,5 @@
 ﻿using Microsoft.Diagnostics.Runtime;
+using Microsoft.Diagnostics.RuntimeExt;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -71,7 +72,7 @@ namespace DumpWriter
             {
                 foreach (var f in t.StackTrace)
                 {
-                    try { f.GetFileAndLineNumber(); }
+                    try { f.GetSourceLocation(); }
                     catch (Exception) { }
                 }
             }

@@ -75,13 +75,19 @@ namespace msos
         }
     }
 
-    class OutputCallbacks : IDebugOutputCallbacksWide
+    class OutputCallbacks : IDebugOutputCallbacks2
     {
         private CommandExecutionContext _context;
 
         public OutputCallbacks(CommandExecutionContext context)
         {
             _context = context;
+        }
+
+        public int GetInterestMask(out DEBUG_OUTCBI Mask)
+        {
+            Mask = DEBUG_OUTCBI.ANY_FORMAT; // TODO For DML output?
+            return 0;
         }
 
         public int Output(DEBUG_OUTPUT mask, string text)
@@ -104,6 +110,12 @@ namespace msos
             }
 
             return 0;
+        }
+
+        public int Output2(DEBUG_OUTCB Which, DEBUG_OUTCBF Flags, ulong Arg, string Text)
+        {
+            // TODO Consider taking Which and Flags into consideration
+            return Output(DEBUG_OUTPUT.NORMAL, Text);
         }
     }
 }

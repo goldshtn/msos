@@ -1,4 +1,5 @@
 ﻿using Microsoft.Diagnostics.Runtime;
+using Microsoft.Diagnostics.RuntimeExt;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -23,7 +24,7 @@ namespace msos
             // ClrStackFrame.GetFileAndLineNumber throws occasionally when something is wrong with the module.
             try
             {
-                var location = frame.GetFileAndLineNumber();
+                var location = frame.GetSourceLocation();
                 if (location == null)
                     _failedToLoadSymbols.Add(moduleName);
                 
