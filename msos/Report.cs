@@ -1,4 +1,5 @@
 ﻿using CmdLine;
+using Microsoft.Diagnostics.Runtime;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using System;
@@ -199,11 +200,57 @@ namespace msos
 
     class LocksAndWaitsComponent : IReportComponent
     {
+        public class LockInfo
+        {
+            public string Reason { get; set; }
+            public ulong Object { get; set; }
+            public string ObjectType { get; set; }
+            public List<ThreadInfo> OwnerThreads { get; } = new List<ThreadInfo>();
+            public List<ThreadInfo> WaitingThreads { get; } = new List<ThreadInfo>();
+        }
+
+        public class ThreadInfo
+        {
+            public uint OSThreadId { get; set; }
+            public int ManagedThreadId { get; set; }
+            public List<LockInfo> Locks { get; } = new List<LockInfo>();
+        }
+
         public string Title => "Locks and waits";
+        public List<ThreadInfo> Threads { get; } = new List<ThreadInfo>();
+
+        private static ThreadInfo ThreadInfoFromThread(ClrThread thread)
+        {
+            return new ThreadInfo
+            {
+                OSThreadId = thread.OSThreadId,
+                ManagedThreadId = thread.ManagedThreadId
+            };
+        }
 
         public bool Generate(CommandExecutionContext context)
         {
-            return true;
+            foreach (var thread in context.Runtime.Threads)
+            {
+                if (thread.BlockingObjects.Count == 0)
+                    continue;
+
+                var ti = ThreadInfoFromThread(thread);
+                foreach (var blockingObject in thread.BlockingObjects)
+                {
+                    var li = new LockInfo
+                    {
+                        Reason = blockingObject.Reason.ToString(),
+                        Object = blockingObject.Object,
+                        ObjectType = context.Heap.GetObjectType(blockingObject.Object)?.Name
+                    };
+                    li.OwnerThreads.AddRange(blockingObject.Owners.Select(ThreadInfoFromThread));
+                    li.WaitingThreads.AddRange(blockingObject.Waiters.Select(ThreadInfoFromThread));
+                    ti.Locks.Add(li);
+                }
+                Threads.Add(ti);
+            }
+            return Threads.Any();
         }
     }
 
