@@ -77,10 +77,32 @@ namespace msos
 
     class LoadedModulesComponent : IReportComponent
     {
+        public class LoadedModule
+        {
+            public string Name { get; set; }
+            public ulong Size { get; set; }
+            public string Path { get; set; }
+            public string Version { get; set; }
+            public bool IsManaged { get; set; }
+        }
+
         public string Title { get { return "Loaded modules"; } }
+        public List<LoadedModule> Modules { get; } = new List<LoadedModule>();
 
         public bool Generate(CommandExecutionContext context)
         {
+            foreach (var module in context.Runtime.DataTarget.EnumerateModules())
+            {
+                var loadedModule = new LoadedModule
+                {
+                    Name = Path.GetFileName(module.FileName),
+                    Size = module.FileSize,
+                    Path = module.FileName,
+                    Version = module.Version.ToString(),
+                    IsManaged = module.IsManaged
+                };
+                Modules.Add(loadedModule);
+            }
             return true;
         }
     }
