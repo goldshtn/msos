@@ -26,7 +26,7 @@ namespace msos
 
         public IEnumerable<dynamic> ObjectsOfType(string typeName)
         {
-            return from obj in Heap.EnumerateObjects()
+            return from obj in Heap.EnumerateObjectAddresses()
                    let type = Heap.GetObjectType(obj)
                    where type != null && typeName == type.Name
                    select Heap.GetDynamicObject(obj);
@@ -34,7 +34,7 @@ namespace msos
 
         public IEnumerable<dynamic> AllObjects()
         {
-            return from obj in Heap.EnumerateObjects()
+            return from obj in Heap.EnumerateObjectAddresses()
                    select Heap.GetDynamicObject(obj);
         }
 
@@ -75,7 +75,7 @@ namespace msos
 
         public IEnumerable<dynamic> ObjectsInSegment(int segmentIdx)
         {
-            return from obj in Heap.Segments[segmentIdx].EnumerateObjects()
+            return from obj in Heap.Segments[segmentIdx].EnumerateObjectAddresses()
                    select Heap.GetDynamicObject(obj);
         }
     }
@@ -190,23 +190,23 @@ internal class RunQuery : IRunQuery
         private ClrRuntime _runtime;
         private DataTarget _target;
 
-        private void CreateRuntime(string dacLocation)
+        private void CreateRuntime(int clrVersionIndex, string dacLocation)
         {
-            _runtime = _target.CreateRuntime(dacLocation);
+            _runtime = _target.ClrVersions[clrVersionIndex].CreateRuntime(dacLocation);
             _heap = _runtime.GetHeap();
         }
 
-        public RunInSeparateAppDomain(string dumpFile, string dacLocation, IPrinter printer)
+        public RunInSeparateAppDomain(string dumpFile, int clrVersionIndex, string dacLocation, IPrinter printer)
         {
             _target = DataTarget.LoadCrashDump(dumpFile, CrashDumpReader.ClrMD);
-            CreateRuntime(dacLocation);
+            CreateRuntime(clrVersionIndex, dacLocation);
             _printer = printer;
         }
 
-        public RunInSeparateAppDomain(int pid, string dacLocation, IPrinter printer)
+        public RunInSeparateAppDomain(int pid, int clrVersionIndex, string dacLocation, IPrinter printer)
         {
             _target = DataTarget.AttachToProcess(pid, AttachTimeout, AttachFlag.Passive);
-            CreateRuntime(dacLocation);
+            CreateRuntime(clrVersionIndex, dacLocation);
             _printer = printer;
         }
 

@@ -37,11 +37,11 @@ namespace msos
             object[] arguments;
             if (context.ProcessId != 0)
             {
-                arguments = new object[] { context.ProcessId, context.DacLocation, context.Printer };
+                arguments = new object[] { context.ProcessId, context.ClrVersionIndex, context.DacLocation, context.Printer };
             }
             else
             {
-                arguments = new object[] { context.DumpFile, context.DacLocation, context.Printer };
+                arguments = new object[] { context.DumpFile, context.ClrVersionIndex, context.DacLocation, context.Printer };
             }
             using (RunInSeparateAppDomain runner = (RunInSeparateAppDomain)appDomain.CreateInstanceAndUnwrap(
                 typeof(RunInSeparateAppDomain).Assembly.FullName,

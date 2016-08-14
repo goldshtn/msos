@@ -63,14 +63,6 @@ namespace DumpWriter
 
         #region Boring
 
-        public bool CanReadAsync
-        {
-            get
-            {
-                return _impl.CanReadAsync;
-            }
-        }
-
         public bool IsMinidump
         {
             get
@@ -140,11 +132,6 @@ namespace DumpWriter
         public uint ReadDwordUnsafe(ulong addr)
         {
             return _impl.ReadDwordUnsafe(addr);
-        }
-
-        public AsyncMemoryReadResult ReadMemoryAsync(ulong address, int bytesRequested)
-        {
-            return _impl.ReadMemoryAsync(address, bytesRequested);
         }
 
         public ulong ReadPointerUnsafe(ulong addr)

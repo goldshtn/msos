@@ -25,5 +25,44 @@ namespace Microsoft.Diagnostics.RuntimeExt
 
             return new ClrDynamicClass(heap, type);
         }
+
+        public static bool IsOfValueClass(this ClrField field)
+        {
+            return field.ElementType == ClrElementType.Struct;
+        }
+
+        public static bool IsOfObjectReferenceType(this ClrField field)
+        {
+            return
+                field.ElementType == ClrElementType.String ||
+                field.ElementType == ClrElementType.Class ||
+                field.ElementType == ClrElementType.Array ||
+                field.ElementType == ClrElementType.SZArray ||
+                field.ElementType == ClrElementType.Object;
+        }
+
+        public static bool IsOfPrimitiveType(this ClrField field)
+        {
+            return
+                field.ElementType != ClrElementType.Struct &&
+                field.ElementType != ClrElementType.String &&
+                field.ElementType != ClrElementType.Class &&
+                field.ElementType != ClrElementType.Array &&
+                field.ElementType != ClrElementType.SZArray &&
+                field.ElementType != ClrElementType.Object;
+        }
+
+        public static ClrRuntime CreateRuntimeAndGetDacLocation(this DataTarget target, ClrInfo info, out string dacLocation)
+        {
+            dacLocation = info.LocalMatchingDac;
+            if (dacLocation != null)
+                return info.CreateRuntime();
+
+            dacLocation = target.SymbolLocator.FindBinary(info.DacInfo);
+            if (dacLocation != null)
+                return info.CreateRuntime(dacLocation);
+
+            return null;
+        }
     }
 }

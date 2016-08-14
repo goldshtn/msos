@@ -58,7 +58,7 @@ namespace msos
             // SOS hasn't necessarily been loaded at this point; try to load it
             // from the symbol server and then issue the appropriate .load command
             // so that the user can have it immediately available.
-            string sosLocation = context.ClrVersion.TryDownloadSos();
+            string sosLocation = context.Runtime.TryDownloadSos();
             if (sosLocation == null)
             {
                 context.WriteWarning(

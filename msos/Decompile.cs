@@ -46,7 +46,7 @@ namespace msos
 
             if (!String.IsNullOrEmpty(AssemblyName))
             {
-                ClrModule module = context.Runtime.EnumerateModules().SingleOrDefault(
+                ClrModule module = context.Runtime.Modules.SingleOrDefault(
                     m => Path.GetFileNameWithoutExtension(m.FileName).Equals(
                         Path.GetFileNameWithoutExtension(AssemblyName),
                         StringComparison.InvariantCultureIgnoreCase

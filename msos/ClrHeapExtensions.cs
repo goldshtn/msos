@@ -33,7 +33,7 @@ namespace msos
                     return;
                 }
                 if (innerType.IsArray &&
-                    (innerType.ArrayComponentType == null || innerType.ArrayComponentType.ContainsPointers))
+                    (innerType.ComponentType == null || innerType.ComponentType.ContainsPointers))
                 {
                     return;
                 }
@@ -55,7 +55,7 @@ namespace msos
                         if (heap.ReadPointer(address, out value))
                         {
                             results.Add(new Tuple<ulong, ClrType>(
-                                value, innerType.ArrayComponentType));
+                                value, innerType.ComponentType));
                         }
                     }
                 }

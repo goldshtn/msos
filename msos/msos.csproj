@@ -81,6 +81,9 @@
       <HintPath>..\packages\SharpZipLib.0.86.0\lib\20\ICSharpCode.SharpZipLib.dll</HintPath>
     </Reference>
     <Reference Include="ISymWrapper" />
+    <Reference Include="Microsoft.Diagnostics.Runtime">
+      <HintPath>..\externals\Microsoft.Diagnostics.Runtime.dll</HintPath>
+    </Reference>
     <Reference Include="Mono.Cecil, Version=0.9.5.0, Culture=neutral, PublicKeyToken=0738eb9f132ed756, processorArchitecture=MSIL">
       <HintPath>..\packages\Mono.Cecil.0.9.5.4\lib\net40\Mono.Cecil.dll</HintPath>
     </Reference>
@@ -124,7 +127,6 @@
     <Compile Include="DataTargetExtensions.cs" />
     <Compile Include="DB.cs" />
     <Compile Include="DbgEngCommand.cs" />
-    <Compile Include="DbgEngInterfaces.cs" />
     <Compile Include="Decompile.cs" />
     <Compile Include="Define.cs" />
     <Compile Include="Disassemble.cs" />
@@ -171,7 +173,6 @@
     <Compile Include="SupportedTargetsAttribute.cs" />
     <Compile Include="SwitchThread.cs" />
     <Compile Include="SymbolCache.cs" />
-    <Compile Include="SymbolNotification.cs" />
     <Compile Include="SyncBlk.cs" />
     <Compile Include="TargetType.cs" />
     <Compile Include="ThreadPool.cs" />
@@ -190,10 +191,6 @@
     <ProjectReference Include="..\ClrMemDiagExt\ClrMemDiagExt.csproj">
       <Project>{249a0236-8fc8-4cd7-b6e1-c3422924ea09}</Project>
       <Name>ClrMemDiagExt</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\ClrMemDiag\ClrMemDiag.csproj">
-      <Project>{a82126ca-23aa-41f1-8586-a5938d44d0a7}</Project>
-      <Name>ClrMemDiag</Name>
     </ProjectReference>
     <ProjectReference Include="..\CmdLine\CmdLine.csproj">
       <Project>{f634ed9d-3a0f-4fc4-988c-bb319bb69fa6}</Project>

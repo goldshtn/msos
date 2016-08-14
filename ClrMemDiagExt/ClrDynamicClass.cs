@@ -21,13 +21,13 @@ namespace Microsoft.Diagnostics.RuntimeExt
 
         public dynamic GetValue(ClrAppDomain appDomain)
         {
-            if (m_field.IsPrimitive())
+            if (m_field.IsOfPrimitiveType())
             {
                 object value = m_field.GetValue(appDomain);
                 if (value != null)
                     return new ClrPrimitiveValue(value, m_field.ElementType);
             }
-            else if (m_field.IsValueClass())
+            else if (m_field.ElementType == ClrElementType.Struct)
             {
                 ulong addr = m_field.GetAddress(appDomain);
                 if (addr != 0)
@@ -36,7 +36,7 @@ namespace Microsoft.Diagnostics.RuntimeExt
             else if (m_field.ElementType == ClrElementType.String)
             {
                 ulong addr = m_field.GetAddress(appDomain);
-                if (m_heap.GetRuntime().ReadPointer(addr, out addr))
+                if (m_heap.Runtime.ReadPointer(addr, out addr))
                     return new ClrObject(m_heap, m_field.Type, addr);
             }
             else

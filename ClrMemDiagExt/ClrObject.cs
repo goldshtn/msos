@@ -100,7 +100,7 @@ namespace Microsoft.Diagnostics.RuntimeExt
 
                 dynamic dict = ((dynamic)this);
                 dynamic entries = dict.entries;
-                ClrInstanceField key = ((ClrType)entries).ArrayComponentType.GetFieldByName("key");
+                ClrInstanceField key = ((ClrType)entries).ComponentType.GetFieldByName("key");
 
                 // Two cases:  The key is an object or string, denoted by "System.__Canon", or it's a primitive.
                 //             otherwise we don't support it.
@@ -181,10 +181,10 @@ namespace Microsoft.Diagnostics.RuntimeExt
                 // If type is null, then we've hit a dac bug.  Attempt to work around it,
                 // but we'll have to give up if getting the object type directly doesn't work.
                 ClrType type = itemsField.Type;
-                if (type == null || type.ArrayComponentType == null)
+                if (type == null || type.ComponentType == null)
                 {
                     type = m_heap.GetObjectType(addr);
-                    if (type == null || type.ArrayComponentType == null)
+                    if (type == null || type.ComponentType == null)
                     {
                         result = new ClrNullValue(m_heap);
                         return true;
@@ -215,7 +215,7 @@ namespace Microsoft.Diagnostics.RuntimeExt
 
         private bool GetArrayValue(ClrType type, ulong addr, int index, out object result)
         {
-            var componentType = type.ArrayComponentType;
+            var componentType = type.ComponentType;
 
             // componentType being null is a dac bug which should only happen when we have an array of
             // value types, where we have never *actually* constructed one of the types.  If there are
@@ -239,7 +239,7 @@ namespace Microsoft.Diagnostics.RuntimeExt
             else if (componentType.IsObjectReference)
             {
                 addr = type.GetArrayElementAddress(addr, index);
-                if (!m_heap.GetRuntime().ReadPointer(addr, out addr) || addr == 0)
+                if (!m_heap.Runtime.ReadPointer(addr, out addr) || addr == 0)
                 {
                     result = new ClrNullValue(m_heap);
                     return true;
@@ -372,7 +372,7 @@ namespace Microsoft.Diagnostics.RuntimeExt
         public ClrType GetDictionaryKeyType()
         {
             dynamic entries = ((dynamic)this).entries;
-            ClrInstanceField key = ((ClrType)entries).ArrayComponentType.GetFieldByName("key");
+            ClrInstanceField key = ((ClrType)entries).ComponentType.GetFieldByName("key");
 
             if (key == null)
                 return null;
@@ -383,7 +383,7 @@ namespace Microsoft.Diagnostics.RuntimeExt
         public ClrType GetDictionaryValueType()
         {
             dynamic entries = ((dynamic)this).entries;
-            ClrInstanceField value = ((ClrType)entries).ArrayComponentType.GetFieldByName("value");
+            ClrInstanceField value = ((ClrType)entries).ComponentType.GetFieldByName("value");
 
             if (value == null)
                 return null;
@@ -468,7 +468,7 @@ namespace Microsoft.Diagnostics.RuntimeExt
                 throw new InvalidOperationException(string.Format("Type '{0}' does not contain a '{1}' field.", m_type.Name, binder.Name));
             }
 
-            if (field.IsPrimitive())
+            if (field.IsOfPrimitiveType())
             {
                 object value = field.GetValue(m_addr, m_inner);
                 if (value == null)
@@ -478,7 +478,7 @@ namespace Microsoft.Diagnostics.RuntimeExt
 
                 return true;
             }
-            else if (field.IsValueClass())
+            else if (field.IsOfValueClass())
             {
                 ulong addr = field.GetAddress(m_addr, m_inner);
                 result = new ClrObject(m_heap, field.Type, addr, true);
@@ -487,7 +487,7 @@ namespace Microsoft.Diagnostics.RuntimeExt
             else if (field.ElementType == ClrElementType.String)
             {
                 ulong addr = field.GetAddress(m_addr, m_inner);
-                if (!m_heap.GetRuntime().ReadPointer(addr, out addr))
+                if (!m_heap.Runtime.ReadPointer(addr, out addr))
                 {
                     result = new ClrNullValue(m_heap);
                     return true;

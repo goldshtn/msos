@@ -79,7 +79,7 @@ namespace msos
             {
                 context.WriteLine("Array:    size {0}, element type {1}",
                     type.GetArrayLength(ObjectAddress),
-                    type.ArrayComponentType != null ? type.ArrayComponentType.Name : "<unknown>");
+                    type.ComponentType != null ? type.ComponentType.Name : "<unknown>");
             }
             context.WriteLine("Assembly: {0}", type.Module.FileName);
             if (type.HasSimpleValue)
@@ -100,7 +100,7 @@ namespace msos
                 {
                     context.WriteLine("{0,-8:x} {1,-20} {2,-3} {3,-10} {4,-20:x16} {5}",
                         field.Offset, field.GetFieldTypeNameTrimmed(),
-                        (field.IsPrimitive() || field.IsValueClass()) ? 1 : 0,
+                        (field.IsOfPrimitiveType() || field.IsOfValueClass()) ? 1 : 0,
                         "shared", "thrstatic", field.Name);
                     foreach (var appDomain in context.Runtime.AppDomains)
                     {
@@ -114,7 +114,7 @@ namespace msos
                 {
                     context.WriteLine("{0,-8:x} {1,-20} {2,-3} {3,-10} {4,-20:x16} {5}",
                         field.Offset, field.GetFieldTypeNameTrimmed(),
-                        (field.IsPrimitive() || field.IsValueClass()) ? 1 : 0,
+                        (field.IsOfPrimitiveType() || field.IsOfValueClass()) ? 1 : 0,
                         "shared", "static", field.Name);
                     foreach (var appDomain in context.Runtime.AppDomains)
                     {

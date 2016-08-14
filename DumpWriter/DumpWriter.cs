@@ -1,4 +1,5 @@
 ﻿using Microsoft.Diagnostics.Runtime;
+using Microsoft.Diagnostics.RuntimeExt;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -47,7 +48,7 @@ namespace DumpWriter
 
             foreach (var clrVersion in target.ClrVersions)
             {
-                var runtime = target.CreateRuntime(clrVersion.TryDownloadDac());
+                var runtime = clrVersion.CreateRuntime();
 
                 AddCLRRegions(runtime);
 
@@ -71,13 +72,13 @@ namespace DumpWriter
             {
                 foreach (var f in t.StackTrace)
                 {
-                    try { f.GetFileAndLineNumber(); }
+                    try { f.GetSourceLocation(); }
                     catch (Exception) { }
                 }
             }
 
             // Touch all modules
-            runtime.EnumerateModules().Count();
+            runtime.Modules.Count();
 
             // Touch all heap regions, roots, types
             var heap = runtime.GetHeap();

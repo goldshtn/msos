@@ -1,6 +1,7 @@
 ﻿using CmdLine;
 using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.Runtime.Interop;
+using Microsoft.Diagnostics.RuntimeExt;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using System;
@@ -92,16 +93,7 @@ namespace msos
                             instr.Offset < mapByOffset[i + 1].ILOffset);
                 }
 
-                // The GetSourceInformation method doesn't attempt to load symbols.
-                if (!module.IsPdbLoaded)
-                {
-                    string pdb = module.TryDownloadPdb(null);
-                    if (pdb != null)
-                    {
-                        module.LoadPdb(pdb);
-                    }
-                }
-                var sourceLocation = module.GetSourceInformation(method, map.ILOffset);
+                var sourceLocation = method.GetSourceLocation(map.ILOffset);
                 if (sourceLocation != null)
                 {
                     _context.WriteLine("{0} {1}-{2}:{3}-{4}", sourceLocation.FilePath,

@@ -21,14 +21,13 @@ namespace msos
         {
             if (!String.IsNullOrEmpty(SpecificModule))
             {
-                var module = context.Runtime.EnumerateModules().FirstOrDefault(
+                var module = context.Runtime.Modules.FirstOrDefault(
                     m => String.Equals(Path.GetFileName(m.Name), SpecificModule, StringComparison.InvariantCultureIgnoreCase));
                 if (module != null)
                 {
                     var moduleInfo = context.Runtime.DataTarget.EnumerateModules().Single(
                         m => String.Equals(m.FileName, module.FileName, StringComparison.InvariantCultureIgnoreCase));
                     context.WriteLine("Module:     {0}", module.Name);
-                    context.WriteLine("PDB loaded: {0}", module.IsPdbLoaded);
                     context.WriteLine("PDB name:   {0}", moduleInfo.Pdb.FileName);
                     context.WriteLine("Debug mode: {0}", module.DebuggingMode);
                 }

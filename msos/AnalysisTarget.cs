@@ -1,4 +1,5 @@
 ﻿using Microsoft.Diagnostics.Runtime;
+using Microsoft.Diagnostics.RuntimeExt;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -120,20 +121,21 @@ namespace msos
         private void CreateRuntime()
         {
             ClrInfo clrInfo = _target.ClrVersions[_clrVersionIndex];
-            string dacLocation = clrInfo.TryDownloadDac();
+            string dacLocation;
+            _context.Runtime = _target.CreateRuntimeAndGetDacLocation(clrInfo, out dacLocation);
             _context.WriteInfo("Using Data Access DLL at: " + dacLocation);
             _context.DacLocation = dacLocation;
+            _context.ClrVersionIndex = _clrVersionIndex;
             _context.ClrVersion = clrInfo;
-            _context.Runtime = _target.CreateRuntime(dacLocation);
             _context.Heap = _context.Runtime.GetHeap();
-            _target.DefaultSymbolNotification = new SymbolNotification(_context);
         }
 
         private void SetupSymPath()
         {
             string symPath = Environment.GetEnvironmentVariable("_NT_SYMBOL_PATH");
             _context.WriteInfo("Symbol path: " + symPath);
-            _target.AppendSymbolPath(symPath);
+            _context.SymbolLocator = _target.SymbolLocator;
+            _context.SymbolLocator.SymbolPath = symPath;
             _context.SymbolPath = symPath;
         }
 

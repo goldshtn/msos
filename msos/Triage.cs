@@ -68,8 +68,10 @@ namespace msos
             context.WriteLine("EVENT    Last event in thread OSID = {0}, managed = {1}",
                 _triageInformation.FaultingThreadOSID, _triageInformation.IsFaultingThreadManaged);
             context.WriteLine("EVENT    {0}", _triageInformation.EventDescription);
-            context.WriteLine("EVENT    Exception {0:X8}", _triageInformation.ExceptionCode);
-            context.WriteLine("EVENT    Managed exception {0}", _triageInformation.ManagedExceptionType);
+            if (_triageInformation.ExceptionCode != 0)
+                context.WriteLine("EVENT    Exception {0:X8}", _triageInformation.ExceptionCode);
+            if (!String.IsNullOrEmpty(_triageInformation.ManagedExceptionType))
+                context.WriteLine("EVENT    Managed exception {0}", _triageInformation.ManagedExceptionType);
             context.WriteLine("EVENT    Faulting module {0}, method {1}", _triageInformation.FaultingModule, _triageInformation.FaultingMethod);
         }
 

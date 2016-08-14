@@ -1,6 +1,7 @@
 ﻿using CmdLine;
 using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.Runtime.Interop;
+using Microsoft.Diagnostics.Runtime.Utilities;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -25,8 +26,10 @@ namespace msos
         public IDictionary<string, string> Aliases { get; private set; }
         public bool HyperlinkOutput { get; set; }
         public SymbolCache SymbolCache { get; private set; }
+        public SymbolLocator SymbolLocator { get; set; }
         public List<string> Defines { get; private set; }
         public string SymbolPath { get; set; }
+        public int ClrVersionIndex { get; set; }
         public ClrInfo ClrVersion { get; set; }
         public TargetType TargetType { get; set; }
 
@@ -264,10 +267,10 @@ namespace msos
                 throw new InvalidOperationException("DbgEng targets can be created only for dump files at this point.");
 
             var target = DataTarget.LoadCrashDump(DumpFile, CrashDumpReader.DbgEng);
-            target.AppendSymbolPath(SymbolPath);
+            target.SymbolLocator.SymbolPath = SymbolPath;
 
             var outputCallbacks = new OutputCallbacks(this);
-            msos_IDebugClient5 client = (msos_IDebugClient5)target.DebuggerInterface;
+            IDebugClient5 client = (IDebugClient5)target.DebuggerInterface;
             HR.Verify(client.SetOutputCallbacksWide(outputCallbacks));
 
             return target;
