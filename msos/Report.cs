@@ -67,11 +67,51 @@ namespace msos
 
     class UnhandledExceptionComponent : IReportComponent
     {
+        public class ExceptionInfo
+        {
+            public string ExceptionType { get; set; }
+            public string ExceptionMessage { get; set; }
+            public List<string> StackFrames { get; set; }
+            public ExceptionInfo InnerException { get; set; }
+        }
+
         public string Title { get { return "The process encountered an unhandled exception"; } }
+        public ExceptionInfo Exception { get; private set; }
+        public uint OSThreadId { get; private set; }
+        public int ManagedThreadId { get; private set; }
+        public string ThreadName { get; private set; }
 
         public bool Generate(CommandExecutionContext context)
         {
-            return false;
+            // TODO Do we care about Win32 exceptions as well, or only managed?
+            //      Also makes sense to cross-check the current exception stack trace
+            //      with the last event information, because the exception might actually
+            //      be residual.
+            var threadWithException = context.Runtime.Threads.FirstOrDefault(
+                t => t.CurrentException != null
+                );
+            if (threadWithException == null)
+                return false;
+
+            OSThreadId = threadWithException.OSThreadId;
+            ManagedThreadId = threadWithException.ManagedThreadId;
+            ThreadName = threadWithException.SpecialDescription(); // TODO Get the actual name if possible
+
+            var exception = threadWithException.CurrentException;
+            var exceptionInfo = Exception = new ExceptionInfo();
+            while (true)
+            {
+                exceptionInfo.ExceptionType = exception.Type.Name;
+                exceptionInfo.ExceptionMessage = exception.Message;
+                exceptionInfo.StackFrames = exception.StackTrace.Select(f => f.DisplayString).ToList();
+
+                exception = exception.Inner;
+                if (exception == null)
+                    break;
+                exceptionInfo.InnerException = new ExceptionInfo();
+                exceptionInfo = exceptionInfo.InnerException;
+            }
+            return true;
         }
     }
 
