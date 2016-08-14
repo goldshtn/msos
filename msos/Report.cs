@@ -57,7 +57,7 @@ namespace msos
 
     class RecommendationsComponent : IReportComponent
     {
-        public string Title { get { return "Issues and next steps"; } }
+        public string Title => "Issues and next steps";
 
         public bool Generate(CommandExecutionContext context)
         {
@@ -75,7 +75,7 @@ namespace msos
             public ExceptionInfo InnerException { get; set; }
         }
 
-        public string Title { get { return "The process encountered an unhandled exception"; } }
+        public string Title => "The process encountered an unhandled exception";
         public ExceptionInfo Exception { get; private set; }
         public uint OSThreadId { get; private set; }
         public int ManagedThreadId { get; private set; }
@@ -149,17 +149,57 @@ namespace msos
 
     class ThreadStacksComponent : IReportComponent
     {
-        public string Title { get { return "Thread stacks"; } }
+        public class StackFrame
+        {
+            public string Module { get; set; }
+            public string Method { get; set; }
+            public string SourceFileName { get; set; }
+            public uint SourceLineNumber { get; set; }
+        }
+
+        public class StackTrace
+        {
+            public uint OSThreadId { get; set; }
+            public int ManagedThreadId { get; set; }
+            public List<StackFrame> Frames { get; } = new List<StackFrame>();
+        }
+
+        public string Title => "Thread stacks";
+        public List<StackTrace> Stacks { get; } = new List<StackTrace>();
 
         public bool Generate(CommandExecutionContext context)
         {
+            using (var target = context.CreateTemporaryDbgEngTarget())
+            {
+                var stackTraces = new UnifiedStackTrace(target.DebuggerInterface, context);
+                foreach (var thread in stackTraces.Threads)
+                {
+                    var stackTrace = stackTraces.GetStackTrace(thread.Index);
+                    var st = new StackTrace
+                    {
+                        OSThreadId = thread.OSThreadId,
+                        ManagedThreadId = thread.ManagedThread?.ManagedThreadId ?? -1
+                    };
+                    foreach (var frame in stackTrace)
+                    {
+                        st.Frames.Add(new StackFrame
+                        {
+                            Module = frame.Module,
+                            Method = frame.Method,
+                            SourceFileName = frame.SourceFileName,
+                            SourceLineNumber = frame.SourceLineNumber
+                        });
+                    }
+                    Stacks.Add(st);
+                }
+            }
             return true;
         }
     }
 
     class LocksAndWaitsComponent : IReportComponent
     {
-        public string Title { get { return "Locks and waits"; } }
+        public string Title => "Locks and waits";
 
         public bool Generate(CommandExecutionContext context)
         {
@@ -169,7 +209,7 @@ namespace msos
 
     class MemoryUsageComponent : IReportComponent
     {
-        public string Title { get { return "Memory usage"; } }
+        public string Title => "Memory usage";
 
         public bool Generate(CommandExecutionContext context)
         {
@@ -179,7 +219,7 @@ namespace msos
 
     class TopMemoryConsumersComponent : IReportComponent
     {
-        public string Title { get { return "Top .NET memory consumers"; } }
+        public string Title => "Top .NET memory consumers";
 
         public bool Generate(CommandExecutionContext context)
         {
@@ -189,7 +229,7 @@ namespace msos
 
     class MemoryFragmentationComponent : IReportComponent
     {
-        public string Title { get { return "Memory fragmentation"; } }
+        public string Title => "Memory fragmentation";
 
         public bool Generate(CommandExecutionContext context)
         {
@@ -199,7 +239,7 @@ namespace msos
 
     class FinalizationComponent : IReportComponent
     {
-        public string Title { get { return "Finalization statistics"; } }
+        public string Title => "Finalization statistics";
 
         public bool Generate(CommandExecutionContext context)
         {
