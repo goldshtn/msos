@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 
 namespace DumpWriter
 {
-#pragma warning disable 0612
     class DumpReaderLogger : IDataReader
     {
         const int PAGE_SIZE = 4096;
@@ -80,6 +79,7 @@ namespace DumpWriter
             }
         }
 
+#pragma warning disable CS0612
         public bool CanReadAsync
         {
             get
@@ -87,6 +87,7 @@ namespace DumpWriter
                 return _impl.CanReadAsync;
             }
         }
+#pragma warning restore CS0612
 
         public void Close()
         {
@@ -158,12 +159,13 @@ namespace DumpWriter
             throw new NotImplementedException();
         }
 
+#pragma warning disable CS0612
         public AsyncMemoryReadResult ReadMemoryAsync(ulong address, int bytesRequested)
         {
             return _impl.ReadMemoryAsync(address, bytesRequested);
         }
+#pragma warning restore CS0612
 
         #endregion
     }
-#pragma warning restore
 }
