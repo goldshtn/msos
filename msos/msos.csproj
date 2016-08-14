@@ -102,6 +102,10 @@
     <Reference Include="NetSerializer">
       <HintPath>..\packages\NetSerializer.3.0.0.0\lib\net40\NetSerializer.dll</HintPath>
     </Reference>
+    <Reference Include="Newtonsoft.Json, Version=9.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.9.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -163,6 +167,7 @@
     <Compile Include="ObjectSet.cs" />
     <Compile Include="ObjSize.cs" />
     <Compile Include="PrinterTextWriter.cs" />
+    <Compile Include="Report.cs" />
     <Compile Include="SessionSettings.cs" />
     <Compile Include="Paths.cs" />
     <Compile Include="PrinterBase.cs" />
