@@ -257,9 +257,47 @@ namespace msos
     class MemoryUsageComponent : IReportComponent
     {
         public string Title => "Memory usage";
+        public ProcessorArchitecture Architecture =>
+            Environment.Is64BitProcess ? ProcessorArchitecture.Amd64 : ProcessorArchitecture.X86;
+        public ulong AddressSpaceSize =>
+            Environment.Is64BitProcess ?
+            128UL * 1024 * 1024 * 1024 * 1024 :
+            2UL * 1024 * 1024 * 1024; // TODO Large address aware process
+        public ulong VirtualSize { get; private set; }
+        public ulong CommitSize { get; private set; }
+        public ulong WorkingSetSize { get; private set; }
+        public ulong PrivateSize { get; private set; }
+        public ulong ManagedHeapSize { get; private set; }
+        public ulong StacksSize { get; private set; }
+        public ulong Win32HeapSize { get; private set; }
+        public ulong ModulesSize { get; private set; }
 
         public bool Generate(CommandExecutionContext context)
         {
+            if (context.TargetType == TargetType.DumpFileNoHeap)
+                return false;
+
+            using (var target = context.CreateTemporaryDbgEngTarget())
+            {
+                var vmRegions = target.EnumerateVMRegions().ToList();
+                // TODO Getting wrong numbers for commit size and virtual size compared to
+                //      the report from !address -summary in WinDbg
+                VirtualSize = (ulong)vmRegions
+                    .Where(r => (r.State & Microsoft.Diagnostics.Runtime.Interop.MEM.FREE) == 0)
+                    .Sum(r => (long)r.RegionSize);
+                CommitSize = (ulong)vmRegions
+                    .Where(r => (r.State & Microsoft.Diagnostics.Runtime.Interop.MEM.COMMIT) != 0)
+                    .Sum(r => (long)r.RegionSize);
+                WorkingSetSize = 0; // TODO Find a way to figure this out
+                PrivateSize = (ulong)vmRegions
+                    .Where(r => (r.Type & Microsoft.Diagnostics.Runtime.Interop.MEM.PRIVATE) != 0)
+                    .Sum(r => (long)r.RegionSize);
+                ManagedHeapSize = context.Heap.TotalHeapSize;
+                StacksSize = 0; // TODO Find a way to figure this out
+                Win32HeapSize = 0; // TODO Find a way to figure this out
+                ModulesSize = (ulong)target.EnumerateModules().Sum(m => m.FileSize);
+            }
+
             return true;
         }
     }
