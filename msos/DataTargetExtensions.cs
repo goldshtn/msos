@@ -68,7 +68,7 @@ namespace msos
         public static IEnumerable<MEMORY_BASIC_INFORMATION64> EnumerateVMRegions(this DataTarget target)
         {
             var dataSpaces = (IDebugDataSpaces4)target.DebuggerInterface;
-            ulong maxAddress = Environment.Is64BitProcess ? uint.MaxValue : ulong.MaxValue;
+            ulong maxAddress = Environment.Is64BitProcess ? ulong.MaxValue : uint.MaxValue;
             for (ulong address = 0; address < maxAddress;)
             {
                 MEMORY_BASIC_INFORMATION64 memInfo;

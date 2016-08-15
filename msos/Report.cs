@@ -280,8 +280,6 @@ namespace msos
             using (var target = context.CreateTemporaryDbgEngTarget())
             {
                 var vmRegions = target.EnumerateVMRegions().ToList();
-                // TODO Getting wrong numbers for commit size and virtual size compared to
-                //      the report from !address -summary in WinDbg
                 VirtualSize = (ulong)vmRegions
                     .Where(r => (r.State & Microsoft.Diagnostics.Runtime.Interop.MEM.FREE) == 0)
                     .Sum(r => (long)r.RegionSize);
