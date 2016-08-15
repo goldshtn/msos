@@ -259,15 +259,18 @@ namespace msos
         public string Title => "Memory usage";
         public ProcessorArchitecture Architecture =>
             Environment.Is64BitProcess ? ProcessorArchitecture.Amd64 : ProcessorArchitecture.X86;
-        public ulong AddressSpaceSize =>
-            Environment.Is64BitProcess ?
-            128UL * 1024 * 1024 * 1024 * 1024 :
-            2UL * 1024 * 1024 * 1024; // TODO Large address aware process
+        public ulong AddressSpaceSize { get; private set; }
         public ulong VirtualSize { get; private set; }
         public ulong CommitSize { get; private set; }
         public ulong WorkingSetSize { get; private set; }
         public ulong PrivateSize { get; private set; }
         public ulong ManagedHeapSize { get; private set; }
+        public ulong ManagedHeapCommittedSize { get; private set; }
+        public ulong ManagedHeapReservedSize { get; private set; }
+        public ulong Generation0Size { get; private set; }
+        public ulong Generation1Size { get; private set; }
+        public ulong Generation2Size { get; private set; }
+        public ulong LargeObjectHeapSize { get; private set; }
         public ulong StacksSize { get; private set; }
         public ulong Win32HeapSize { get; private set; }
         public ulong ModulesSize { get; private set; }
@@ -280,23 +283,54 @@ namespace msos
             using (var target = context.CreateTemporaryDbgEngTarget())
             {
                 var vmRegions = target.EnumerateVMRegions().ToList();
+                AddressSpaceSize = vmRegions.Last().BaseAddress + vmRegions.Last().RegionSize;
                 VirtualSize = (ulong)vmRegions
                     .Where(r => (r.State & Microsoft.Diagnostics.Runtime.Interop.MEM.FREE) == 0)
                     .Sum(r => (long)r.RegionSize);
                 CommitSize = (ulong)vmRegions
                     .Where(r => (r.State & Microsoft.Diagnostics.Runtime.Interop.MEM.COMMIT) != 0)
                     .Sum(r => (long)r.RegionSize);
-                WorkingSetSize = 0; // TODO Find a way to figure this out
                 PrivateSize = (ulong)vmRegions
                     .Where(r => (r.Type & Microsoft.Diagnostics.Runtime.Interop.MEM.PRIVATE) != 0)
                     .Sum(r => (long)r.RegionSize);
                 ManagedHeapSize = context.Heap.TotalHeapSize;
-                StacksSize = 0; // TODO Find a way to figure this out
-                Win32HeapSize = 0; // TODO Find a way to figure this out
+                ManagedHeapCommittedSize = (ulong)context.Heap.Segments.Sum(s => (long)(s.CommittedEnd - s.Start));
+                ManagedHeapReservedSize = (ulong)context.Heap.Segments.Sum(s => (long)(s.ReservedEnd - s.Start));
+                Generation0Size = context.Heap.GetSizeByGen(0);
+                Generation1Size = context.Heap.GetSizeByGen(1);
+                Generation2Size = context.Heap.GetSizeByGen(2);
+                LargeObjectHeapSize = context.Heap.GetSizeByGen(3);
+                StacksSize = GetStacksSize(target);
+                Win32HeapSize = GetWin32HeapSize(target);
                 ModulesSize = (ulong)target.EnumerateModules().Sum(m => m.FileSize);
             }
 
             return true;
+        }
+
+        private ulong GetWin32HeapSize(DataTarget target)
+        {
+            // TODO Find the ProcessHeaps pointer in the PEB, and the NumberOfHeaps field.
+            //      This is an array of _HEAP structure pointers. Each _HEAP structure has
+            //      a field called Counters of type HEAP_COUNTERS (is that so on older OS
+            //      versions as well?), which has information about the reserve and commit
+            //      size of that heap. This isn't accurate to the level of busy/free blocks,
+            //      but should be a reasonable estimate of which part of memory is used for
+            //      the Win32 heap.
+            //      To find the PEB, use IDebugSystemObjects::GetCurrentProcessPeb().
+            return 0;
+        }
+
+        private ulong GetStacksSize(DataTarget target)
+        {
+            // TODO Find all the TEBs and then sum StackBase - StackLimit for all of them
+            //      This is just the committed size. To get the reserved size, need
+            //      to enumerate adjacent memory regions? Also, what of WoW64 threads, which
+            //      really have two thread stacks? Ignore the x64 stack because it doesn't
+            //      live in the 4GB address space anyway?
+            //      To find the TEB for all threads, use IDebugSystemObjects::GetCurrentThreadTeb()
+            //      for each of the threads (calling SetCurrentThreadId() every time).
+            return 0;
         }
     }
 
