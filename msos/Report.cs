@@ -261,6 +261,8 @@ namespace msos
             Environment.Is64BitProcess ? ProcessorArchitecture.Amd64 : ProcessorArchitecture.X86;
         public ulong AddressSpaceSize { get; private set; }
         public ulong VirtualSize { get; private set; }
+        public ulong FreeSize { get; private set; }
+        public ulong LargestFreeBlockSize { get; private set; }
         public ulong CommitSize { get; private set; }
         public ulong WorkingSetSize { get; private set; }
         public ulong PrivateSize { get; private set; }
@@ -287,6 +289,10 @@ namespace msos
                 VirtualSize = (ulong)vmRegions
                     .Where(r => (r.State & Microsoft.Diagnostics.Runtime.Interop.MEM.FREE) == 0)
                     .Sum(r => (long)r.RegionSize);
+                FreeSize = AddressSpaceSize - VirtualSize;
+                LargestFreeBlockSize = vmRegions
+                    .Where(r => (r.State & Microsoft.Diagnostics.Runtime.Interop.MEM.FREE) != 0)
+                    .Max(r => r.RegionSize);
                 CommitSize = (ulong)vmRegions
                     .Where(r => (r.State & Microsoft.Diagnostics.Runtime.Interop.MEM.COMMIT) != 0)
                     .Sum(r => (long)r.RegionSize);
