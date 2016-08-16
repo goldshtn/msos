@@ -244,7 +244,7 @@ namespace msos
                         Object = blockingObject.Object,
                         ObjectType = context.Heap.GetObjectType(blockingObject.Object)?.Name
                     };
-                    li.OwnerThreads.AddRange(blockingObject.Owners.Select(ThreadInfoFromThread));
+                    li.OwnerThreads.AddRange(blockingObject.Owners.Where(o => o != null).Select(ThreadInfoFromThread));
                     li.WaitingThreads.AddRange(blockingObject.Waiters.Select(ThreadInfoFromThread));
                     ti.Locks.Add(li);
                 }
@@ -336,10 +336,57 @@ namespace msos
 
     class TopMemoryConsumersComponent : IReportComponent
     {
+        public class TypeInfo
+        {
+            public string Type { get; set; }
+            public ulong Count { get; set; }
+            public ulong Size { get; set; }
+            public double AverageSize { get; set; }
+            public ulong MinimumSize { get; set; }
+            public ulong MaximumSize { get; set; }
+        }
+
         public string Title => "Top .NET memory consumers";
+
+        public List<TypeInfo> TopConsumers { get; } = new List<TypeInfo>();
+
+        private Tuple<ulong, ulong, ulong, ulong> GetStats(IEnumerable<long> elements)
+        {
+            ulong min = ulong.MaxValue, max = ulong.MinValue, sum = 0, count = 0;
+            foreach (ulong element in elements)
+            {
+                ++count;
+                sum += element;
+                min = Math.Min(min, element);
+                max = Math.Max(max, element);
+            }
+            return new Tuple<ulong, ulong, ulong, ulong>(min, max, sum, count);
+        }
 
         public bool Generate(CommandExecutionContext context)
         {
+            if (context.TargetType == TargetType.DumpFileNoHeap)
+                return false;
+
+            // TODO If this LINQ query is too slow, optimize by hand-rolling a loop.
+            var topTypes = from obj in context.Heap.EnumerateObjectAddresses()
+                           let type = context.Heap.GetObjectType(obj)
+                           where type != null && !type.IsFree
+                           let size = type.GetSize(obj)
+                           group (long)size by type.Name into g
+                           let totalSize = g.Sum()
+                           orderby totalSize descending
+                           let stats = GetStats(g)
+                           select new TypeInfo
+                           {
+                               Type = g.Key,
+                               Count = stats.Item4,
+                               Size = stats.Item3,
+                               AverageSize = stats.Item3 / (double)stats.Item4,
+                               MaximumSize = stats.Item2,
+                               MinimumSize = stats.Item1
+                           };
+            TopConsumers.AddRange(topTypes.Take(100));
             return true;
         }
     }
