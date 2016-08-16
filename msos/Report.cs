@@ -77,6 +77,7 @@ namespace msos
         }
 
         public string Title => "The process encountered an unhandled exception";
+        public uint ExceptionCode { get; private set; }
         public ExceptionInfo Exception { get; private set; }
         public uint OSThreadId { get; private set; }
         public int ManagedThreadId { get; private set; }
@@ -84,34 +85,44 @@ namespace msos
 
         public bool Generate(CommandExecutionContext context)
         {
-            // TODO Do we care about Win32 exceptions as well, or only managed?
-            //      Also makes sense to cross-check the current exception stack trace
-            //      with the last event information, because the exception might actually
-            //      be residual.
-            var threadWithException = context.Runtime.Threads.FirstOrDefault(
-                t => t.CurrentException != null
-                );
-            if (threadWithException == null)
-                return false;
-
-            OSThreadId = threadWithException.OSThreadId;
-            ManagedThreadId = threadWithException.ManagedThreadId;
-            ThreadName = threadWithException.SpecialDescription(); // TODO Get the actual name if possible
-
-            var exception = threadWithException.CurrentException;
-            var exceptionInfo = Exception = new ExceptionInfo();
-            while (true)
+            using (var target = context.CreateTemporaryDbgEngTarget())
             {
-                exceptionInfo.ExceptionType = exception.Type.Name;
-                exceptionInfo.ExceptionMessage = exception.Message;
-                exceptionInfo.StackFrames = exception.StackTrace.Select(f => f.DisplayString).ToList();
+                var lastEvent = target.GetLastEventInformation();
+                if (lastEvent == null)
+                    return false;
 
-                exception = exception.Inner;
+                var threadWithException = context.Runtime.Threads.SingleOrDefault(t => t.OSThreadId == lastEvent.OSThreadId);
+                if (threadWithException == null)
+                    return false;
+
+                ExceptionCode = lastEvent.ExceptionRecord?.ExceptionCode ?? 0;
+                OSThreadId = threadWithException.OSThreadId;
+                ManagedThreadId = threadWithException.ManagedThreadId;
+                ThreadName = threadWithException.SpecialDescription(); // TODO Get the actual name if possible
+
+                // Note that we might have an exception, but if it wasn't managed
+                // then the Thread.CurrentException field will be null. In that case,
+                // we report only the Win32 exception code.
+                // TODO We could try to translate to a human-readable exception string?
+                var exception = threadWithException.CurrentException;
                 if (exception == null)
-                    break;
-                exceptionInfo.InnerException = new ExceptionInfo();
-                exceptionInfo = exceptionInfo.InnerException;
+                    return true;
+
+                var exceptionInfo = Exception = new ExceptionInfo();
+                while (true)
+                {
+                    exceptionInfo.ExceptionType = exception.Type.Name;
+                    exceptionInfo.ExceptionMessage = exception.Message;
+                    exceptionInfo.StackFrames = exception.StackTrace.Select(f => f.DisplayString).ToList();
+
+                    exception = exception.Inner;
+                    if (exception == null)
+                        break;
+                    exceptionInfo.InnerException = new ExceptionInfo();
+                    exceptionInfo = exceptionInfo.InnerException;
+                }
             }
+
             return true;
         }
     }
