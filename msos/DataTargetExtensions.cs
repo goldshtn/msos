@@ -69,18 +69,23 @@ namespace msos
         {
             var dataSpaces = (IDebugDataSpaces4)target.DebuggerInterface;
             ulong maxAddress = Environment.Is64BitProcess ? ulong.MaxValue : uint.MaxValue;
-            for (ulong address = 0; address < maxAddress;)
+            ulong address = 0;
+            while (true)
             {
                 MEMORY_BASIC_INFORMATION64 memInfo;
                 if (0 != dataSpaces.QueryVirtual(address, out memInfo))
                     break;
 
-                if (memInfo.RegionSize == 0)
+                // TODO 32-bit processes on 64-bit Windows with `/LARGEADDRESSAWARE`
+                // enabled are behaving oddly here. Specifically, no valid addresses
+                // above 2GB and below 4GB are reported by `QueryVirtual`, whereas the
+                // WinDbg `!address` command can see them.
+                if (memInfo.BaseAddress >= maxAddress || memInfo.RegionSize == 0)
                     break;
 
                 yield return memInfo;
 
-                address += memInfo.RegionSize;
+                address = memInfo.BaseAddress + memInfo.RegionSize;
             }
         }
 
