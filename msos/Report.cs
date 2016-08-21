@@ -277,7 +277,7 @@ namespace msos
             using (var target = context.CreateTemporaryDbgEngTarget())
             {
                 var debugAdvanced = (IDebugAdvanced2)target.DebuggerInterface;
-                var stackTraces = new UnifiedStackTrace(target.DebuggerInterface, context);
+                var stackTraces = new UnifiedStackTraces(target.DebuggerInterface, context);
                 foreach (var thread in stackTraces.Threads)
                 {
                     var stackTrace = stackTraces.GetStackTrace(thread.Index);
@@ -468,10 +468,43 @@ namespace msos
 
     class MemoryFragmentationComponent : IReportComponent
     {
+        public class SegmentInfo
+        {
+            public ulong Size { get; set; }
+            public ulong Committed { get; set; }
+            public ulong Reserved { get; set; }
+            public bool IsLargeObjectHeap { get; set; }
+            public double FragmentationPercent { get; set; }
+        }
+
         public string Title => "Memory fragmentation";
+        public ulong LargeObjectHeapSize { get; private set; }
+        public double HeapFragmentationPercent { get; private set; }
+        public List<SegmentInfo> HeapSegments { get; } = new List<SegmentInfo>();
 
         public bool Generate(CommandExecutionContext context)
         {
+            if (context.TargetType == TargetType.DumpFileNoHeap)
+                return false;
+
+            LargeObjectHeapSize = context.Heap.GetSizeByGen(3);
+            var freeSpaceBySegment = context.Heap.GetFreeSpaceBySegment();
+            foreach (var segment in context.Heap.Segments)
+            {
+                ulong free;
+                if (!freeSpaceBySegment.TryGetValue(segment, out free))
+                    free = 0;
+                HeapSegments.Add(new SegmentInfo
+                {
+                    Size = segment.Length,
+                    Reserved = segment.ReservedEnd - segment.Start,
+                    Committed = segment.CommittedEnd - segment.Start,
+                    IsLargeObjectHeap = segment.IsLarge,
+                    FragmentationPercent = 100.0 * free / segment.Length
+                });
+            }
+            HeapFragmentationPercent = 100.0 * freeSpaceBySegment.Values.Sum(l => (long)l) / context.Heap.TotalHeapSize;
+
             return true;
         }
     }

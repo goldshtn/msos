@@ -152,5 +152,27 @@ namespace msos
                    orderby totalSize descending
                    select GetStats(g.Key, g);
         }
+
+        public static IDictionary<ClrSegment, ulong> GetFreeSpaceBySegment(this ClrHeap heap)
+        {
+            var freeSpaceBySegment = new Dictionary<ClrSegment, ulong>();
+            foreach (ClrSegment segment in heap.Segments)
+            {
+                for (ulong currentObject = segment.FirstObject; currentObject != 0;
+                    currentObject = segment.NextObject(currentObject))
+                {
+                    ClrType type = heap.GetObjectType(currentObject);
+                    if (type != null && type.IsFree)
+                    {
+                        ulong size = type.GetSize(currentObject);
+                        if (!freeSpaceBySegment.ContainsKey(segment))
+                            freeSpaceBySegment.Add(segment, size);
+                        else
+                            freeSpaceBySegment[segment] += size;
+                    }
+                }
+            }
+            return freeSpaceBySegment;
+        }
     }
 }
