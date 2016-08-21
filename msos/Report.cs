@@ -1,5 +1,6 @@
 ﻿using CmdLine;
 using Microsoft.Diagnostics.Runtime;
+using Microsoft.Diagnostics.Runtime.Interop;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using System;
@@ -7,6 +8,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -36,6 +38,13 @@ namespace msos
     {
         public string Title { get; private set; }
         public string DumpType { get; private set; }
+
+        // TODO:
+        //      Windows version (IDebugControl::GetSystemVersion)
+        //      Process executable name
+        //      # of processors (IDebugControl::GetNumberOfProcessors)
+        //      # System uptime and session time (IDebugControl2)
+        //      Currenet process uptime (IDebugSystemObjects2::GetCurrentProcessUpTime)
 
         public bool Generate(CommandExecutionContext context)
         {
@@ -172,32 +181,77 @@ namespace msos
             public uint SourceLineNumber { get; set; }
         }
 
-        public class StackTrace
+        public class ThreadInfo
         {
+            [JsonIgnore]
+            public uint EngineThreadId { get; set; }
             public uint OSThreadId { get; set; }
             public int ManagedThreadId { get; set; }
-            public List<StackFrame> Frames { get; } = new List<StackFrame>();
+            public uint PriorityClass { get; set; }
+            public uint Priority { get; set; }
+            public ulong Affinity { get; set; }
+            // The CreateTime can be correlated with system and process uptime from the dump
+            // information report component.
+            public ulong CreateTime { get; set; }
+            public ulong KernelTime { get; set; }
+            public ulong UserTime { get; set; }
+            public List<StackFrame> StackFrames { get; } = new List<StackFrame>();
+
+            public void Fill(IDebugAdvanced2 debugAdvanced)
+            {
+                int size = Marshal.SizeOf(typeof(DEBUG_THREAD_BASIC_INFORMATION));
+                byte[] buffer = new byte[size];
+                if (HR.Failed(debugAdvanced.GetSystemObjectInformation(
+                    DEBUG_SYSOBJINFO.THREAD_BASIC_INFORMATION, 0, EngineThreadId, buffer, buffer.Length, out size)))
+                    return;
+
+                var gch = GCHandle.Alloc(buffer, GCHandleType.Pinned);
+                try
+                {
+                    var threadBasicInformation = (DEBUG_THREAD_BASIC_INFORMATION)
+                        Marshal.PtrToStructure(gch.AddrOfPinnedObject(), typeof(DEBUG_THREAD_BASIC_INFORMATION));
+                    if ((threadBasicInformation.Valid & DEBUG_TBINFO.AFFINITY) != 0)
+                        Affinity = threadBasicInformation.Affinity;
+                    if ((threadBasicInformation.Valid & DEBUG_TBINFO.PRIORITY_CLASS) != 0)
+                        PriorityClass = threadBasicInformation.PriorityClass;
+                    if ((threadBasicInformation.Valid & DEBUG_TBINFO.PRIORITY) != 0)
+                        Priority = threadBasicInformation.Priority;
+                    if ((threadBasicInformation.Valid & DEBUG_TBINFO.TIMES) != 0)
+                    {
+                        CreateTime = threadBasicInformation.CreateTime;
+                        KernelTime = threadBasicInformation.KernelTime;
+                        UserTime = threadBasicInformation.UserTime;
+                    }
+                }
+                finally
+                {
+                    gch.Free();
+                }
+            }
         }
 
         public string Title => "Thread stacks";
-        public List<StackTrace> Stacks { get; } = new List<StackTrace>();
+        public List<ThreadInfo> Threads { get; } = new List<ThreadInfo>();
 
         public bool Generate(CommandExecutionContext context)
         {
             using (var target = context.CreateTemporaryDbgEngTarget())
             {
+                var debugAdvanced = (IDebugAdvanced2)target.DebuggerInterface;
                 var stackTraces = new UnifiedStackTrace(target.DebuggerInterface, context);
                 foreach (var thread in stackTraces.Threads)
                 {
                     var stackTrace = stackTraces.GetStackTrace(thread.Index);
-                    var st = new StackTrace
+                    var threadInfo = new ThreadInfo
                     {
+                        EngineThreadId = thread.EngineThreadId,
                         OSThreadId = thread.OSThreadId,
                         ManagedThreadId = thread.ManagedThread?.ManagedThreadId ?? -1
                     };
+                    threadInfo.Fill(debugAdvanced);
                     foreach (var frame in stackTrace)
                     {
-                        st.Frames.Add(new StackFrame
+                        threadInfo.StackFrames.Add(new StackFrame
                         {
                             Module = frame.Module,
                             Method = frame.Method,
@@ -205,7 +259,7 @@ namespace msos
                             SourceLineNumber = frame.SourceLineNumber
                         });
                     }
-                    Stacks.Add(st);
+                    Threads.Add(threadInfo);
                 }
             }
             return true;
@@ -395,13 +449,10 @@ namespace msos
         // The finalizer thread stack can be obtained from the threads stack report.
 
         // Whether the finalizer thread is currently blocked can be obtained from the
-        // locks and waits report.
+        // locks and waits report, including what it is blocked on.
 
-        // TODO The finalizer thread's last wake-up time can be obtained from ...?
-        //      Probably some DbgEng method: ...
-        //      There's what `!runaway` uses, but it doesn't give last wake-up time,
-        //      only total execution time statistics. Still, if we see very high CPU
-        //      time on this thread, might be suspicious?
+        // If there is very high CPU usage on this thread (obtained from the thread stacks component),
+        // display a warning that indicates the finalizer thread has been excessively busy.
 
         public bool Generate(CommandExecutionContext context)
         {
@@ -414,6 +465,8 @@ namespace msos
             MemoryBytesReachableFromFinalizationQueue = context.Heap.SizeReachableFromObjectSet(readyForFinalization);
             ObjectsWaitingForFinalization.AddRange(
                 context.Heap.GroupTypesInObjectSetAndSortBySize(readyForFinalization));
+            ObjectsWithFinalizers.AddRange(context.Heap.GroupTypesInObjectSetAndSortBySize(
+                context.Heap.EnumerateFinalizableObjectAddresses()));
 
             return true;
         }
