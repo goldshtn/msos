@@ -38,13 +38,15 @@ namespace msos
     {
         public string Title { get; private set; }
         public string DumpType { get; private set; }
-
-        // TODO:
-        //      Windows version (IDebugControl::GetSystemVersion)
-        //      Process executable name
-        //      # of processors (IDebugControl::GetNumberOfProcessors)
-        //      # System uptime and session time (IDebugControl2)
-        //      Currenet process uptime (IDebugSystemObjects2::GetCurrentProcessUpTime)
+        public string ExecutableName { get; private set; }
+        public uint ProcessUpTimeInSeconds { get; private set; }
+        public uint SystemUpTimeInSeconds { get; private set; }
+        public DateTimeOffset SessionTime { get; private set; }
+        public uint NumberOfProcessors { get; private set; }
+        public uint WindowsBuildNumber { get; private set; }
+        public string WindowsServicePack { get; private set; }
+        public uint WindowsServicePackNumber { get; private set; }
+        public string WindowsBuild { get; private set; }
 
         public bool Generate(CommandExecutionContext context)
         {
@@ -60,6 +62,42 @@ namespace msos
                 default:
                     DumpType = "Unsupported dump file type";
                     break;
+            }
+            using (var target = context.CreateTemporaryDbgEngTarget())
+            {
+                IDebugSystemObjects2 sysObjects = (IDebugSystemObjects2)target.DebuggerInterface;
+                IDebugControl2 control = (IDebugControl2)target.DebuggerInterface;
+
+                uint dummy;
+                StringBuilder exeName = new StringBuilder(2048);
+                if (HR.Succeeded(sysObjects.GetCurrentProcessExecutableName(exeName, exeName.Capacity, out dummy)))
+                    ExecutableName = exeName.ToString();
+
+                uint uptime;
+                if (HR.Succeeded(sysObjects.GetCurrentProcessUpTime(out uptime)))
+                    ProcessUpTimeInSeconds = uptime;
+
+                if (HR.Succeeded(control.GetCurrentSystemUpTime(out uptime)))
+                    SystemUpTimeInSeconds = uptime;
+
+                uint time;
+                if (HR.Succeeded(control.GetCurrentTimeDate(out time)))
+                    SessionTime = DateTimeOffset.FromUnixTimeSeconds(time);
+
+                uint num;
+                if (HR.Succeeded(control.GetNumberProcessors(out num)))
+                    NumberOfProcessors = num;
+
+                uint platformId, major, minor, servicePackNumber;
+                StringBuilder servicePack = new StringBuilder(1048);
+                StringBuilder build = new StringBuilder(1048);
+                if (HR.Succeeded(control.GetSystemVersion(out platformId, out major, out minor, servicePack, servicePack.Capacity, out dummy, out servicePackNumber, build, build.Capacity, out dummy)))
+                {
+                    WindowsBuildNumber = minor;
+                    WindowsServicePack = servicePack.ToString();
+                    WindowsServicePackNumber = servicePackNumber;
+                    WindowsBuild = build.ToString();
+                }
             }
             return true;
         }
