@@ -25,6 +25,7 @@ namespace msos
         public DateTime AnalysisStartTime { get; } = DateTime.Now;
         public DateTime AnalysisEndTime { get; set; }
         public AnalysisResult AnalysisResult { get; set; } = AnalysisResult.CompletedSuccessfully;
+        public string AnalysisError { get; set; }
         public List<IReportComponent> Components { get; } = new List<IReportComponent>();
     }
 
@@ -525,12 +526,18 @@ namespace msos
                              where type.GetInterface(typeof(IReportComponent).FullName) != null
                              select (IReportComponent)Activator.CreateInstance(type);
 
-            foreach (var component in components)
+            try
             {
-                if (component.Generate(context))
-                    reportDocument.Components.Add(component);
-
-                // TODO Handle errors
+                foreach (var component in components)
+                {
+                    if (component.Generate(context))
+                        reportDocument.Components.Add(component);
+                }
+            }
+            catch (Exception ex)
+            {
+                reportDocument.AnalysisResult = AnalysisResult.InternalError;
+                reportDocument.AnalysisError = ex.ToString();
             }
 
             reportDocument.AnalysisEndTime = DateTime.Now;
