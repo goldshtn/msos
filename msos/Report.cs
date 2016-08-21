@@ -96,6 +96,9 @@ namespace msos
                     return false;
 
                 ExceptionCode = lastEvent.ExceptionRecord?.ExceptionCode ?? 0;
+                if (ExceptionCode == 0)
+                    return false;
+
                 OSThreadId = threadWithException.OSThreadId;
                 ManagedThreadId = threadWithException.ManagedThreadId;
                 ThreadName = threadWithException.SpecialDescription(); // TODO Get the actual name if possible
@@ -353,57 +356,19 @@ namespace msos
 
     class TopMemoryConsumersComponent : IReportComponent
     {
-        public class TypeInfo
-        {
-            public string Type { get; set; }
-            public ulong Count { get; set; }
-            public ulong Size { get; set; }
-            public double AverageSize { get; set; }
-            public ulong MinimumSize { get; set; }
-            public ulong MaximumSize { get; set; }
-        }
-
         public string Title => "Top .NET memory consumers";
 
-        public List<TypeInfo> TopConsumers { get; } = new List<TypeInfo>();
-
-        private Tuple<ulong, ulong, ulong, ulong> GetStats(IEnumerable<long> elements)
-        {
-            ulong min = ulong.MaxValue, max = ulong.MinValue, sum = 0, count = 0;
-            foreach (ulong element in elements)
-            {
-                ++count;
-                sum += element;
-                min = Math.Min(min, element);
-                max = Math.Max(max, element);
-            }
-            return new Tuple<ulong, ulong, ulong, ulong>(min, max, sum, count);
-        }
+        public List<HeapTypeStatistics> TopConsumers { get; } = new List<HeapTypeStatistics>();
 
         public bool Generate(CommandExecutionContext context)
         {
             if (context.TargetType == TargetType.DumpFileNoHeap)
                 return false;
 
-            // TODO If this LINQ query is too slow, optimize by hand-rolling a loop.
-            var topTypes = from obj in context.Heap.EnumerateObjectAddresses()
-                           let type = context.Heap.GetObjectType(obj)
-                           where type != null && !type.IsFree
-                           let size = type.GetSize(obj)
-                           group (long)size by type.Name into g
-                           let totalSize = g.Sum()
-                           orderby totalSize descending
-                           let stats = GetStats(g)
-                           select new TypeInfo
-                           {
-                               Type = g.Key,
-                               Count = stats.Item4,
-                               Size = stats.Item3,
-                               AverageSize = stats.Item3 / (double)stats.Item4,
-                               MaximumSize = stats.Item2,
-                               MinimumSize = stats.Item1
-                           };
-            TopConsumers.AddRange(topTypes.Take(100));
+            var heap = context.Heap;
+            var allObjects = heap.EnumerateObjectAddresses();
+            TopConsumers.AddRange(heap.GroupTypesInObjectSetAndSortBySize(allObjects).Take(100));
+
             return true;
         }
     }
@@ -422,8 +387,34 @@ namespace msos
     {
         public string Title => "Finalization statistics";
 
+        public List<HeapTypeStatistics> ObjectsWaitingForFinalization { get; } = new List<HeapTypeStatistics>();
+        public List<HeapTypeStatistics> ObjectsWithFinalizers { get; } = new List<HeapTypeStatistics>();
+        public uint FinalizerThreadOSID { get; private set; }
+        public ulong MemoryBytesReachableFromFinalizationQueue { get; private set; }
+
+        // The finalizer thread stack can be obtained from the threads stack report.
+
+        // Whether the finalizer thread is currently blocked can be obtained from the
+        // locks and waits report.
+
+        // TODO The finalizer thread's last wake-up time can be obtained from ...?
+        //      Probably some DbgEng method: ...
+        //      There's what `!runaway` uses, but it doesn't give last wake-up time,
+        //      only total execution time statistics. Still, if we see very high CPU
+        //      time on this thread, might be suspicious?
+
         public bool Generate(CommandExecutionContext context)
         {
+            if (context.TargetType == TargetType.DumpFileNoHeap)
+                return false;
+
+            FinalizerThreadOSID = context.Runtime.Threads.SingleOrDefault(t => t.IsFinalizer)?.OSThreadId ?? 0;
+
+            var readyForFinalization = context.Runtime.EnumerateFinalizerQueueObjectAddresses().ToList();
+            MemoryBytesReachableFromFinalizationQueue = context.Heap.SizeReachableFromObjectSet(readyForFinalization);
+            ObjectsWaitingForFinalization.AddRange(
+                context.Heap.GroupTypesInObjectSetAndSortBySize(readyForFinalization));
+
             return true;
         }
     }
