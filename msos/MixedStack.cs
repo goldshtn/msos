@@ -638,7 +638,7 @@ namespace msos
         WriterAcquired = 9,
 
         //Based on WCT_OBJECT_TYPE Enumerations
-        CriticalSection = 20,
+        CriticalSection = 10,
         SendMessage = 11,
         Mutex = 12,
         Alpc = 13,

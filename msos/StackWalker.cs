@@ -29,7 +29,7 @@ namespace msos
 
             var address = Convert(paramz[0]);
 
-            byte[] buffer = new byte[Marshal.SizeOf(new CRITICAL_SECTION())];
+            byte[] buffer = new byte[Marshal.SizeOf(typeof(CRITICAL_SECTION))];
 
             int read;
 
