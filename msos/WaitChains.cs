@@ -31,7 +31,7 @@ namespace msos
 
             if (SpecificThreadId != 0)
             {
-                UnifiedThread uthread = SpecificThread;
+                UnifiedThread thread = SpecificThread;
 
                 if (SpecificThread == null)
                 {
@@ -39,11 +39,11 @@ namespace msos
                     return;
                 }
 
-                DisplayChainForThread(uthread);
+                DisplayChainForThread(thread, 0, new HashSet<int>());
             }
             else
             {
-                _threads.ForEach(DisplayChainForThread);
+                _threads.ForEach(thread => DisplayChainForThread(thread, 0, new HashSet<int>()));
             }
 
             if (_context.NativeDbgEngTarget != null)
@@ -187,7 +187,7 @@ namespace msos
             var unmanagedStack = GetNativeStackTrace(specific_info);
             var managedStack = GetManagedStackTrace(specific_info.ManagedThread);
 
-            var unmanagedObjs = _blockingObjectsStrategy.GetUnmanagedBlockingObjects(specific_info,  unmanagedStack);
+            var unmanagedObjs = _blockingObjectsStrategy.GetUnmanagedBlockingObjects(specific_info, unmanagedStack);
             var managedObjs = _blockingObjectsStrategy.GetManagedBlockingObjects(specific_info, managedStack);
 
             unmanagedObjs.AddRange(managedObjs);
@@ -227,7 +227,7 @@ namespace msos
 
         #region Console Display
 
-        private void DisplayChainForThread(UnifiedThread thread)
+        private void DisplayChainForThread(UnifiedThread thread, int depth, HashSet<int> visitedThreadIds)
         {
             if (thread.IsManagedThread)
             {
@@ -255,41 +255,44 @@ namespace msos
             }
             visitedThreadIds.Add(thread.ManagedThreadId);
 
-            foreach (var blockingObject in unified_thread.BlockingObjects)
+            if (unified_thread.BlockingObjects != null)
             {
-                _context.WriteLine("SOURCE: {0}", blockingObject.Origin);
-                _context.Write("{0}| {1}", new string(' ', (depth + 1) * 2), blockingObject.Reason);
-
-                if (!String.IsNullOrEmpty(blockingObject.KernelObjectName))
+                foreach (var blockingObject in unified_thread.BlockingObjects)
                 {
-                    _context.WriteLink(
-                        String.Format("{0:x16} {1} {2}", blockingObject.Handle,
-                        blockingObject.KernelObjectTypeName, blockingObject.KernelObjectName),
-                        String.Format("!do {0:x16}", blockingObject.Handle));
-                }
+                    
+                    _context.Write("{0}| {1}", new string(' ', (depth + 1) * 2), blockingObject.Reason);
 
-                var type = _context.Heap.GetObjectType(blockingObject.ManagedObjectAddress);
-                if (type != null && !String.IsNullOrEmpty(type.Name))
-                {
-                    _context.WriteLink(
-                        String.Format("{0:x16} {1}", blockingObject.ManagedObjectAddress, type.Name),
-                        String.Format("!do {0:x16}", blockingObject.ManagedObjectAddress));
-                }
-                else
-                {
-                    _context.Write("{0:x16}", blockingObject.ManagedObjectAddress);
-                }
-
-                _context.WriteLine();
-
-                if (blockingObject.Owners != null)
-                {
-                    foreach (var owner in blockingObject.Owners)
+                    if (!String.IsNullOrEmpty(blockingObject.KernelObjectName))
                     {
-                        if (owner == null) // ClrMD sometimes reports this nonsense
-                            continue;
+                        _context.WriteLink(
+                            String.Format("{0:x16} {1} {2}", blockingObject.Handle,
+                            blockingObject.KernelObjectTypeName, blockingObject.KernelObjectName),
+                            String.Format("!do {0:x16}", blockingObject.Handle));
+                    }
 
-                        DisplayManagedThread_ChainAux(owner, depth + 2, visitedThreadIds);
+                    var type = _context.Heap.GetObjectType(blockingObject.ManagedObjectAddress);
+                    if (type != null && !String.IsNullOrEmpty(type.Name))
+                    {
+                        _context.WriteLink(
+                            String.Format("{0:x16} {1}", blockingObject.ManagedObjectAddress, type.Name),
+                            String.Format("!do {0:x16}", blockingObject.ManagedObjectAddress));
+                    }
+                    else
+                    {
+                        _context.Write("{0:x16}", blockingObject.ManagedObjectAddress);
+                    }
+
+                    _context.WriteLine();
+
+                    if (blockingObject.Owners != null)
+                    {
+                        foreach (var owner in blockingObject.Owners)
+                        {
+                            if (owner == null) // ClrMD sometimes reports this nonsense
+                                continue;
+
+                            DisplayChainForThread(owner, depth + 2, visitedThreadIds);
+                        }
                     }
                 }
             }
@@ -311,28 +314,30 @@ namespace msos
 
             visitedThreadIds.Add((int)thread.OSThreadId);
 
-            foreach (var blockingObject in thread.BlockingObjects)
+            if (thread.BlockingObjects != null)
             {
-                _context.WriteLine("SOURCE: {0}", blockingObject.Origin);
-                _context.Write("{0}| {1} ", new string(' ', (depth + 1) * 2), blockingObject.Reason);
-
-                if (!String.IsNullOrEmpty(blockingObject.KernelObjectName))
+                foreach (var blockingObject in thread.BlockingObjects)
                 {
-                    _context.WriteLink(String.Format("{0:x16} {1} {2}", blockingObject.Handle,
-                        blockingObject.KernelObjectTypeName, blockingObject.KernelObjectName),
-                        String.Format("!do {0:x16}", blockingObject.Handle));
-                }
+                    _context.Write("{0}| {1} ", new string(' ', (depth + 1) * 2), blockingObject.Reason);
 
-                _context.WriteLine();
-
-                if (blockingObject.Owners != null)
-                {
-                    foreach (var owner in blockingObject.Owners)
+                    if (!String.IsNullOrEmpty(blockingObject.KernelObjectName))
                     {
-                        if (owner == null)
-                            continue;
+                        _context.WriteLink(String.Format("{0:x16} {1} {2}", blockingObject.Handle,
+                            blockingObject.KernelObjectTypeName, blockingObject.KernelObjectName),
+                            String.Format("!do {0:x16}", blockingObject.Handle));
+                    }
 
-                        DisplayUnManagedThread_ChainAux(owner, depth + 2, visitedThreadIds);
+                    _context.WriteLine();
+
+                    if (blockingObject.Owners != null)
+                    {
+                        foreach (var owner in blockingObject.Owners)
+                        {
+                            if (owner == null)
+                                continue;
+
+                            DisplayUnManagedThread_ChainAux(owner, depth + 2, visitedThreadIds);
+                        }
                     }
                 }
             }
