@@ -155,7 +155,6 @@
     <Compile Include="LastEvent.cs" />
     <Compile Include="LM.cs" />
     <Compile Include="MemStats.cs" />
-    <Compile Include="MiniDump.cs" />
     <Compile Include="MixedStack.cs" />
     <Compile Include="NativeMethods.cs" />
     <Compile Include="NativeStructs.cs" />

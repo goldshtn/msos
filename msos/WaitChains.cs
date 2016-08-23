@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Diagnostics.Runtime.Interop;
 using System.Runtime.InteropServices;
+using Microsoft.Diagnostics.Runtime.Utilities;
 
 namespace msos
 {
@@ -469,7 +470,7 @@ namespace msos
     {
         public DumpFileBlockingObjectsStrategy(CommandExecutionContext context) : base(context)
         {
-            _miniDump = new MiniDump(context.DumpFile);
+            _miniDump = new DumpReader(context.DumpFile);
 
             if (context.NativeDbgEngTarget != null)
             {
@@ -478,19 +479,19 @@ namespace msos
                 _debugClient = context.NativeDbgEngTarget.DebuggerInterface;
             }
 
-            _handles = _miniDump.GetHandles();
+            _handles = _miniDump.EnumerateHandles().ToList();
         }
 
-        private MiniDump _miniDump;
-        private List<MiniDumpHandle> _handles;
+        private DumpReader _miniDump;
+        private List<DumpHandle> _handles;
 
-        private IEnumerable<MiniDumpHandle> FilterByThread(ThreadInfo thread)
+        private IEnumerable<DumpHandle> FilterByThread(ThreadInfo thread)
         {
             return _handles.Where(handle => thread.IsManagedThread ?
                     thread.ManagedThread.ManagedThreadId == handle.OwnerThreadId : handle.OwnerThreadId == thread.OSThreadId);
         }
 
-        private IEnumerable<MiniDumpHandle> FilterByThread(ClrThread thread)
+        private IEnumerable<DumpHandle> FilterByThread(ClrThread thread)
         {
             return _handles.Where(handle => thread.ManagedThreadId == handle.OwnerThreadId);
         }

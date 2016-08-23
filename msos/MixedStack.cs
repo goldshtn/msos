@@ -1,6 +1,7 @@
 ﻿using CmdLine;
 using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.Runtime.Interop;
+using Microsoft.Diagnostics.Runtime.Utilities;
 using Microsoft.Diagnostics.RuntimeExt;
 using System;
 using System.Collections.Generic;
@@ -439,7 +440,7 @@ namespace msos
 
     public enum UnifiedBlockingType
     {
-        WaitChainInfoObject, ClrBlockingObject, MiniDumpHandle, CriticalSectionObject, UnmanagedHandleObject
+        WaitChainInfoObject, ClrBlockingObject, DumpHandle, CriticalSectionObject, UnmanagedHandleObject
     }
 
     public enum OriginSource
@@ -476,13 +477,14 @@ namespace msos
             Type = UnifiedBlockingType.WaitChainInfoObject;
         }
 
-        internal UnifiedBlockingObject(MiniDumpHandle handle)
+        internal UnifiedBlockingObject(DumpHandle handle)
             : this(OriginSource.MiniDump)
         {
             KernelObjectName = handle.ObjectName;
             KernelObjectTypeName = handle.TypeName;
-            Reason = handle.UnifiedType;
-            Type = UnifiedBlockingType.MiniDumpHandle;
+            //TODO: Convertion
+            Reason = ConvertToUnified(handle.Type);
+            Type = UnifiedBlockingType.DumpHandle;
             Handle = handle.Handle;
         }
 
@@ -566,47 +568,22 @@ namespace msos
         private static UnifiedBlockingReason ConvertToUnified(string objectType)
         {
             UnifiedBlockingReason result = UnifiedBlockingReason.Unknown;
+
             switch (objectType)
             {
-                case "Thread":
-                    result = UnifiedBlockingReason.Thread;
-                    break;
-                case "Job":
-                    result = UnifiedBlockingReason.Job;
-                    break;
-                case "File":
-                    result = UnifiedBlockingReason.File;
-                    break;
-                case "Semaphore":
-                    result = UnifiedBlockingReason.Semaphore;
-                    break;
-                case "Mutex":
-                    result = UnifiedBlockingReason.Mutex;
-                    break;
-                case "Section":
-                    result = UnifiedBlockingReason.CriticalSection;
-                    break;
-                case "Mutant":
-                    result = UnifiedBlockingReason.Mutex;
-                    break;
-                case "ALPC Port":
-                    result = UnifiedBlockingReason.Alpc;
-                    break;
-                case "Process":
-                    result = UnifiedBlockingReason.ProcessWait;
-                    break;
-                case "Unknown":
-                    result = UnifiedBlockingReason.Unknown;
-                    break;
-                case "None":
-                    result = UnifiedBlockingReason.None;
-                    break;
-                case "Timer":
-                    result = UnifiedBlockingReason.Timer;
-                    break;
-                case "Event":
-                    result = UnifiedBlockingReason.Event;
-                    break;
+                case "Thread": result = UnifiedBlockingReason.Thread; break;
+                case "Job": result = UnifiedBlockingReason.Job; break;
+                case "File": result = UnifiedBlockingReason.File; break;
+                case "Semaphore": result = UnifiedBlockingReason.Semaphore; break;
+                case "Mutex": result = UnifiedBlockingReason.Mutex; break;
+                case "Section": result = UnifiedBlockingReason.CriticalSection; break;
+                case "Mutant": result = UnifiedBlockingReason.Mutex; break;
+                case "ALPC Port": result = UnifiedBlockingReason.Alpc; break;
+                case "Process": result = UnifiedBlockingReason.ProcessWait; break;
+                case "Unknown": result = UnifiedBlockingReason.Unknown; break;
+                case "None": result = UnifiedBlockingReason.None; break;
+                case "Timer": result = UnifiedBlockingReason.Timer; break;
+                case "Event": result = UnifiedBlockingReason.Event; break;
                     //case "Callback": break;
                     //case "Desktop": break;
                     //case "Key": break;
@@ -617,6 +594,25 @@ namespace msos
                     //case "TpWorkerFactory": break;
                     //case "Timer": break;
             }
+            return result;
+        }
+
+        UnifiedBlockingReason ConvertToUnified(DumpHandleType type)
+        {
+            UnifiedBlockingReason result = UnifiedBlockingReason.Unknown;
+
+            switch (type)
+            {
+                case DumpHandleType.NONE: result = UnifiedBlockingReason.None; break;
+                case DumpHandleType.THREAD: result = UnifiedBlockingReason.Thread; break;
+                case DumpHandleType.MUTEX1: result = UnifiedBlockingReason.Mutex; break;
+                case DumpHandleType.MUTEX2: result = UnifiedBlockingReason.Mutex; break;
+                case DumpHandleType.PROCESS1: result = UnifiedBlockingReason.ProcessWait; break;
+                case DumpHandleType.PROCESS2: result = UnifiedBlockingReason.ProcessWait; break;
+                case DumpHandleType.EVENT: result = UnifiedBlockingReason.ThreadWait; break;
+                case DumpHandleType.SECTION: result = UnifiedBlockingReason.MemorySection; break;
+            }
+
             return result;
         }
 
