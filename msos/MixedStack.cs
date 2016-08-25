@@ -74,7 +74,6 @@ namespace msos
         public uint SourceColumnNumber { get; set; }
         public uint SourceColumnNumberEnd { get; set; }
 
-        public List<byte[]> NativeParams { get; set; }
         public List<UnifiedHandle> Handles { get; set; }
 
         public string SourceAndLine
@@ -190,9 +189,9 @@ namespace msos
             Info = info;
         }
 
-        public UnifiedThread(uint owningThreadId)
+        public UnifiedThread(uint osThreadId)
         {
-            this.OSThreadId = owningThreadId;
+            this.OSThreadId = osThreadId;
         }
         public ThreadInfo Info { get; private set; }
         public List<UnifiedStackFrame> StackTrace { get; protected set; }
@@ -230,7 +229,7 @@ namespace msos
                 ManagedThread = thread
             })
         {
-            //TODO: complete logic -> used with Blocking object Wiater    
+            
         }
 
         public UnifiedManagedThread(ClrThread thread, List<UnifiedBlockingObject> blockingObjs)
@@ -424,14 +423,14 @@ namespace msos
 
     public class UnifiedHandle
     {
-        public UnifiedHandle(ulong uid, UnifiedHandleType unifiedType = UnifiedHandleType.Handle, string type = null, string objectName = null)
+        public UnifiedHandle(ulong value, UnifiedHandleType unifiedType = UnifiedHandleType.Handle, string type = null, string objectName = null)
         {
-            Id = uid;
+            Value = value;
             Type = type;
             ObjectName = objectName;
         }
 
-        public ulong Id { get; private set; }
+        public ulong Value { get; private set; }
         public string Type { get; private set; }
         public UnifiedHandleType UnifiedHandleType { get; private set; }
         public string ObjectName { get; private set; }
@@ -482,7 +481,6 @@ namespace msos
         {
             KernelObjectName = handle.ObjectName;
             KernelObjectTypeName = handle.TypeName;
-            //TODO: Convertion
             Reason = ConvertToUnified(handle.Type);
             Type = UnifiedBlockingType.DumpHandle;
             Handle = handle.Handle;

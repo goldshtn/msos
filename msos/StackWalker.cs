@@ -87,7 +87,6 @@ namespace msos
             var paramz = GetParams(frame, WAIT_FOR_MULTIPLE_OBJECTS_PARAM_COUNT);
             if (paramz.Count > 0)
             {
-                frame.NativeParams = paramz;
                 frame.Handles = new List<UnifiedHandle>();
 
                 var HandlesCunt = BitConverter.ToUInt32(paramz[0], 0);

@@ -8,19 +8,6 @@ namespace msos
 {
     static class NativeMethods
     {
-        #region DbgHelp
-        //public const int ERR_ELEMENT_NOT_FOUND = 1168;
-
-        [DllImport("Dbghelp.dll", SetLastError = true)]
-        public static extern bool MiniDumpReadDumpStream(IntPtr BaseOfDump,
-            MINIDUMP_STREAM_TYPE StreamNumber,
-            ref MINIDUMP_DIRECTORY Dir,
-            ref IntPtr StreamPointer,
-            ref uint StreamSize);
-
-        #endregion
-
-
         #region Kernel32.dll
 
         [DllImport("kernel32.dll", SetLastError = true, CallingConvention = CallingConvention.Winapi)]

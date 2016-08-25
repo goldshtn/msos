@@ -393,7 +393,7 @@ namespace msos
                 {
                     foreach (var handle in frame.Handles)
                     {
-                        result.Add(new UnifiedBlockingObject(handle.Id, handle.ObjectName, handle.Type));
+                        result.Add(new UnifiedBlockingObject(handle.Value, handle.ObjectName, handle.Type));
                     }
                 }
             }
@@ -436,7 +436,7 @@ namespace msos
             {
                 foreach (var handle in frame.Handles)
                 {
-                    result.Add(new UnifiedBlockingObject(handle.Id, handle.ObjectName, handle.Type));
+                    result.Add(new UnifiedBlockingObject(handle.Value, handle.ObjectName, handle.Type));
                 }
             }
 
