@@ -55,7 +55,7 @@ namespace msos
         {
             _threads = new List<UnifiedThread>();
 
-            if (_context.TargetType == TargetType.DumpFile)
+            if (_context.TargetType == TargetType.DumpFile || _context.TargetType == TargetType.DumpFile)
             {
                 if (_context.NativeDbgEngTarget == null)
                     _context.EnterDbgEngNativeMode();
@@ -88,31 +88,31 @@ namespace msos
             }
         }
 
-        public IDebugSystemObjects DebugSystemObjects => (IDebugSystemObjects)_context
+        private IDebugSystemObjects DebugSystemObjects => (IDebugSystemObjects)_context
             .NativeDbgEngTarget.DebuggerInterface;
 
-        public IDebugControl DebugControl => (IDebugControl)_context
+        private IDebugControl DebugControl => (IDebugControl)_context
             .NativeDbgEngTarget.DebuggerInterface;
 
         #endregion
 
         private void FetchThreads_LiveProcess()
         {
-            foreach (var clr_thread in _context.Runtime.Threads)
+            foreach (var clrThread in _context.Runtime.Threads)
             {
-                var managedStack = GetManagedStackTrace(clr_thread);
+                var managedStack = GetManagedStackTrace(clrThread);
 
                 var blockingObjs = new List<UnifiedBlockingObject>();
 
-                if (clr_thread.BlockingObjects?.Count > 0)
+                if (clrThread.BlockingObjects?.Count > 0)
                 {
-                    clr_thread.BlockingObjects
+                    clrThread.BlockingObjects
                         .ForEach((obj) => blockingObjs.Add(new UnifiedBlockingObject(obj)));
                 }
-                var unmanaged_blockinglist = _blockingObjectsStrategy.GetUnmanagedBlockingObjects(clr_thread);
-                blockingObjs.AddRange(unmanaged_blockinglist);
+                var unmanagedBlockingObjects = _blockingObjectsStrategy.GetUnmanagedBlockingObjects(clrThread);
+                blockingObjs.AddRange(unmanagedBlockingObjects);
 
-                _threads.Add(new UnifiedManagedThread(clr_thread, managedStack, blockingObjs));
+                _threads.Add(new UnifiedManagedThread(clrThread, managedStack, blockingObjs));
             }
         }
 
@@ -138,15 +138,15 @@ namespace msos
         {
             UnifiedThread result = null;
 
-            ThreadInfo specific_info = GetThreadInfo(threadIdx);
+            ThreadInfo threadInfo = GetThreadInfo(threadIdx);
 
-            if (specific_info.IsManagedThread)
+            if (threadInfo.IsManagedThread)
             {
-                result = HandleManagedThread(specific_info);
+                result = HandleManagedThread(threadInfo);
             }
             else
             {
-                result = HandleUnManagedThread(specific_info);
+                result = HandleUnmanagedThread(threadInfo);
             }
 
             return result;
@@ -169,7 +169,7 @@ namespace msos
             };
         }
 
-        private UnifiedUnManagedThread HandleUnManagedThread(ThreadInfo specific_info)
+        private UnifiedUnManagedThread HandleUnmanagedThread(ThreadInfo specific_info)
         {
             UnifiedUnManagedThread result = null;
             var unmanagedStack = GetNativeStackTrace(specific_info);

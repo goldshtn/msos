@@ -40,7 +40,7 @@ namespace msos
 
             try
             {
-                CRITICAL_SECTION section  = (CRITICAL_SECTION)Marshal.PtrToStructure
+                CRITICAL_SECTION section = (CRITICAL_SECTION)Marshal.PtrToStructure
                     (gch.AddrOfPinnedObject(), typeof(CRITICAL_SECTION));
 
                 result = new UnifiedBlockingObject(section, address);
@@ -136,23 +136,22 @@ namespace msos
         }
 
 
-        private List<byte[]> ReadFromMemmory(ulong startAddress, uint count)
+        private List<byte[]> ReadFromMemory(ulong startAddress, uint count)
         {
             List<byte[]> result = new List<byte[]>();
             int sum = 0;
-            //TODO: Check if dfor can be inserted into the REadMemmory result (seems to be..)
             for (int i = 0; i < count; i++)
             {
-                byte[] readedBytes = new byte[IntPtr.Size];
-                if (_runtime.ReadMemory(startAddress, readedBytes, IntPtr.Size, out sum))
+                byte[] readBytes = new byte[IntPtr.Size];
+                if (_runtime.ReadMemory(startAddress, readBytes, IntPtr.Size, out sum))
                 {
-                    result.Add(readedBytes);
+                    result.Add(readBytes);
                 }
                 else
                 {
                     throw new Exception($"Accessing Unreadable memorry at {startAddress}");
                 }
-                //Advancing the pointer by 4 (32-bit system)
+
                 startAddress += (ulong)IntPtr.Size;
             }
             return result;
@@ -166,7 +165,7 @@ namespace msos
 
             return result;
         }
-        
+
         internal bool GetCriticalSectionBlockingObject(UnifiedStackFrame frame, out UnifiedBlockingObject blockingObject)
         {
             bool result = false;
@@ -207,11 +206,9 @@ namespace msos
         protected void EnrichUnifiedStackFrame(UnifiedStackFrame frame, ulong waitCount, ulong hPtr)
         {
             if (waitCount > MAXIMUM_WAIT_OBJECTS)
-            {
-                throw new InvalidOperationException($"waitCount exceeded MAXIMUM_WAIT_OBJECTS :{ waitCount }");
-            }
+                waitCount = MAXIMUM_WAIT_OBJECTS;
 
-            var handles = ReadFromMemmory(hPtr, (uint)waitCount);
+            var handles = ReadFromMemory(hPtr, (uint)waitCount);
 
             frame.Handles = new List<UnifiedHandle>();
             foreach (var handle in handles)
