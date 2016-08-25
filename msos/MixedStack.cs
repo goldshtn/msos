@@ -476,7 +476,7 @@ namespace msos
             Type = UnifiedBlockingType.WaitChainInfoObject;
         }
 
-        internal UnifiedBlockingObject(DumpHandle handle)
+        internal UnifiedBlockingObject(HandleInfo handle)
             : this(OriginSource.MiniDump)
         {
             KernelObjectName = handle.ObjectName;
@@ -595,22 +595,18 @@ namespace msos
             return result;
         }
 
-        UnifiedBlockingReason ConvertToUnified(DumpHandleType type)
+        UnifiedBlockingReason ConvertToUnified(HandleInfo.HandleType type)
         {
             UnifiedBlockingReason result = UnifiedBlockingReason.Unknown;
-
             switch (type)
             {
-                case DumpHandleType.NONE: result = UnifiedBlockingReason.None; break;
-                case DumpHandleType.THREAD: result = UnifiedBlockingReason.Thread; break;
-                case DumpHandleType.MUTEX1: result = UnifiedBlockingReason.Mutex; break;
-                case DumpHandleType.MUTEX2: result = UnifiedBlockingReason.Mutex; break;
-                case DumpHandleType.PROCESS1: result = UnifiedBlockingReason.ProcessWait; break;
-                case DumpHandleType.PROCESS2: result = UnifiedBlockingReason.ProcessWait; break;
-                case DumpHandleType.EVENT: result = UnifiedBlockingReason.ThreadWait; break;
-                case DumpHandleType.SECTION: result = UnifiedBlockingReason.MemorySection; break;
+                case HandleInfo.HandleType.NONE: result = UnifiedBlockingReason.None; break;
+                case HandleInfo.HandleType.THREAD: result = UnifiedBlockingReason.Thread; break;
+                case HandleInfo.HandleType.MUTEX: result = UnifiedBlockingReason.Mutex; break;
+                case HandleInfo.HandleType.PROCESS: result = UnifiedBlockingReason.ProcessWait; break;
+                case HandleInfo.HandleType.EVENT: result = UnifiedBlockingReason.ThreadWait; break;
+                case HandleInfo.HandleType.SECTION: result = UnifiedBlockingReason.MemorySection; break;
             }
-
             return result;
         }
 

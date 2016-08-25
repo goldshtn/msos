@@ -6,6 +6,7 @@ using System.Linq;
 using Microsoft.Diagnostics.Runtime.Interop;
 using System.Runtime.InteropServices;
 using Microsoft.Diagnostics.Runtime.Utilities;
+using Microsoft.Diagnostics.Runtime.Desktop;
 
 namespace msos
 {
@@ -239,9 +240,9 @@ namespace msos
             }
         }
 
-        private void DisplayManagedThread_ChainAux(UnifiedThread unified_thread, int depth, HashSet<int> visitedThreadIds)
+        private void DisplayManagedThread_ChainAux(UnifiedThread unifiedThread, int depth, HashSet<int> visitedThreadIds)
         {
-            var thread = unified_thread.Info.ManagedThread;
+            var thread = unifiedThread.Info.ManagedThread;
 
             _context.WriteLink(
                 String.Format("{0}+ Thread {1}", new string(' ', depth * 2), thread.ManagedThreadId),
@@ -255,9 +256,9 @@ namespace msos
             }
             visitedThreadIds.Add(thread.ManagedThreadId);
 
-            if (unified_thread.BlockingObjects != null)
+            if (unifiedThread.BlockingObjects != null)
             {
-                foreach (var blockingObject in unified_thread.BlockingObjects)
+                foreach (var blockingObject in unifiedThread.BlockingObjects)
                 {
                     
                     _context.Write("{0}| {1}", new string(' ', (depth + 1) * 2), blockingObject.Reason);
@@ -475,8 +476,8 @@ namespace msos
     {
         public DumpFileBlockingObjectsStrategy(CommandExecutionContext context) : base(context)
         {
-            _miniDump = new DumpReader(context.DumpFile);
 
+           
             if (context.NativeDbgEngTarget != null)
             {
                 context.EnterDbgEngNativeMode();
@@ -484,19 +485,19 @@ namespace msos
                 _debugClient = context.NativeDbgEngTarget.DebuggerInterface;
             }
 
-            _handles = _miniDump.EnumerateHandles().ToList();
+            var _handles = context.Runtime.DataTarget.DataReader.EnumerateHandles().ToList();
         }
 
-        private DumpReader _miniDump;
-        private List<DumpHandle> _handles;
+        //private DumpReader _miniDump;
+        private List<HandleInfo> _handles;
 
-        private IEnumerable<DumpHandle> FilterByThread(ThreadInfo thread)
+        private IEnumerable<HandleInfo> FilterByThread(ThreadInfo thread)
         {
             return _handles.Where(handle => thread.IsManagedThread ?
                     thread.ManagedThread.ManagedThreadId == handle.OwnerThreadId : handle.OwnerThreadId == thread.OSThreadId);
         }
 
-        private IEnumerable<DumpHandle> FilterByThread(ClrThread thread)
+        private IEnumerable<HandleInfo> FilterByThread(ClrThread thread)
         {
             return _handles.Where(handle => thread.ManagedThreadId == handle.OwnerThreadId);
         }
