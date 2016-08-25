@@ -144,6 +144,11 @@ namespace DumpWriter
             return _impl.VirtualQuery(addr, out vq);
         }
 
+        public IEnumerable<HandleInfo> EnumerateHandles()
+        {
+            throw new NotImplementedException();
+        }
+
         #endregion
     }
 }

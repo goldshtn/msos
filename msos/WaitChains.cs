@@ -22,53 +22,58 @@ namespace msos
         private BlockingObjectsStrategy _blockingObjectsStrategy;
         private SymbolCache _symbolCache;
         private List<UnifiedThread> _threads;
+        private DataTarget _dataTarget;
 
         public void Execute(CommandExecutionContext context)
         {
             _context = context;
             _symbolCache = new SymbolCache();
 
-            SetStrategy();
-
-            if (SpecificThreadId != 0)
+            try
             {
-                UnifiedThread thread = SpecificThread;
+                SetStrategy();
 
-                if (SpecificThread == null)
+                if (SpecificThreadId != 0)
                 {
-                    _context.WriteError("There is no thread with the id '{0}'.", SpecificThreadId);
-                    return;
+                    UnifiedThread thread = SpecificThread;
+
+                    if (SpecificThread == null)
+                    {
+                        _context.WriteError("There is no thread with the id '{0}'.", SpecificThreadId);
+                        return;
+                    }
+
+                    DisplayChainForThread(thread, 0, new HashSet<int>());
                 }
-
-                DisplayChainForThread(thread, 0, new HashSet<int>());
+                else
+                {
+                    _threads.ForEach(thread => DisplayChainForThread(thread, 0, new HashSet<int>()));
+                }
             }
-            else
+            finally
             {
-                _threads.ForEach(thread => DisplayChainForThread(thread, 0, new HashSet<int>()));
+                _dataTarget?.Dispose();
             }
-
-            if (_context.NativeDbgEngTarget != null)
-                _context.ExitDbgEngNativeMode();
-
         }
 
         private void SetStrategy()
         {
             _threads = new List<UnifiedThread>();
 
-            if (_context.TargetType == TargetType.DumpFile || _context.TargetType == TargetType.DumpFile)
+            if (_context.TargetType == TargetType.DumpFile
+                || _context.TargetType == TargetType.DumpFile)
             {
-                if (_context.NativeDbgEngTarget == null)
-                    _context.EnterDbgEngNativeMode();
+                _dataTarget = _context.CreateTemporaryDbgEngTarget();
 
                 if (_blockingObjectsStrategy == null)
-                    _blockingObjectsStrategy = new DumpFileBlockingObjectsStrategy(_context);
+                    _blockingObjectsStrategy = new DumpFileBlockingObjectsStrategy(
+                        _context.Runtime, _dataTarget);
 
                 FetchThreads_DumpFile();
             }
             else
             {
-                _blockingObjectsStrategy = new LiveProcessBlockingObjectsStrategy(_context);
+                _blockingObjectsStrategy = new LiveProcessBlockingObjectsStrategy(_context.Runtime);
                 FetchThreads_LiveProcess();
             }
         }
@@ -89,11 +94,9 @@ namespace msos
             }
         }
 
-        private IDebugSystemObjects DebugSystemObjects => (IDebugSystemObjects)_context
-            .NativeDbgEngTarget.DebuggerInterface;
+        private IDebugSystemObjects DebugSystemObjects => (IDebugSystemObjects)_dataTarget.DebuggerInterface;
 
-        private IDebugControl DebugControl => (IDebugControl)_context
-            .NativeDbgEngTarget.DebuggerInterface;
+        private IDebugControl DebugControl => (IDebugControl)_dataTarget.DebuggerInterface;
 
         #endregion
 
@@ -228,117 +231,71 @@ namespace msos
 
         #region Console Display
 
-        private void DisplayChainForThread(UnifiedThread thread, int depth, HashSet<int> visitedThreadIds)
+        private void DisplayChainForThread(UnifiedThread unifiedThread, int depth, HashSet<int> visitedThreadIds)
         {
-            if (thread.IsManagedThread)
-            {
-                DisplayManagedThread_ChainAux(thread, 0, new HashSet<int>());
-            }
-            else
-            {
-                DisplayUnManagedThread_ChainAux(thread, 0, new HashSet<int>());
-            }
-        }
+            int threadId = unifiedThread.IsManagedThread ? 
+                unifiedThread.Info.ManagedThread.ManagedThreadId 
+                : (int)unifiedThread.OSThreadId;
 
-        private void DisplayManagedThread_ChainAux(UnifiedThread unifiedThread, int depth, HashSet<int> visitedThreadIds)
-        {
-            var thread = unifiedThread.Info.ManagedThread;
+            var commandStr = unifiedThread.IsManagedThread ? "!clrstack" : "!stack";
 
-            _context.WriteLink(
-                String.Format("{0}+ Thread {1}", new string(' ', depth * 2), thread.ManagedThreadId),
-                String.Format("~ {0}; !clrstack", thread.ManagedThreadId));
+            var command = String.Format("~ {0}; {1}", threadId, commandStr);
+
+            _context.WriteLink(String.Format("{0}+ Thread {1}", new string(' ', depth * 2), threadId), command);
             _context.WriteLine();
 
-            if (visitedThreadIds.Contains(thread.ManagedThreadId))
+            if (visitedThreadIds.Contains(threadId))
             {
                 _context.WriteLine("{0}*** DEADLOCK!", new string(' ', depth * 2));
                 return;
             }
-            visitedThreadIds.Add(thread.ManagedThreadId);
+
+            visitedThreadIds.Add(threadId);
 
             if (unifiedThread.BlockingObjects != null)
             {
-                foreach (var blockingObject in unifiedThread.BlockingObjects)
+                DiplayThreadsBlockingObjcets(unifiedThread, depth, unifiedThread.BlockingObjects, visitedThreadIds);
+            }
+        }
+
+        private void DiplayThreadsBlockingObjcets(UnifiedThread unifiedThread,
+            int depth, List<UnifiedBlockingObject> blockingObjects,
+            HashSet<int> visitedThreadIds)
+        {
+            foreach (var blockingObject in unifiedThread.BlockingObjects)
+            {
+                _context.Write("{0}| {1}", new string(' ', (depth + 1) * 2), blockingObject.Reason);
+
+                if (!String.IsNullOrEmpty(blockingObject.KernelObjectName))
                 {
-                    
-                    _context.Write("{0}| {1}", new string(' ', (depth + 1) * 2), blockingObject.Reason);
+                    _context.Write(
+                        String.Format("{0:x16} {1} {2}", blockingObject.Handle,
+                        blockingObject.KernelObjectTypeName, blockingObject.KernelObjectName));
+                }
 
-                    if (!String.IsNullOrEmpty(blockingObject.KernelObjectName))
-                    {
-                        _context.WriteLink(
-                            String.Format("{0:x16} {1} {2}", blockingObject.Handle,
-                            blockingObject.KernelObjectTypeName, blockingObject.KernelObjectName),
-                            String.Format("!do {0:x16}", blockingObject.Handle));
-                    }
-
+                if (blockingObject.Type == UnifiedBlockingType.ClrBlockingObject)
+                {
                     var type = _context.Heap.GetObjectType(blockingObject.ManagedObjectAddress);
                     if (type != null && !String.IsNullOrEmpty(type.Name))
                     {
-                        _context.WriteLink(
-                            String.Format("{0:x16} {1}", blockingObject.ManagedObjectAddress, type.Name),
-                            String.Format("!do {0:x16}", blockingObject.ManagedObjectAddress));
+                        _context.Write(String.Format("{0:x16} {1}", blockingObject.ManagedObjectAddress, type.Name));
                     }
                     else
                     {
                         _context.Write("{0:x16}", blockingObject.ManagedObjectAddress);
                     }
-
-                    _context.WriteLine();
-
-                    if (blockingObject.Owners != null)
-                    {
-                        foreach (var owner in blockingObject.Owners)
-                        {
-                            if (owner == null) // ClrMD sometimes reports this nonsense
-                                continue;
-
-                            DisplayChainForThread(owner, depth + 2, visitedThreadIds);
-                        }
-                    }
                 }
-            }
-        }
 
-        private void DisplayUnManagedThread_ChainAux(UnifiedThread thread, int depth, HashSet<int> visitedThreadIds)
-        {
-            _context.WriteLink(
-                String.Format("{0}+ Thread {1}", new string(' ', depth * 2), thread.OSThreadId),
-                String.Format("~ {0}; !stack", thread.OSThreadId));
+                _context.WriteLine();
 
-            _context.WriteLine();
-
-            if (visitedThreadIds.Contains((int)thread.OSThreadId))
-            {
-                _context.WriteLine("{0}*** DEADLOCK!", new string(' ', depth * 2));
-                return;
-            }
-
-            visitedThreadIds.Add((int)thread.OSThreadId);
-
-            if (thread.BlockingObjects != null)
-            {
-                foreach (var blockingObject in thread.BlockingObjects)
+                if (blockingObject.Owners != null)
                 {
-                    _context.Write("{0}| {1} ", new string(' ', (depth + 1) * 2), blockingObject.Reason);
-
-                    if (!String.IsNullOrEmpty(blockingObject.KernelObjectName))
+                    foreach (var owner in blockingObject.Owners)
                     {
-                        _context.WriteLink(String.Format("{0:x16} {1} {2}", blockingObject.Handle,
-                            blockingObject.KernelObjectTypeName, blockingObject.KernelObjectName),
-                            String.Format("!do {0:x16}", blockingObject.Handle));
-                    }
+                        if (owner == null) // ClrMD sometimes reports this nonsense
+                            continue;
 
-                    _context.WriteLine();
-
-                    if (blockingObject.Owners != null)
-                    {
-                        foreach (var owner in blockingObject.Owners)
-                        {
-                            if (owner == null)
-                                continue;
-
-                            DisplayUnManagedThread_ChainAux(owner, depth + 2, visitedThreadIds);
-                        }
+                        DisplayChainForThread(owner, depth + 2, visitedThreadIds);
                     }
                 }
             }
@@ -349,23 +306,31 @@ namespace msos
 
     abstract class BlockingObjectsStrategy
     {
-        public BlockingObjectsStrategy(CommandExecutionContext context)
+        public BlockingObjectsStrategy(ClrRuntime runtime, DataTarget dataTarget = null)
         {
-            _runtime = context.Runtime;
+            _runtime = runtime;
+            _dataTarget = dataTarget;
 
-            if (_runtime.DataTarget.Architecture == Architecture.X86)
+            if (_dataTarget.Architecture == Architecture.X86)
             {
                 _stackWalker = new StackWalkerStrategy_x86(_runtime);
+            }
+
+            if (_dataTarget != null)
+            {
+
+                _dataReader = _dataTarget.DataReader;
+                _debugClient = _dataTarget.DebuggerInterface;
             }
         }
 
         #region Members
 
-        protected IDataReader _dataReader;
-        protected IDebugClient _debugClient;
-        protected ClrRuntime _runtime;
-        private CommandExecutionContext context;
-        protected StackWalkerStrategy _stackWalker;
+        protected readonly DataTarget _dataTarget;
+        protected readonly IDataReader _dataReader;
+        protected readonly IDebugClient _debugClient;
+        protected readonly ClrRuntime _runtime;
+        protected readonly StackWalkerStrategy _stackWalker;
 
         #endregion
 
@@ -474,21 +439,15 @@ namespace msos
     /// </summary>
     class DumpFileBlockingObjectsStrategy : BlockingObjectsStrategy
     {
-        public DumpFileBlockingObjectsStrategy(CommandExecutionContext context) : base(context)
+        public DumpFileBlockingObjectsStrategy(ClrRuntime runtime, DataTarget dataTarget)
+            : base(runtime, dataTarget)
         {
-
-           
-            if (context.NativeDbgEngTarget != null)
+            if (_dataTarget != null)
             {
-                context.EnterDbgEngNativeMode();
-                _dataReader = context.NativeDbgEngTarget.DataReader;
-                _debugClient = context.NativeDbgEngTarget.DebuggerInterface;
+                _handles = runtime.DataTarget.DataReader.EnumerateHandles().ToList();
             }
-
-            var _handles = context.Runtime.DataTarget.DataReader.EnumerateHandles().ToList();
         }
 
-        //private DumpReader _miniDump;
         private List<HandleInfo> _handles;
 
         private IEnumerable<HandleInfo> FilterByThread(ThreadInfo thread)
@@ -536,7 +495,8 @@ namespace msos
     /// </summary>
     class LiveProcessBlockingObjectsStrategy : BlockingObjectsStrategy
     {
-        public LiveProcessBlockingObjectsStrategy(CommandExecutionContext context) : base(context)
+        public LiveProcessBlockingObjectsStrategy(ClrRuntime runtime)
+            : base(runtime)
         {
             _wctApi = new WaitChainTraversal();
         }
