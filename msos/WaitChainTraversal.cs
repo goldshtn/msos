@@ -12,9 +12,9 @@ namespace msos
     /// </summary>
     class WaitChainTraversal
     {
-        public const int WCT_MAX_NODE_COUNT = 16;
-        public const uint WCTP_GETINFO_ALL_FLAGS = 7;
-        public const int WCT_OBJNAME_LENGTH = 128;
+        private const int WCT_MAX_NODE_COUNT = 16;
+        private const uint WCTP_GETINFO_ALL_FLAGS = 7;
+        private const int WCT_OBJNAME_LENGTH = 128;
 
         /// <summary>
         /// Gets WCT information using WCT api by the given threadId (OS threadId)
@@ -24,39 +24,44 @@ namespace msos
         public ThreadWCTInfo GetBlockingObjects(uint threadId)
         {
             ThreadWCTInfo result = null;
-
-            var g_WctIntPtr = OpenThreadWaitChainSession((int)WCT_SESSION_OPEN_FLAGS.WCT_SYNC_OPEN_FLAG, 0);
-
-
-            WAITCHAIN_NODE_INFO[] NodeInfoArray = new WAITCHAIN_NODE_INFO[WCT_MAX_NODE_COUNT];
-
-
-            int isCycle = 0;
-            int Count = WCT_MAX_NODE_COUNT;
-
-            // Make a synchronous WCT call to retrieve the wait chain.
-            bool waitChainResult = GetThreadWaitChain(g_WctIntPtr,
-                                    IntPtr.Zero,
-                                    WCTP_GETINFO_ALL_FLAGS,
-                                    threadId, ref Count, NodeInfoArray, out isCycle);
-
-            // Check if the wait chain is too big for the array we passed in.
-            if (Count > WCT_MAX_NODE_COUNT)
+            IntPtr g_WctIntPtr = IntPtr.Zero;
+            try
             {
-                Count = WCT_MAX_NODE_COUNT;
-            }
+                g_WctIntPtr = OpenThreadWaitChainSession((int)WCT_SESSION_OPEN_FLAGS.WCT_SYNC_OPEN_FLAG, 0);
 
-            if (waitChainResult)
+                WAITCHAIN_NODE_INFO[] NodeInfoArray = new WAITCHAIN_NODE_INFO[WCT_MAX_NODE_COUNT];
+
+
+                int isCycle = 0;
+                int Count = WCT_MAX_NODE_COUNT;
+
+                // Make a synchronous WCT call to retrieve the wait chain.
+                bool waitChainResult = GetThreadWaitChain(g_WctIntPtr,
+                                        IntPtr.Zero,
+                                        WCTP_GETINFO_ALL_FLAGS,
+                                        threadId, ref Count, NodeInfoArray, out isCycle);
+
+                // Check if the wait chain is too big for the array we passed in.
+                if (Count > WCT_MAX_NODE_COUNT)
+                {
+                    Count = WCT_MAX_NODE_COUNT;
+                }
+
+                if (waitChainResult)
+                {
+                    result = HandleGetThreadWaitChainResult(threadId, Count, NodeInfoArray, isCycle);
+                }
+            }
+            finally
             {
-                result = HandleGetThreadWaitChainRsult(threadId, Count, NodeInfoArray, isCycle);
+                if (g_WctIntPtr != IntPtr.Zero)
+                    CloseThreadWaitChainSession(g_WctIntPtr);
             }
-
-            CloseThreadWaitChainSession(g_WctIntPtr);
 
             return result;
         }
 
-        private ThreadWCTInfo HandleGetThreadWaitChainRsult(uint threadId, int Count, WAITCHAIN_NODE_INFO[] NodeInfoArray, int isCycle)
+        private ThreadWCTInfo HandleGetThreadWaitChainResult(uint threadId, int Count, WAITCHAIN_NODE_INFO[] NodeInfoArray, int isCycle)
         {
             WAITCHAIN_NODE_INFO[] waitchain = new WAITCHAIN_NODE_INFO[Count];
             Array.Copy(NodeInfoArray, waitchain, Count);
@@ -106,10 +111,10 @@ namespace msos
             ObjectType = item.ObjectType;
 
             TimeOut = item.Union.LockObject.Timeout;
-            AlertTable = item.Union.LockObject.Alertable;
+            Alertable = item.Union.LockObject.Alertable;
 
             if (item.ObjectType == WCT_OBJECT_TYPE.WctThreadType)
-            { 
+            {
                 //Use the ThreadObject part of the union
                 this.ThreadId = item.Union.ThreadObject.ThreadId;
                 this.ProcessId = item.Union.ThreadObject.ProcessId;
@@ -162,6 +167,6 @@ namespace msos
         /// <summary>
         /// This member is reserved for future use.
         /// </summary>
-        public uint AlertTable { get; private set; }
+        public uint Alertable { get; private set; }
     }
 }
