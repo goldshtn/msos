@@ -257,13 +257,13 @@ namespace msos
         {
             string result = null;
 
-            IntPtr handleDuplicate = IntPtr.Zero;
+            IntPtr duplicatedHandle = IntPtr.Zero;
 
-            if (Duplicate(handle, pid, out handleDuplicate))
+            if (Duplicate(handle, pid, out duplicatedHandle))
             {
                 int length;
 
-                NtStatus stat = NtQueryObject(handleDuplicate,
+                NtStatus stat = NtQueryObject(duplicatedHandle,
                     OBJECT_INFORMATION_CLASS.ObjectTypeInformation, IntPtr.Zero, 0, out length);
 
                 if (stat != NtStatus.InvalidHandle)
@@ -273,7 +273,7 @@ namespace msos
                     {
                         pointer = Marshal.AllocHGlobal((int)length);
 
-                        NtStatus status = NtQueryObject(handleDuplicate,
+                        NtStatus status = NtQueryObject(duplicatedHandle,
                            OBJECT_INFORMATION_CLASS.ObjectTypeInformation, pointer, length, out length);
 
                         if (status == NtStatus.Success)
@@ -290,8 +290,9 @@ namespace msos
                         }
                     }
                 }
-            }
 
+                CloseHandle(duplicatedHandle);
+            }
             return result;
         }
 
@@ -339,6 +340,8 @@ namespace msos
                         }
                     }
                 }
+
+                CloseHandle(duplicatedHandle);
             }
 
             return result;
