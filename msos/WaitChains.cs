@@ -311,13 +311,12 @@ namespace msos
             _runtime = runtime;
             _dataTarget = dataTarget;
 
-            if (_dataTarget.Architecture == Architecture.X86)
-            {
-                _stackWalker = new StackWalkerStrategy_x86(_runtime);
-            }
-
             if (_dataTarget != null)
             {
+                if (_dataTarget.Architecture == Architecture.X86)
+                {
+                    _stackWalker = new StackWalkerStrategy_x86(_runtime);
+                }
 
                 _dataReader = _dataTarget.DataReader;
                 _debugClient = _dataTarget.DebuggerInterface;
