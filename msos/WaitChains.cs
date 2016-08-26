@@ -21,6 +21,7 @@ namespace msos
         private SymbolCache _symbolCache;
         private List<UnifiedThread> _threads;
         private DataTarget _dataTarget;
+        private UnifiedStackTrace _unifiedStackTrace;
 
         public void Execute(CommandExecutionContext context)
         {
@@ -54,6 +55,7 @@ namespace msos
             }
         }
 
+
         private void SetStrategy()
         {
             _threads = new List<UnifiedThread>();
@@ -62,6 +64,8 @@ namespace msos
                 || _context.TargetType == TargetType.DumpFile)
             {
                 _dataTarget = _context.CreateTemporaryDbgEngTarget();
+
+                _unifiedStackTrace = new UnifiedStackTrace(_dataTarget.DebuggerInterface, _context);
 
                 if (_blockingObjectsStrategy == null)
                     _blockingObjectsStrategy = new DumpFileBlockingObjectsStrategy(
@@ -171,51 +175,35 @@ namespace msos
             };
         }
 
-        private UnifiedUnManagedThread HandleUnmanagedThread(ThreadInfo specific_info)
+        private UnifiedUnManagedThread HandleUnmanagedThread(ThreadInfo threadInfo)
         {
             UnifiedUnManagedThread result = null;
-            var unmanagedStack = GetNativeStackTrace(specific_info);
+            var unmanagedStack = _unifiedStackTrace.GetNativeStackTrace(threadInfo.EngineThreadId);
 
-            var blockingObjects = _blockingObjectsStrategy.GetUnmanagedBlockingObjects(specific_info, unmanagedStack);
+            var blockingObjects = _blockingObjectsStrategy.GetUnmanagedBlockingObjects(threadInfo, unmanagedStack);
 
 
-            result = new UnifiedUnManagedThread(specific_info, unmanagedStack, blockingObjects);
+            result = new UnifiedUnManagedThread(threadInfo, unmanagedStack, blockingObjects);
 
             return result;
         }
 
-        private UnifiedManagedThread HandleManagedThread(ThreadInfo specific_info)
+        private UnifiedManagedThread HandleManagedThread(ThreadInfo threadInfo)
         {
-            var unmanagedStack = GetNativeStackTrace(specific_info);
-            var managedStack = GetManagedStackTrace(specific_info.ManagedThread);
+            var stackTrace = _unifiedStackTrace.GetStackTrace(threadInfo.EngineThreadId);
 
-            var unmanagedObjs = _blockingObjectsStrategy.GetUnmanagedBlockingObjects(specific_info, unmanagedStack);
-            var managedObjs = _blockingObjectsStrategy.GetManagedBlockingObjects(specific_info, managedStack);
+            var unmanagedStack = stackTrace.Where(stack => stack.Type == UnifiedStackFrameType.Native);
+            var managedStack = stackTrace.Where(stack => stack.Type == UnifiedStackFrameType.Managed);
+
+            var unmanagedObjs = _blockingObjectsStrategy.GetUnmanagedBlockingObjects(threadInfo, unmanagedStack.ToList());
+            var managedObjs = _blockingObjectsStrategy.GetManagedBlockingObjects(threadInfo, managedStack.ToList());
 
             unmanagedObjs.AddRange(managedObjs);
 
-            return new UnifiedManagedThread(specific_info, managedStack, unmanagedStack, unmanagedObjs);
+            return new UnifiedManagedThread(threadInfo,stackTrace,unmanagedObjs);
         }
 
         #region Stack Trace
-
-        private unsafe List<UnifiedStackFrame> GetNativeStackTrace(ThreadInfo info)
-        {
-            if (_context.TargetType == TargetType.LiveProcess)
-                return null;
-
-            Util.VerifyHr((DebugSystemObjects).SetCurrentThreadId(info.EngineThreadId));
-
-            DEBUG_STACK_FRAME[] stackFrames = new DEBUG_STACK_FRAME[400];
-            uint framesFilled;
-
-            DEBUG_STACK_FRAME frame = new DEBUG_STACK_FRAME();
-            Util.VerifyHr((DebugControl).GetStackTrace(0, 0, 0,
-                            stackFrames, Marshal.SizeOf(frame), out framesFilled));
-
-            var frames = stackFrames.Take((int)framesFilled);
-            return _blockingObjectsStrategy.ConvertToUnified(frames, _context.Runtime, info);
-        }
 
         private List<UnifiedStackFrame> GetManagedStackTrace(ClrThread thread)
         {
@@ -231,8 +219,8 @@ namespace msos
 
         private void DisplayChainForThread(UnifiedThread unifiedThread, int depth, HashSet<int> visitedThreadIds)
         {
-            int threadId = unifiedThread.IsManagedThread ? 
-                unifiedThread.Info.ManagedThread.ManagedThreadId 
+            int threadId = unifiedThread.IsManagedThread ?
+                unifiedThread.Info.ManagedThread.ManagedThreadId
                 : (int)unifiedThread.OSThreadId;
 
             var commandStr = unifiedThread.IsManagedThread ? "!clrstack" : "!stack";
