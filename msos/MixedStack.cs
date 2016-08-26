@@ -194,7 +194,8 @@ namespace msos
             this.OSThreadId = osThreadId;
         }
         public ThreadInfo Info { get; private set; }
-        public List<UnifiedStackFrame> StackTrace { get; protected set; }
+        public List<UnifiedStackFrame> UnmanagedStackTrace { get; protected set; }
+        public List<UnifiedStackFrame> ManagedStackTrace { get; protected set; }
         public List<UnifiedBlockingObject> BlockingObjects { get; protected set; }
 
         public bool IsManagedThread { get; protected set; }
@@ -206,19 +207,14 @@ namespace msos
 
     class UnifiedManagedThread : UnifiedThread
     {
-        public UnifiedManagedThread(ThreadInfo info, List<UnifiedStackFrame> managedStack, List<UnifiedStackFrame> unManagedStack, List<UnifiedBlockingObject> blockingObjects) : base(info)
+        public UnifiedManagedThread(
+            ThreadInfo info,
+            List<UnifiedStackFrame> managedStack,
+            List<UnifiedStackFrame> unmanagedStack,
+            List<UnifiedBlockingObject> blockingObjects) : base(info)
         {
-            StackTrace = new List<UnifiedStackFrame>();
-
-            if (managedStack != null)
-            {
-                StackTrace.AddRange(managedStack);
-            }
-
-            if (unManagedStack != null)
-            {
-                StackTrace.AddRange(unManagedStack);
-            }
+            UnmanagedStackTrace = unmanagedStack;
+            ManagedStackTrace = managedStack;
             BlockingObjects = blockingObjects;
         }
 
@@ -229,10 +225,13 @@ namespace msos
                 ManagedThread = thread
             })
         {
-            
+
         }
 
-        public UnifiedManagedThread(ClrThread thread, List<UnifiedBlockingObject> blockingObjs)
+        public UnifiedManagedThread(
+            ClrThread thread,
+            List<UnifiedBlockingObject> blockingObjs) 
+            
             : base(new ThreadInfo()
             {
                 OSThreadId = thread.OSThreadId,
@@ -244,20 +243,15 @@ namespace msos
 
         public UnifiedManagedThread(ClrThread thread,
             List<UnifiedStackFrame> managedStack,
-            List<UnifiedBlockingObject> blockingObjs)
+            List<UnifiedBlockingObject> blockingObjs) 
+            
             : base(new ThreadInfo()
             {
                 OSThreadId = thread.OSThreadId,
                 ManagedThread = thread
             })
         {
-            StackTrace = new List<UnifiedStackFrame>();
-
-            if (managedStack != null)
-            {
-                StackTrace.AddRange(managedStack);
-            }
-
+            ManagedStackTrace = managedStack;
             BlockingObjects = blockingObjs;
         }
     }
@@ -409,10 +403,13 @@ namespace msos
     }
     class UnifiedUnManagedThread : UnifiedThread
     {
-        public UnifiedUnManagedThread(ThreadInfo info, List<UnifiedStackFrame> unmanagedStack, List<UnifiedBlockingObject> blockingObjects) : base(info)
+        public UnifiedUnManagedThread(
+            ThreadInfo info,
+            List<UnifiedStackFrame> unmanagedStack,
+            List<UnifiedBlockingObject> blockingObjects) : base(info)
         {
             BlockingObjects = blockingObjects;
-            StackTrace = unmanagedStack;
+            UnmanagedStackTrace = unmanagedStack;
         }
     }
 
@@ -423,7 +420,10 @@ namespace msos
 
     public class UnifiedHandle
     {
-        public UnifiedHandle(ulong value, UnifiedHandleType unifiedType = UnifiedHandleType.Handle, string type = null, string objectName = null)
+        public UnifiedHandle(
+            ulong value,
+            UnifiedHandleType unifiedType = UnifiedHandleType.Handle,
+            string type = null, string objectName = null)
         {
             Value = value;
             Type = type;
