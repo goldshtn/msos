@@ -1,47 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
-using DWORD = System.Int32;
 
 namespace msos
 {
     static class NativeStructs
     {
-        #region Kernel32
-
-        public struct VS_FIXEDFILEINFO
-        {
-            public UInt32 dwSignature;
-            public UInt32 dwStrucVersion;
-            public UInt32 dwFileVersionMS;
-            public UInt32 dwFileVersionLS;
-            public UInt32 dwProductVersionMS;
-            public UInt32 dwProductVersionLS;
-            public UInt32 dwFileFlagsMask;
-            public UInt32 dwFileFlags;
-            public UInt32 dwFileOS;
-            public UInt32 dwFileType;
-            public UInt32 dwFileSubtype;
-            public UInt32 dwFileDateMS;
-            public UInt32 dwFileDateLS;
-        };
-
-        public struct MEMORY_BASIC_INFORMATION
-        {
-            public IntPtr BaseAddress;
-            public IntPtr AllocationBase;
-            public uint AllocationProtect;
-            public UIntPtr RegionSize;
-            public uint State;
-            public uint Protect;
-            public uint Type;
-        }
-
-        #endregion
-
         #region Advapi32.dll
 
         [StructLayout(LayoutKind.Sequential)]
@@ -144,98 +107,6 @@ namespace msos
             }
         }
 
-
-#if !(_WIN64)
-
-        public struct THREAD_ADDITIONAL_INFO
-        {
-            public DWORD Unknown1;
-            public DWORD Unknown2;
-            public DWORD ProcessId;
-            public DWORD ThreadId;
-            public DWORD Unknown3;
-            public DWORD Priority;
-            public DWORD Unknown4;
-        };
-
-        public struct MUTEX_ADDITIONAL_INFO_1
-        {
-            public DWORD Unknown1;
-            public DWORD Unknown2;
-        };
-
-        public struct MUTEX_ADDITIONAL_INFO_2
-        {
-            public DWORD OwnerProcessId;
-            public DWORD OwnerThreadId;
-        };
-
-        public struct PROCESS_ADDITIONAL_INFO_2
-        {
-            public DWORD Unknown1;
-            public DWORD Unknown2;
-            public DWORD Unknown3;
-            public DWORD Unknown4;
-            public DWORD Unknown5;
-            public DWORD ProcessId;
-            public DWORD ParentProcessId;
-            public DWORD Unknown6;
-        };
-
-#else
-
-    struct MUTEX_ADDITIONAL_INFO_2
-    {
-        DWORD OwnerProcessId;
-        DWORD Unknown1;
-        DWORD OwnerThreadId;
-        DWORD Unknown2;
-    };
-
-    struct MUTEX_ADDITIONAL_INFO_1
-    {
-        DWORD Unknown1;
-        DWORD Unknown2;
-    };
-
-    struct THREAD_ADDITIONAL_INFO
-    {
-        DWORD Unknown1;
-        DWORD Unknown2;
-        DWORD Unknown3;
-        DWORD Unknown4;
-        DWORD ProcessId;
-        DWORD Unknown5;
-        DWORD ThreadId;
-        DWORD Unknown6;
-        DWORD Unknown7;
-        DWORD Unknown8;
-        DWORD Priority;
-        DWORD Unknown9;
-    };
-
-    struct PROCESS_ADDITIONAL_INFO_2
-    {
-        DWORD Unknown1;
-        DWORD Unknown2;
-        DWORD Unknown3;
-        DWORD Unknown4;
-        DWORD Unknown5;
-        DWORD Unknown6;
-        DWORD Unknown7;
-        DWORD Unknown8;
-        DWORD BasePriority;
-        DWORD Unknown10;
-        DWORD ProcessId;
-        DWORD Unknown12;
-        DWORD ParentProcessId;
-        DWORD Unknown14;
-        DWORD Unknown15;
-        DWORD Unknown16;
-    };
-
-#endif
-
         #endregion
     }
 
@@ -271,9 +142,6 @@ namespace msos
         WctStatusMax = 11
     }
 
-    /// <summary>
-    /// Doc: https://msdn.microsoft.com/en-us/library/windows/desktop/ms681388(v=vs.85).aspx
-    /// </summary>
     public enum SYSTEM_ERROR_CODES
     {
         /// <summary>
@@ -665,149 +533,12 @@ namespace msos
         Synchronize = 0x00100000
     }
 
-
-    [Flags]
-    public enum FileMapAccess : uint
-    {
-        FileMapCopy = 0x0001,
-        FileMapWrite = 0x0002,
-        FileMapRead = 0x0004,
-        FileMapAllAccess = 0x001f,
-        FileMapExecute = 0x0020,
-    }
-
     [Flags]
     public enum DuplicateOptions : uint
     {
         DUPLICATE_CLOSE_SOURCE = (0x00000001),// Closes the source handle. This occurs regardless of any error status returned.
         DUPLICATE_SAME_ACCESS = (0x00000002), //Ignores the dwDesiredAccess parameter. The duplicate handle has the same access as the source handle.
     }
-
-    #endregion
-
-    #region DbgHelp
-
-    public enum MINIDUMP_STREAM_TYPE : uint
-    {
-        UnusedStream = 0,
-        ReservedStream0 = 1,
-        ReservedStream1 = 2,
-        ThreadListStream = 3,
-        ModuleListStream = 4,
-        MemoryListStream = 5,
-        ExceptionStream = 6,
-        SystemInfoStream = 7,
-        ThreadExListStream = 8,
-        Memory64ListStream = 9,
-        CommentStreamA = 10,
-        CommentStreamW = 11,
-        HandleDataStream = 12,
-        FunctionTableStream = 13,
-        UnloadedModuleListStream = 14,
-        MiscInfoStream = 15,
-        MemoryInfoListStream = 16,
-        ThreadInfoListStream = 17,
-        HandleOperationListStream = 18,
-        LastReservedStream = 0xffff
-    }
-
-    public enum MiniDumpProcessorArchitecture
-    {
-        PROCESSOR_ARCHITECTURE_INTEL = 0,
-        PROCESSOR_ARCHITECTURE_IA64 = 6,
-        PROCESSOR_ARCHITECTURE_AMD64 = 9,
-        PROCESSOR_ARCHITECTURE_UNKNOWN = 0xfff
-    }
-
-    public enum MiniDumpProductType
-    {
-        VER_NT_WORKSTATION = 0x0000001,
-        VER_NT_DOMAIN_CONTROLLER = 0x0000002,
-        VER_NT_SERVER = 0x0000003
-    }
-
-    public enum MiniDumpPlatform
-    {
-        VER_PLATFORM_WIN32s = 0,
-        VER_PLATFORM_WIN32_WINDOWS = 1,
-        VER_PLATFORM_WIN32_NT = 2
-    }
-
-    // Per-handle object information varies according to
-    // the OS, the OS version, the processor type and
-    // so on.  The minidump gives a minidump identifier
-    // to each possible data format for identification
-    // purposes but does not control nor describe the actual data.
-    public enum MINIDUMP_HANDLE_OBJECT_INFORMATION_TYPE : uint
-    {
-        MiniHandleObjectInformationNone,
-        MiniThreadInformation1,
-        MiniMutantInformation1,
-        MiniMutantInformation2,
-        MiniProcessInformation1,
-        MiniProcessInformation2,
-        MiniEventInformation1,
-        MiniSectionInformation1,
-        MiniHandleObjectInformationTypeMax
-    }
-
-    #endregion
-
-    #region WinNt
-
-    [StructLayout(LayoutKind.Sequential)]
-    public struct CONTEXT_X86
-    {
-        public uint ContextFlags; //set this to an appropriate value 
-                                  // Retrieved by CONTEXT_DEBUG_REGISTERS 
-        public uint Dr0;
-        public uint Dr1;
-        public uint Dr2;
-        public uint Dr3;
-        public uint Dr6;
-        public uint Dr7;
-        // Retrieved by CONTEXT_FLOATING_POINT 
-        public FLOATING_SAVE_AREA FloatSave;
-        // Retrieved by CONTEXT_SEGMENTS 
-        public uint SegGs;
-        public uint SegFs;
-        public uint SegEs;
-        public uint SegDs;
-        // Retrieved by CONTEXT_INTEGER 
-        public uint Edi;
-        public uint Esi;
-        public uint Ebx;
-        public uint Edx;
-        public uint Ecx;
-        public uint Eax;
-        // Retrieved by CONTEXT_CONTROL 
-        public uint Ebp;
-        public uint Eip;
-        public uint SegCs;
-        public uint EFlags;
-        public uint Esp;
-        public uint SegSs;
-        // Retrieved by CONTEXT_EXTENDED_REGISTERS 
-        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 512)]
-        public byte[] ExtendedRegisters;
-    }
-
-
-    [StructLayout(LayoutKind.Sequential)]
-    public struct FLOATING_SAVE_AREA
-    {
-        public uint ControlWord;
-        public uint StatusWord;
-        public uint TagWord;
-        public uint ErrorOffset;
-        public uint ErrorSelector;
-        public uint DataOffset;
-        public uint DataSelector;
-        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 80)]
-        public byte[] RegisterArea;
-        public uint Cr0NpxState;
-    }
-
 
     #endregion
 }

@@ -40,18 +40,17 @@ namespace msos
                                     WCTP_GETINFO_ALL_FLAGS,
                                     threadId, ref Count, NodeInfoArray, out isCycle);
 
-            CheckCount(ref Count);
+            // Check if the wait chain is too big for the array we passed in.
+            if (Count > WCT_MAX_NODE_COUNT)
+            {
+                Count = WCT_MAX_NODE_COUNT;
+            }
 
             if (waitChainResult)
             {
                 result = HandleGetThreadWaitChainRsult(threadId, Count, NodeInfoArray, isCycle);
             }
-            else
-            {
-                HandleWctRequestError();
-            }
 
-            //Finaly ...
             CloseThreadWaitChainSession(g_WctIntPtr);
 
             return result;
@@ -59,46 +58,29 @@ namespace msos
 
         private ThreadWCTInfo HandleGetThreadWaitChainRsult(uint threadId, int Count, WAITCHAIN_NODE_INFO[] NodeInfoArray, int isCycle)
         {
-            ThreadWCTInfo result = new ThreadWCTInfo(isCycle == 1, threadId);
-            WAITCHAIN_NODE_INFO[] info = new WAITCHAIN_NODE_INFO[Count];
-            Array.Copy(NodeInfoArray, info, Count);
+            WAITCHAIN_NODE_INFO[] waitchain = new WAITCHAIN_NODE_INFO[Count];
+            Array.Copy(NodeInfoArray, waitchain, Count);
 
-            result.SetInfo(info);
+            ThreadWCTInfo result = new ThreadWCTInfo(isCycle == 1, threadId, waitchain);
 
             return result;
-        }
-
-        private void HandleWctRequestError()
-        {
-            var lastErrorCode = Marshal.GetLastWin32Error();
-
-            if (lastErrorCode == (uint)SYSTEM_ERROR_CODES.ERROR_IO_PENDING)
-            {
-                //TODO: Follow this doc: https://msdn.microsoft.com/en-us/library/windows/desktop/ms681421(v=vs.85).aspx
-            }
-            else
-            {
-                //TODO : Ifdentify code error and responce accordingly
-            }
-        }
-
-        private void CheckCount(ref int Count)
-        {
-            // Check if the wait chain is too big for the array we passed in.
-            if (Count > WCT_MAX_NODE_COUNT)
-            {
-                //Found additional nodes 
-                Count = WCT_MAX_NODE_COUNT;
-            }
         }
     }
 
     class ThreadWCTInfo
     {
-        public ThreadWCTInfo(bool isDeadLock, uint threadId)
+        public ThreadWCTInfo(bool isDeadLock, uint threadId, WAITCHAIN_NODE_INFO[] info)
         {
             IsDeadLocked = isDeadLock;
             ThreadId = threadId;
+
+            WctBlockingObjects = new List<WaitChainInfoObject>();
+
+            foreach (var item in info)
+            {
+                var block = new WaitChainInfoObject(item);
+                WctBlockingObjects.Add(block);
+            }
         }
 
         /// <summary>
@@ -110,31 +92,10 @@ namespace msos
         /// </summary>
         public uint ThreadId { get; private set; }
 
-        List<WaitChainInfoObject> _blockingObjects;
-
-        public List<WaitChainInfoObject> WctBlockingObjects
-        {
-            get
-            {
-                if (_blockingObjects == null)
-                {
-                    _blockingObjects = new List<WaitChainInfoObject>();
-                }
-                return _blockingObjects;
-            }
-        }
-
-        internal void SetInfo(WAITCHAIN_NODE_INFO[] info)
-        {
-            if (info != null)
-            {
-                foreach (var item in info)
-                {
-                    var block = new WaitChainInfoObject(item);
-                    WctBlockingObjects.Add(block);
-                }
-            }
-        }
+        /// <summary>
+        /// Thread blocking objects
+        /// </summary>
+        public List<WaitChainInfoObject> WctBlockingObjects { get; private set; }
     }
 
     class WaitChainInfoObject
@@ -144,21 +105,20 @@ namespace msos
             ObjectStatus = item.ObjectStatus;
             ObjectType = item.ObjectType;
 
-
-            //LockObject stuct data
             TimeOut = item.Union.LockObject.Timeout;
             AlertTable = item.Union.LockObject.Alertable;
 
             if (item.ObjectType == WCT_OBJECT_TYPE.WctThreadType)
-            { //Use the ThreadObject part of the union
+            { 
+                //Use the ThreadObject part of the union
                 this.ThreadId = item.Union.ThreadObject.ThreadId;
                 this.ProcessId = item.Union.ThreadObject.ProcessId;
                 this.ContextSwitches = item.Union.ThreadObject.ContextSwitches;
                 this.WaitTime = item.Union.ThreadObject.WaitTime;
-
             }
             else
-            {//Use the LockObject  part of the union
+            {
+                //Use the LockObject part of the union
                 unsafe
                 {
                     ObjectName = Marshal.PtrToStringUni((IntPtr)item.Union.LockObject.ObjectName);
@@ -166,7 +126,6 @@ namespace msos
             }
 
         }
-
 
         public WCT_OBJECT_STATUS ObjectStatus { get; private set; }
         public WCT_OBJECT_TYPE ObjectType { get; private set; }
@@ -204,13 +163,5 @@ namespace msos
         /// This member is reserved for future use.
         /// </summary>
         public uint AlertTable { get; private set; }
-        public UnifiedBlockingReason UnifiedType
-        {
-            get
-            {
-                var wctIndex = (int)this.ObjectType;
-                return (UnifiedBlockingReason)(UnifiedBlockingObject.BLOCK_REASON_WCT_SECTION_START_INDEX + wctIndex);
-            }
-        }
     }
 }

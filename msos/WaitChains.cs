@@ -5,8 +5,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Diagnostics.Runtime.Interop;
 using System.Runtime.InteropServices;
-using Microsoft.Diagnostics.Runtime.Utilities;
-using Microsoft.Diagnostics.Runtime.Desktop;
 
 namespace msos
 {

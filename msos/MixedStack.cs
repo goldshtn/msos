@@ -472,7 +472,7 @@ namespace msos
         internal UnifiedBlockingObject(WaitChainInfoObject obj) : this(OriginSource.WCT)
         {
             KernelObjectName = obj.ObjectName;
-            Reason = obj.UnifiedType;
+            Reason = ConvertToUnified(obj.ObjectType);
             Type = UnifiedBlockingType.WaitChainInfoObject;
         }
 
@@ -561,8 +561,11 @@ namespace msos
         public string KernelObjectTypeName { get; private set; }
         public ulong Handle { get; private set; }
 
-        public const int BLOCK_REASON_WCT_SECTION_START_INDEX = 9;
+        const int BLOCK_REASON_WCT_SECTION_START_INDEX = 9;
 
+        /// <summary>
+        /// Converts objetType of a handle to UnifiedBlockingReason enum value
+        /// </summary>
         private static UnifiedBlockingReason ConvertToUnified(string objectType)
         {
             UnifiedBlockingReason result = UnifiedBlockingReason.Unknown;
@@ -595,6 +598,9 @@ namespace msos
             return result;
         }
 
+        /// <summary>
+        /// Converts HandleType enum value to UnifiedBlockingReason enum value 
+        /// </summary>
         UnifiedBlockingReason ConvertToUnified(HandleInfo.HandleType type)
         {
             UnifiedBlockingReason result = UnifiedBlockingReason.Unknown;
@@ -610,8 +616,15 @@ namespace msos
             return result;
         }
 
+        /// <summary>
+        /// Converts WCT_OBJECT_TYPE enum value to UnifiedBlockingReason enum value 
+        /// </summary>
+        public UnifiedBlockingReason ConvertToUnified(WCT_OBJECT_TYPE type)
+        {
+            var wctIndex = (int)type;
+            return (UnifiedBlockingReason)(BLOCK_REASON_WCT_SECTION_START_INDEX + wctIndex);
+        }
     }
-
 
     public enum UnifiedBlockingReason
     {
