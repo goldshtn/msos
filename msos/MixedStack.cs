@@ -1,6 +1,7 @@
 ﻿using CmdLine;
 using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.Runtime.Interop;
+using Microsoft.Diagnostics.Runtime.Utilities;
 using Microsoft.Diagnostics.RuntimeExt;
 using System;
 using System.Collections.Generic;
@@ -8,6 +9,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using static msos.NativeStructs;
 
 namespace msos
 {
@@ -57,7 +59,7 @@ namespace msos
     class UnifiedStackFrame
     {
         public UnifiedStackFrameType Type { get; set; }
-        
+
         public string Module { get; set; }
         public string Method { get; set; }
 
@@ -65,11 +67,14 @@ namespace msos
         public ulong InstructionPointer { get; set; }
         public ulong StackPointer { get; set; }
 
+        public ulong FrameOffset { get; private set; }
         public string SourceFileName { get; set; }
         public uint SourceLineNumber { get; set; }
         public uint SourceLineNumberEnd { get; set; }
         public uint SourceColumnNumber { get; set; }
         public uint SourceColumnNumberEnd { get; set; }
+
+        public List<UnifiedHandle> Handles { get; set; }
 
         public string SourceAndLine
         {
@@ -90,6 +95,8 @@ namespace msos
 
         public UnifiedStackFrame(DEBUG_STACK_FRAME nativeFrame, IDebugSymbols2 debugSymbols)
         {
+            FrameOffset = nativeFrame.FrameOffset;
+
             Type = UnifiedStackFrameType.Native;
             InstructionPointer = nativeFrame.InstructionOffset;
             StackPointer = nativeFrame.StackOffset;
@@ -167,8 +174,92 @@ namespace msos
         public uint OSThreadId { get; set; }
         public ClrThread ManagedThread { get; set; }
         public string Detail { get; set; }
-
         public bool IsManagedThread { get { return ManagedThread != null; } }
+    }
+
+    class UnifiedThread
+    {
+        public UnifiedThread(ThreadInfo info, List<UnifiedStackFrame> stackTrace)
+        {
+            IsManagedThread = info.IsManagedThread;
+            Index = info.Index;
+            EngineThreadId = info.EngineThreadId;
+            OSThreadId = info.OSThreadId;
+            Detail = info.Detail;
+            Info = info;
+            StackTrace = stackTrace;
+        }
+
+        public UnifiedThread(uint osThreadId)
+        {
+            this.OSThreadId = osThreadId;
+        }
+
+        public ThreadInfo Info { get; private set; }
+        public List<UnifiedStackFrame> StackTrace { get; protected set; }
+        public List<UnifiedBlockingObject> BlockingObjects { get; protected set; }
+
+        public bool IsManagedThread { get; protected set; }
+        public uint Index { get; set; }
+        public uint EngineThreadId { get; set; }
+        public uint OSThreadId { get; set; }
+        public string Detail { get; set; }
+    }
+
+    class UnifiedManagedThread : UnifiedThread
+    {
+        public UnifiedManagedThread(
+            ThreadInfo info,
+            List<UnifiedStackFrame> stackTrace,
+            List<UnifiedBlockingObject> blockingObjects) : base(info, stackTrace)
+        {
+            BlockingObjects = blockingObjects;
+        }
+
+        public UnifiedManagedThread(ClrThread thread, List<UnifiedStackFrame> stackTrace)
+            : base(new ThreadInfo()
+            {
+                OSThreadId = thread.OSThreadId,
+                ManagedThread = thread
+            }, stackTrace)
+        {
+
+        }
+
+        public UnifiedManagedThread(
+            ClrThread thread,
+            List<UnifiedStackFrame> stackTrace,
+            List<UnifiedBlockingObject> blockingObjs) 
+            
+            : base(new ThreadInfo()
+            {
+                OSThreadId = thread.OSThreadId,
+                ManagedThread = thread
+            }, stackTrace)
+        {
+            BlockingObjects = blockingObjs;
+        }
+
+        public UnifiedManagedThread(ClrThread thread)
+            : base(new ThreadInfo()
+            {
+                OSThreadId = thread.OSThreadId,
+                ManagedThread = thread
+            }, null)
+        {
+            
+        }
+    }
+
+    class UnifiedUnManagedThread : UnifiedThread
+    {
+        public UnifiedUnManagedThread(
+            ThreadInfo info,
+            List<UnifiedStackFrame> stackTrace,
+            List<UnifiedBlockingObject> blockingObjects) : base(info, stackTrace)
+        {
+            BlockingObjects = blockingObjects;
+        }
     }
 
     class UnifiedStackTrace
@@ -177,6 +268,7 @@ namespace msos
         private CommandExecutionContext _context;
         private ClrRuntime _runtime;
         private uint _numThreads;
+
 
         public UnifiedStackTrace(IDebugClient debugClient, CommandExecutionContext context)
         {
@@ -198,7 +290,7 @@ namespace msos
         public uint NumThreads { get { return _numThreads; } }
         public IEnumerable<ThreadInfo> Threads { get; private set; }
 
-        private ThreadInfo GetThreadInfo(uint threadIndex)
+        public ThreadInfo GetThreadInfo(uint threadIndex)
         {
             uint[] engineThreadIds = new uint[1];
             uint[] osThreadIds = new uint[1];
@@ -206,17 +298,16 @@ namespace msos
             ClrThread managedThread = _runtime.Threads.FirstOrDefault(thread => thread.OSThreadId == osThreadIds[0]);
             return new ThreadInfo
             {
-                 Index = threadIndex,
-                 EngineThreadId = engineThreadIds[0],
-                 OSThreadId = osThreadIds[0],
-                 ManagedThread = managedThread
+                Index = threadIndex,
+                EngineThreadId = engineThreadIds[0],
+                OSThreadId = osThreadIds[0],
+                ManagedThread = managedThread
             };
         }
-
-        private List<UnifiedStackFrame> GetNativeStackTrace(uint engineThreadId)
+        public List<UnifiedStackFrame> GetNativeStackTrace(uint engineThreadId)
         {
             Util.VerifyHr(((IDebugSystemObjects)_debugClient).SetCurrentThreadId(engineThreadId));
-            
+
             DEBUG_STACK_FRAME[] stackFrames = new DEBUG_STACK_FRAME[200];
             uint framesFilled;
             Util.VerifyHr(((IDebugControl)_debugClient).GetStackTrace(0, 0, 0, stackFrames, stackFrames.Length, out framesFilled));
@@ -229,7 +320,7 @@ namespace msos
             return stackTrace;
         }
 
-        private List<UnifiedStackFrame> GetManagedStackTrace(ClrThread thread)
+        public List<UnifiedStackFrame> GetManagedStackTrace(ClrThread thread)
         {
             return (from frame in thread.StackTrace
                     let sourceLocation = _context.SymbolCache.GetFileAndLineNumberSafe(frame)
@@ -242,6 +333,7 @@ namespace msos
             ThreadInfo threadInfo = GetThreadInfo(threadIndex);
             List<UnifiedStackFrame> unifiedStackTrace = new List<UnifiedStackFrame>();
             List<UnifiedStackFrame> nativeStackTrace = GetNativeStackTrace(threadInfo.EngineThreadId);
+
             if (threadInfo.IsManagedThread)
             {
                 List<UnifiedStackFrame> managedStackTrace = GetManagedStackTrace(threadInfo.ManagedThread);
@@ -312,5 +404,254 @@ namespace msos
             var stackTrace = GetStackTrace(index);
             PrintStackTrace(context, stackTrace);
         }
+
+
+    }
+
+    public enum UnifiedHandleType
+    {
+        Handle, CriticalSection
+    }
+
+    public class UnifiedHandle
+    {
+        public UnifiedHandle(
+            ulong value,
+            UnifiedHandleType unifiedType = UnifiedHandleType.Handle,
+            string type = null, string objectName = null)
+        {
+            Value = value;
+            Type = type;
+            ObjectName = objectName;
+        }
+
+        public ulong Value { get; private set; }
+        public string Type { get; private set; }
+        public UnifiedHandleType UnifiedHandleType { get; private set; }
+        public string ObjectName { get; private set; }
+    }
+
+
+    public enum UnifiedBlockingType
+    {
+        WaitChainInfoObject, ClrBlockingObject, DumpHandle, CriticalSectionObject, UnmanagedHandleObject
+    }
+
+    public enum OriginSource
+    {
+        WCT, MiniDump, ClrMD, StackWalker, ThreadContextRegisters
+    }
+
+    public class UnifiedBlockingObject
+    {
+        private UnifiedBlockingObject(OriginSource source)
+        {
+            Origin = source;
+        }
+
+        public UnifiedBlockingObject(BlockingObject obj) : this(OriginSource.ClrMD)
+        {
+
+            SetOwners(obj);
+            SetWaiters(obj);
+
+            Reason = (UnifiedBlockingReason)((int)obj.Reason);
+            RecursionCount = obj.RecursionCount;
+            ManagedObjectAddress = obj.Object;
+            KernelObjectName = null;
+
+            Type = UnifiedBlockingType.ClrBlockingObject;
+
+        }
+
+        internal UnifiedBlockingObject(WaitChainInfoObject obj) : this(OriginSource.WCT)
+        {
+            KernelObjectName = obj.ObjectName;
+            Reason = ConvertToUnified(obj.ObjectType);
+            Type = UnifiedBlockingType.WaitChainInfoObject;
+        }
+
+        internal UnifiedBlockingObject(HandleInfo handle)
+            : this(OriginSource.MiniDump)
+        {
+            KernelObjectName = handle.ObjectName;
+            KernelObjectTypeName = handle.TypeName;
+            Reason = ConvertToUnified(handle.Type);
+            Type = UnifiedBlockingType.DumpHandle;
+            Handle = handle.Handle;
+        }
+
+        internal UnifiedBlockingObject(CRITICAL_SECTION section, ulong handle)
+            : this(OriginSource.StackWalker)
+        {
+            Owners = new List<UnifiedThread>();
+            Owners.Add(new UnifiedThread((uint)section.OwningThread));
+            Reason = UnifiedBlockingReason.CriticalSection;
+            Type = UnifiedBlockingType.CriticalSectionObject;
+            Handle = handle;
+        }
+
+        public UnifiedBlockingObject(ulong handle, string objectName, string objectType)
+            : this(OriginSource.StackWalker)
+        {
+            Owners = new List<UnifiedThread>();
+            Handle = handle;
+            KernelObjectName = objectName;
+            KernelObjectTypeName = objectType;
+            Type = UnifiedBlockingType.UnmanagedHandleObject;
+            Reason = ConvertToUnified(objectType);
+        }
+
+        public UnifiedBlockingObject(ulong handle, UnifiedBlockingType type)
+            : this(OriginSource.ThreadContextRegisters)
+        {
+            Handle = handle;
+            Type = type;
+        }
+
+        private void SetWaiters(BlockingObject item)
+        {
+            if (item.Waiters?.Count > 0)
+            {
+                Owners = new List<UnifiedThread>();
+                foreach (var waiter in item.Waiters)
+                {
+                    this.Owners.Add(new UnifiedManagedThread(waiter));
+                }
+            }
+        }
+
+        private void SetOwners(BlockingObject item)
+        {
+            if (item.Owners?.Count > 0)
+            {
+                Owners = new List<UnifiedThread>();
+                foreach (var owner in item.Owners)
+                {
+                    if (owner != null)
+                    {
+                        this.Owners.Add(new UnifiedManagedThread(owner));
+                    }
+                }
+            }
+        }
+
+        public OriginSource Origin { get; private set; }
+        public UnifiedBlockingType Type { get; private set; }
+
+        internal List<UnifiedThread> Owners { get; private set; }
+
+        public bool HasOwnershipInformation { get { return Owners != null && Owners.Count > 0; } }
+
+        public UnifiedBlockingReason Reason { get; private set; } = UnifiedBlockingReason.Unknown;
+
+        internal List<UnifiedThread> Waiters { get; private set; }
+
+        public int RecursionCount { get; private set; }
+
+        public ulong ManagedObjectAddress { get; private set; }
+
+        public string KernelObjectName { get; private set; }
+
+        public string KernelObjectTypeName { get; private set; }
+        public ulong Handle { get; private set; }
+
+        const int BLOCK_REASON_WCT_SECTION_START_INDEX = 9;
+
+        /// <summary>
+        /// Converts objetType of a handle to UnifiedBlockingReason enum value
+        /// </summary>
+        private static UnifiedBlockingReason ConvertToUnified(string objectType)
+        {
+            UnifiedBlockingReason result = UnifiedBlockingReason.Unknown;
+
+            switch (objectType)
+            {
+                case "Thread": result = UnifiedBlockingReason.Thread; break;
+                case "Job": result = UnifiedBlockingReason.Job; break;
+                case "File": result = UnifiedBlockingReason.File; break;
+                case "Semaphore": result = UnifiedBlockingReason.Semaphore; break;
+                case "Mutex": result = UnifiedBlockingReason.Mutex; break;
+                case "Section": result = UnifiedBlockingReason.CriticalSection; break;
+                case "Mutant": result = UnifiedBlockingReason.Mutex; break;
+                case "ALPC Port": result = UnifiedBlockingReason.Alpc; break;
+                case "Process": result = UnifiedBlockingReason.ProcessWait; break;
+                case "Unknown": result = UnifiedBlockingReason.Unknown; break;
+                case "None": result = UnifiedBlockingReason.None; break;
+                case "Timer": result = UnifiedBlockingReason.Timer; break;
+                case "Event": result = UnifiedBlockingReason.Event; break;
+                    //case "Callback": break;
+                    //case "Desktop": break;
+                    //case "Key": break;
+                    //case "IoCompletion": break;
+                    //case "Directory": break;
+                    //case "WindowStation": break;
+                    //case "WaitCompletionPacket": break;
+                    //case "TpWorkerFactory": break;
+                    //case "Timer": break;
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// Converts HandleType enum value to UnifiedBlockingReason enum value 
+        /// </summary>
+        UnifiedBlockingReason ConvertToUnified(HandleInfo.HandleType type)
+        {
+            UnifiedBlockingReason result = UnifiedBlockingReason.Unknown;
+            switch (type)
+            {
+                case HandleInfo.HandleType.NONE: result = UnifiedBlockingReason.None; break;
+                case HandleInfo.HandleType.THREAD: result = UnifiedBlockingReason.Thread; break;
+                case HandleInfo.HandleType.MUTEX: result = UnifiedBlockingReason.Mutex; break;
+                case HandleInfo.HandleType.PROCESS: result = UnifiedBlockingReason.ProcessWait; break;
+                case HandleInfo.HandleType.EVENT: result = UnifiedBlockingReason.ThreadWait; break;
+                case HandleInfo.HandleType.SECTION: result = UnifiedBlockingReason.MemorySection; break;
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// Converts WCT_OBJECT_TYPE enum value to UnifiedBlockingReason enum value 
+        /// </summary>
+        public UnifiedBlockingReason ConvertToUnified(WCT_OBJECT_TYPE type)
+        {
+            var wctIndex = (int)type;
+            return (UnifiedBlockingReason)(BLOCK_REASON_WCT_SECTION_START_INDEX + wctIndex);
+        }
+    }
+
+    public enum UnifiedBlockingReason
+    {
+        //Based on ClrThread BlockingReason Enumerations
+        None = 0,
+        Unknown = 1,
+        Monitor = 2,
+        MonitorWait = 3,
+        WaitOne = 4,
+        WaitAll = 5,
+        WaitAny = 6,
+        ThreadJoin = 7,
+        ReaderAcquired = 8,
+        WriterAcquired = 9,
+
+        //Based on WCT_OBJECT_TYPE Enumerations
+        CriticalSection = 10,
+        SendMessage = 11,
+        Mutex = 12,
+        Alpc = 13,
+        Com = 14,
+        ThreadWait = 15,
+        ProcessWait = 16,
+        Thread = 17,
+        ComActivation = 18,
+        UnknownType = Unknown,
+        File = 19,
+        Job = 20,
+        Semaphore = 21,
+
+        Event = 22,        //An object which encapsulates some information, to be used for notifying processes of something.
+        Timer = 23,
+        MemorySection = 24
     }
 }
