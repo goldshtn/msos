@@ -38,7 +38,7 @@ namespace msos
             {
                 using (var target = context.CreateTemporaryDbgEngTarget())
                 {
-                    var tracer = new UnifiedStackTrace(target.DebuggerInterface, context);
+                    var tracer = new UnifiedStackTraces(target.DebuggerInterface, context);
                     context.WriteLine("Stack tree for {0} threads:", tracer.NumThreads);
                     var allStacks = from thread in tracer.Threads
                                 let frames = from frame in tracer.GetStackTrace(thread.Index)

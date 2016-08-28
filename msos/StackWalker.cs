@@ -17,33 +17,27 @@ namespace msos
         public StackWalkerStrategy_x86(ClrRuntime runtime) : base(runtime)
         {
             if (_runtime.DataTarget.Architecture != Architecture.X86)
-            {
-                throw new Exception("Unexpected Architecture");
-            }
+                throw new Exception("Unexpected architecture: only X86 is supported");
         }
 
         protected override UnifiedBlockingObject GetCriticalSectionBlockingObject(UnifiedStackFrame frame)
         {
             UnifiedBlockingObject result = null;
-            var paramz = GetParams(frame, ENTER_CRITICAL_SECTION_FUNCTION_PARAM_COUNT);
-
-            var address = Convert(paramz[0]);
+            var parameters = GetParameters(frame, ENTER_CRITICAL_SECTION_FUNCTION_PARAM_COUNT);
+            var criticalSectionAddress = ConvertToAddress(parameters[0]);
 
             byte[] buffer = new byte[Marshal.SizeOf(typeof(CRITICAL_SECTION))];
-
             int read;
 
-            if (!_runtime.ReadMemory(address, buffer, buffer.Length, out read) || read != buffer.Length)
-                throw new Exception($"Address : {address}");
+            if (!_runtime.ReadMemory(criticalSectionAddress, buffer, buffer.Length, out read) || read != buffer.Length)
+                throw new Exception($"Error reading critical section data from address: {criticalSectionAddress}");
 
             var gch = GCHandle.Alloc(buffer, GCHandleType.Pinned);
-
             try
             {
-                CRITICAL_SECTION section = (CRITICAL_SECTION)Marshal.PtrToStructure
-                    (gch.AddrOfPinnedObject(), typeof(CRITICAL_SECTION));
-
-                result = new UnifiedBlockingObject(section, address);
+                CRITICAL_SECTION section = (CRITICAL_SECTION)Marshal.PtrToStructure(
+                    gch.AddrOfPinnedObject(), typeof(CRITICAL_SECTION));
+                result = new UnifiedBlockingObject(section, criticalSectionAddress);
             }
             finally
             {
@@ -52,20 +46,17 @@ namespace msos
             return result;
         }
 
-        List<byte[]> GetParams(UnifiedStackFrame stackFrame, int paramCount)
+        private List<byte[]> GetParameters(UnifiedStackFrame stackFrame, int paramCount)
         {
             List<byte[]> result = new List<byte[]>();
-
-            var offset = stackFrame.FrameOffset; //Base Pointer - % EBP
-            byte[] paramBuffer;
+            var offset = stackFrame.FramePointer + 4; // Parameters start at EBP + 4
             int bytesRead = 0;
-            offset += 4;
 
             for (int i = 0; i < paramCount; i++)
             {
-                paramBuffer = new byte[IntPtr.Size];
+                byte[] paramBuffer = new byte[IntPtr.Size];
                 offset += (uint)IntPtr.Size;
-                if (_runtime.ReadMemory(offset, paramBuffer, 4, out bytesRead))
+                if (_runtime.ReadMemory(offset, paramBuffer, paramBuffer.Length, out bytesRead))
                 {
                     result.Add(paramBuffer);
                 }
@@ -74,37 +65,24 @@ namespace msos
             return result;
         }
 
-        protected override void DealWithCriticalSection(UnifiedStackFrame frame)
+        protected override void ExtractWaitForMultipleObjectsInformation(UnifiedStackFrame frame)
         {
-            var paramz = GetParams(frame, ENTER_CRITICAL_SECTION_FUNCTION_PARAM_COUNT);
-            var criticalSectionPtr = Convert(paramz[0]);
-            frame.Handles = new List<UnifiedHandle>();
-            frame.Handles.Add(new UnifiedHandle(criticalSectionPtr, UnifiedHandleType.CriticalSection));
-        }
-
-        protected override void DealWithMultiple(UnifiedStackFrame frame)
-        {
-            var paramz = GetParams(frame, WAIT_FOR_MULTIPLE_OBJECTS_PARAM_COUNT);
-            if (paramz.Count > 0)
+            var parameters = GetParameters(frame, WAIT_FOR_MULTIPLE_OBJECTS_PARAM_COUNT);
+            if (parameters.Count > 0)
             {
-                frame.Handles = new List<UnifiedHandle>();
-
-                var HandlesCunt = BitConverter.ToUInt32(paramz[0], 0);
-                var HandleAddress = BitConverter.ToUInt32(paramz[1], 0);
-
-                EnrichUnifiedStackFrame(frame, HandlesCunt, HandleAddress);
+                var numberOfHandles = BitConverter.ToUInt32(parameters[0], 0);
+                var addressOfHandlesArray = ConvertToAddress(parameters[1]);
+                AddMultipleWaitInformation(frame, numberOfHandles, addressOfHandlesArray);
             }
         }
 
-        protected override void DealWithSingle(UnifiedStackFrame frame)
+        protected override void ExtractWaitForSingleObjectInformation(UnifiedStackFrame frame)
         {
-            var paramz = GetParams(frame, WAIT_FOR_SINGLE_OBJECT_PARAM_COUNT);
-            if (paramz.Count > 0)
+            var parameters = GetParameters(frame, WAIT_FOR_SINGLE_OBJECT_PARAM_COUNT);
+            if (parameters.Count > 0)
             {
-                var handle = Convert(paramz[0]);
-
-                frame.Handles = new List<UnifiedHandle>();
-                frame.Handles.Add(new UnifiedHandle(handle));
+                var handle = ConvertToAddress(parameters[0]);
+                AddSingleWaitInformation(frame, handle);
             }
         }
     }
@@ -116,9 +94,11 @@ namespace msos
     {
         #region Constants
 
-        public const string WAIT_FOR_SINGLE_OBJECTS_FUNCTION_NAME = "WaitForSingleObject";
+        public const string WAIT_FOR_SINGLE_OBJECT_FUNCTION_NAME = "WaitForSingleObject";
+        public const string WAIT_FOR_SINGLE_OBJECT_EX_FUNCTION_NAME = "WaitForSingleObjectEx";
         public const string WAIT_FOR_MULTIPLE_OBJECTS_FUNCTION_NAME = "WaitForMultipleObjects";
-        public const string ENTER_CRITICAL_SECTION_FUNCTION_NAME = "EnterCriticalSection";
+        public const string WAIT_FOR_MULTIPLE_OBJECTS_EX_FUNCTION_NAME = "WaitForMultipleObjectsEx";
+        public const string ENTER_CRITICAL_SECTION_FUNCTION_NAME = "RtlEnterCriticalSection";
 
         protected const int ENTER_CRITICAL_SECTION_FUNCTION_PARAM_COUNT = 1;
         protected const int WAIT_FOR_SINGLE_OBJECT_PARAM_COUNT = 2;
@@ -135,21 +115,21 @@ namespace msos
             _runtime = runtime;
         }
 
-
-        private List<byte[]> ReadFromMemory(ulong startAddress, uint count)
+        private List<byte[]> ReadHandles(ulong startAddress, uint count)
         {
             List<byte[]> result = new List<byte[]>();
-            int sum = 0;
-            for (int i = 0; i < count; i++)
+            for (uint i = 0; i < count; i++)
             {
-                byte[] readBytes = new byte[IntPtr.Size];
-                if (_runtime.ReadMemory(startAddress, readBytes, IntPtr.Size, out sum))
+                byte[] buffer = new byte[IntPtr.Size];
+                int bytesRead;
+                if (_runtime.ReadMemory(startAddress, buffer, IntPtr.Size, out bytesRead) &&
+                    bytesRead == IntPtr.Size)
                 {
-                    result.Add(readBytes);
+                    result.Add(buffer);
                 }
                 else
                 {
-                    throw new Exception($"Accessing Unreadable memorry at {startAddress}");
+                    throw new Exception($"Error reading memory at {startAddress}");
                 }
 
                 startAddress += (ulong)IntPtr.Size;
@@ -157,20 +137,16 @@ namespace msos
             return result;
         }
 
-        internal bool CheckMethod(UnifiedStackFrame frame, string key)
+        private bool IsMatchingMethod(UnifiedStackFrame frame, string key)
         {
-            bool result = frame != null
-                && !String.IsNullOrEmpty(frame.Method)
-                && frame.Method != null && frame.Method.Contains(key);
-
-            return result;
+            return frame?.Method == key;
         }
 
-        internal bool GetCriticalSectionBlockingObject(UnifiedStackFrame frame, out UnifiedBlockingObject blockingObject)
+        public bool GetCriticalSectionBlockingObject(UnifiedStackFrame frame, out UnifiedBlockingObject blockingObject)
         {
             bool result = false;
 
-            if (frame.Handles != null && frame.Method.Contains(ENTER_CRITICAL_SECTION_FUNCTION_NAME))
+            if (frame.Handles != null && IsMatchingMethod(frame, ENTER_CRITICAL_SECTION_FUNCTION_NAME))
             {
                 blockingObject = GetCriticalSectionBlockingObject(frame);
                 result = blockingObject != null;
@@ -183,63 +159,67 @@ namespace msos
             return result;
         }
 
-        internal bool SetFrameParameters(UnifiedStackFrame frame, ClrRuntime runtime)
+        public bool SetFrameParameters(UnifiedStackFrame frame)
         {
-            bool waitCallFound = false;
-
-            if (waitCallFound = CheckMethod(frame, WAIT_FOR_SINGLE_OBJECTS_FUNCTION_NAME))
+            if (IsMatchingMethod(frame, WAIT_FOR_SINGLE_OBJECT_FUNCTION_NAME) ||
+                IsMatchingMethod(frame, WAIT_FOR_SINGLE_OBJECT_EX_FUNCTION_NAME))
             {
-                DealWithSingle(frame);
-            }
-            else if (waitCallFound = CheckMethod(frame, WAIT_FOR_MULTIPLE_OBJECTS_FUNCTION_NAME))
-            {
-                DealWithMultiple(frame);
-            }
-            else if (waitCallFound = CheckMethod(frame, ENTER_CRITICAL_SECTION_FUNCTION_NAME))
-            {
-                DealWithCriticalSection(frame);
+                ExtractWaitForSingleObjectInformation(frame);
+                return true;
             }
 
-            return waitCallFound;
+            if (IsMatchingMethod(frame, WAIT_FOR_MULTIPLE_OBJECTS_FUNCTION_NAME) ||
+                IsMatchingMethod(frame, WAIT_FOR_MULTIPLE_OBJECTS_EX_FUNCTION_NAME))
+            {
+                ExtractWaitForMultipleObjectsInformation(frame);
+                return true;
+            }
+
+            return false;
         }
 
-        protected void EnrichUnifiedStackFrame(UnifiedStackFrame frame, ulong waitCount, ulong hPtr)
+        protected void AddSingleWaitInformation(UnifiedStackFrame frame, ulong handleValue)
         {
-            if (waitCount > MAXIMUM_WAIT_OBJECTS)
-                waitCount = MAXIMUM_WAIT_OBJECTS;
+            // TODO The process id can't be zero, or this will always fail!
+            //      Currently we are running the stack walker only for dump files, which means
+            //      we don't have an id to run DuplicateHandle against.
+            var typeName = GetHandleType((IntPtr)handleValue, 0);
+            var objectName = GetHandleObjectName((IntPtr)handleValue, 0);
 
-            var handles = ReadFromMemory(hPtr, (uint)waitCount);
+            UnifiedHandle unifiedHandle = new UnifiedHandle(handleValue, typeName, objectName);
+            frame.Handles.Add(unifiedHandle);
+        }
 
-            frame.Handles = new List<UnifiedHandle>();
-            foreach (var handle in handles)
+        protected void AddMultipleWaitInformation(UnifiedStackFrame frame, uint numberOfHandles, ulong addressOfHandlesArray)
+        {
+            if (numberOfHandles > MAXIMUM_WAIT_OBJECTS)
+                numberOfHandles = MAXIMUM_WAIT_OBJECTS;
+
+            var handles = ReadHandles(addressOfHandlesArray, numberOfHandles);
+            foreach (var handleBytes in handles)
             {
-                ulong handleUint = Convert(handle);
-
-                var typeName = GetHandleType((IntPtr)handleUint, 0);
-                var handleName = GetHandleObjectName((IntPtr)handleUint, 0);
-
-                UnifiedHandle unifiedHandle = new UnifiedHandle(handleUint, UnifiedHandleType.Handle, typeName, handleName);
-
-                if (unifiedHandle != null)
-                {
-                    frame.Handles.Add(unifiedHandle);
-                }
+                ulong handleValue = ConvertToAddress(handleBytes);
+                AddSingleWaitInformation(frame, handleValue);
             }
         }
 
-        protected ulong Convert(byte[] bits)
+        protected static ulong ConvertToAddress(byte[] bits)
         {
-            var integer = BitConverter.ToInt32(bits, 0);
-            return (ulong)integer;
+            if (IntPtr.Size == 4)
+            {
+                return BitConverter.ToUInt32(bits, 0);
+            }
+            else
+            {
+                return BitConverter.ToUInt64(bits, 0);
+            }
         }
 
         #region Abstract Methods
 
-        protected abstract void DealWithSingle(UnifiedStackFrame frame);
+        protected abstract void ExtractWaitForSingleObjectInformation(UnifiedStackFrame frame);
 
-        protected abstract void DealWithMultiple(UnifiedStackFrame frame);
-
-        protected abstract void DealWithCriticalSection(UnifiedStackFrame frame);
+        protected abstract void ExtractWaitForMultipleObjectsInformation(UnifiedStackFrame frame);
 
         protected abstract UnifiedBlockingObject GetCriticalSectionBlockingObject(UnifiedStackFrame frame);
 
@@ -248,122 +228,80 @@ namespace msos
         #region NtQueryObject functions
 
         /// <summary>
-        /// Gets Handle Type (String type name) using NtQueryObject NtDll function
-        /// Doc: https://msdn.microsoft.com/en-us/library/bb432383(v=vs.85).aspx
+        /// Retrieve the handle type name using NtQueryObject.
         /// </summary>
-        /// <param name="handle"></param>
-        /// <returns></returns>
-        public static unsafe string GetHandleType(IntPtr handle, uint pid)
+        private static string GetHandleType(IntPtr handle, uint pid)
         {
-            string result = null;
+            IntPtr duplicatedHandle;
+            if (!DuplicateHandle(handle, pid, out duplicatedHandle))
+                return null;
 
-            IntPtr duplicatedHandle = IntPtr.Zero;
-
-            if (Duplicate(handle, pid, out duplicatedHandle))
+            int length = Marshal.SizeOf(typeof(PUBLIC_OBJECT_TYPE_INFORMATION)), dummy;
+            IntPtr buffer = Marshal.AllocHGlobal(length);
+            try
             {
-                int length;
+                NtStatus status = NtQueryObject(duplicatedHandle,
+                    OBJECT_INFORMATION_CLASS.ObjectTypeInformation, buffer, length, out dummy);
 
-                NtStatus stat = NtQueryObject(duplicatedHandle,
-                    OBJECT_INFORMATION_CLASS.ObjectTypeInformation, IntPtr.Zero, 0, out length);
-
-                if (stat != NtStatus.InvalidHandle)
+                if (status == NtStatus.Success)
                 {
-                    IntPtr pointer = default(IntPtr);
-                    try
-                    {
-                        pointer = Marshal.AllocHGlobal((int)length);
-
-                        NtStatus status = NtQueryObject(duplicatedHandle,
-                           OBJECT_INFORMATION_CLASS.ObjectTypeInformation, pointer, length, out length);
-
-                        if (status == NtStatus.Success)
-                        {
-                            var info = (PUBLIC_OBJECT_TYPE_INFORMATION)Marshal.PtrToStructure(pointer, typeof(PUBLIC_OBJECT_TYPE_INFORMATION));
-                            result = info.TypeName.ToString();
-                        }
-                    }
-                    finally
-                    {
-                        if (pointer != default(IntPtr))
-                        {
-                            Marshal.FreeHGlobal(pointer);
-                        }
-                    }
+                    var info = (PUBLIC_OBJECT_TYPE_INFORMATION)Marshal.PtrToStructure(buffer, typeof(PUBLIC_OBJECT_TYPE_INFORMATION));
+                    return info.TypeName.ToString();
                 }
-
-                CloseHandle(duplicatedHandle);
             }
-            return result;
-        }
-
-        /// <summary>
-        /// Gets Handle Object name using NtQueryObject NtDll function
-        /// Doc: https://msdn.microsoft.com/en-us/library/bb432383(v=vs.85).aspx
-        /// </summary>
-        /// <param name="handle"></param>
-        /// <returns></returns>
-        public static unsafe string GetHandleObjectName(IntPtr handle, uint pid)
-        {
-            string result = null;
-
-            IntPtr duplicatedHandle = default(IntPtr);
-
-            if (Duplicate(handle, pid, out duplicatedHandle))
+            finally
             {
-                int length;
-
-                NtStatus stat = NtQueryObject(duplicatedHandle,
-                    OBJECT_INFORMATION_CLASS.ObjectNameInformation, IntPtr.Zero, 0, out length);
-
-                if (stat != NtStatus.InvalidHandle)
-                {
-                    IntPtr pointer = default(IntPtr);
-                    try
-                    {
-                        pointer = Marshal.AllocHGlobal((int)length);
-
-                        NtStatus status = NtQueryObject(duplicatedHandle,
-                               OBJECT_INFORMATION_CLASS.ObjectNameInformation, pointer, length, out length);
-
-                        if (status == NtStatus.Success)
-                        {
-
-                            OBJECT_NAME_INFORMATION info = (OBJECT_NAME_INFORMATION)Marshal.PtrToStructure(pointer, typeof(OBJECT_NAME_INFORMATION));
-                            result = info.Name.ToString();
-                        }
-                    }
-                    finally
-                    {
-                        if (pointer != default(IntPtr))
-                        {
-                            Marshal.FreeHGlobal(pointer);
-                        }
-                    }
-                }
-
+                Marshal.FreeHGlobal(buffer);
                 CloseHandle(duplicatedHandle);
             }
 
-            return result;
+            return null;
         }
 
         /// <summary>
-        /// Perform handle duplication
+        /// Retrieves the name of the object referenced by the specified handle using NtQueryObject.
         /// </summary>
-        /// <param name="handle">Handle which needed to be duplicated</param>
-        /// <param name="pid">Process PID (handle owner)</param>
-        /// <param name="result">Duplicated Handle</param>
-        /// <returns></returns>
-        private static bool Duplicate(IntPtr handle, uint pid, out IntPtr result)
+        private static string GetHandleObjectName(IntPtr handle, uint pid)
         {
-            result = default(IntPtr);
+            IntPtr duplicatedHandle;
+            if (!DuplicateHandle(handle, pid, out duplicatedHandle))
+                return null;
 
-            var processHandle = OpenProcess(ProcessAccessFlags.All, true, pid);
+            int length = Marshal.SizeOf(typeof(OBJECT_NAME_INFORMATION)) + 256, dummy;
+            IntPtr buffer = Marshal.AllocHGlobal(length);
+            try
+            {
+                NtStatus status = NtQueryObject(duplicatedHandle,
+                        OBJECT_INFORMATION_CLASS.ObjectNameInformation, buffer, length, out dummy);
+                if (status == NtStatus.Success)
+                {
+
+                    OBJECT_NAME_INFORMATION info = (OBJECT_NAME_INFORMATION)Marshal.PtrToStructure(buffer, typeof(OBJECT_NAME_INFORMATION));
+                    return info.Name.ToString();
+                }
+            }
+            finally
+            {
+                Marshal.FreeHGlobal(buffer);
+                CloseHandle(duplicatedHandle);
+            }
+
+            return null;
+        }
+
+        private static bool DuplicateHandle(IntPtr handle, uint pid, out IntPtr newHandle)
+        {
+            newHandle = IntPtr.Zero;
+
+            var processHandle = OpenProcess(ProcessAccessFlags.DuplicateHandle, true, pid);
 
             var process = GetCurrentProcess();
             var options = DuplicateOptions.DUPLICATE_SAME_ACCESS;
 
-            return DuplicateHandle(processHandle, handle, process, out result, 0, false, options);
+            bool success = NativeMethods.DuplicateHandle(processHandle, handle, process, out newHandle, 0, false, options);
+            CloseHandle(processHandle);
+
+            return success;
         }
 
         #endregion

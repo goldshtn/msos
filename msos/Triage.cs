@@ -88,7 +88,7 @@ namespace msos
 
         private void FillFaultingThreadAndModuleInformation(CommandExecutionContext context)
         {
-            UnifiedStackTrace stackTrace = new UnifiedStackTrace(_dbgEngTarget.DebuggerInterface, context);
+            UnifiedStackTraces stackTrace = new UnifiedStackTraces(_dbgEngTarget.DebuggerInterface, context);
             _triageInformation.TotalThreadCount = (int)stackTrace.NumThreads;
             _triageInformation.ManagedThreadCount = stackTrace.Threads.Count(t => t.IsManagedThread);
 
@@ -96,7 +96,7 @@ namespace msos
             if (lastEventInformation == null)
                 return;
 
-            ThreadInfo faultingThread = stackTrace.Threads.SingleOrDefault(t => t.OSThreadId == lastEventInformation.OSThreadId);
+            ThreadInformation faultingThread = stackTrace.Threads.SingleOrDefault(t => t.OSThreadId == lastEventInformation.OSThreadId);
             if (faultingThread == null)
                 return;
 

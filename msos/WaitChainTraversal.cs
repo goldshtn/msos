@@ -3,12 +3,12 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using static msos.NativeStructs;
 using static msos.NativeMethods;
+using System.Linq;
 
 namespace msos
 {
     /// <summary>
-    /// Exract blocking objects information using WCT api:
-    /// doc: https://msdn.microsoft.com/en-us/library/windows/desktop/ms681622(v=vs.85).aspx
+    /// Extract blocking objects information using the Windows Wait Chain Traversal API.
     /// </summary>
     class WaitChainTraversal
     {
@@ -17,58 +17,33 @@ namespace msos
         private const int WCT_OBJNAME_LENGTH = 128;
 
         /// <summary>
-        /// Gets WCT information using WCT api by the given threadId (OS threadId)
+        /// Gets WCT information for the specified thread.
         /// </summary>
-        /// <param name="threadId"> ThreadWCTInfo  object</param>
-        /// <returns>Thread id of thread target</returns>
-        public ThreadWCTInfo GetBlockingObjects(uint threadId)
+        public ThreadWCTInfo GetBlockingObjects(uint osThreadId)
         {
-            ThreadWCTInfo result = null;
-            IntPtr g_WctIntPtr = IntPtr.Zero;
+            IntPtr wctSession = IntPtr.Zero;
             try
             {
-                g_WctIntPtr = OpenThreadWaitChainSession((int)WCT_SESSION_OPEN_FLAGS.WCT_SYNC_OPEN_FLAG, 0);
+                wctSession = OpenThreadWaitChainSession((int)WCT_SESSION_OPEN_FLAGS.WCT_SYNC_OPEN_FLAG, 0);
+                if (wctSession == IntPtr.Zero)
+                    return null;
 
-                WAITCHAIN_NODE_INFO[] NodeInfoArray = new WAITCHAIN_NODE_INFO[WCT_MAX_NODE_COUNT];
-
-
+                WAITCHAIN_NODE_INFO[] nodes = new WAITCHAIN_NODE_INFO[WCT_MAX_NODE_COUNT];
                 int isCycle = 0;
-                int Count = WCT_MAX_NODE_COUNT;
-
-                // Make a synchronous WCT call to retrieve the wait chain.
-                bool waitChainResult = GetThreadWaitChain(g_WctIntPtr,
-                                        IntPtr.Zero,
-                                        WCTP_GETINFO_ALL_FLAGS,
-                                        threadId, ref Count, NodeInfoArray, out isCycle);
-
-                // Check if the wait chain is too big for the array we passed in.
-                if (Count > WCT_MAX_NODE_COUNT)
+                int count = nodes.Length;
+                if (GetThreadWaitChain(wctSession, IntPtr.Zero, WCTP_GETINFO_ALL_FLAGS,
+                                       osThreadId, ref count, nodes, out isCycle))
                 {
-                    Count = WCT_MAX_NODE_COUNT;
-                }
-
-                if (waitChainResult)
-                {
-                    result = HandleGetThreadWaitChainResult(threadId, Count, NodeInfoArray, isCycle);
+                    return new ThreadWCTInfo(isCycle == 1, osThreadId, nodes.Take(count).ToArray());
                 }
             }
             finally
             {
-                if (g_WctIntPtr != IntPtr.Zero)
-                    CloseThreadWaitChainSession(g_WctIntPtr);
+                if (wctSession != IntPtr.Zero)
+                    CloseThreadWaitChainSession(wctSession);
             }
 
-            return result;
-        }
-
-        private ThreadWCTInfo HandleGetThreadWaitChainResult(uint threadId, int Count, WAITCHAIN_NODE_INFO[] NodeInfoArray, int isCycle)
-        {
-            WAITCHAIN_NODE_INFO[] waitchain = new WAITCHAIN_NODE_INFO[Count];
-            Array.Copy(NodeInfoArray, waitchain, Count);
-
-            ThreadWCTInfo result = new ThreadWCTInfo(isCycle == 1, threadId, waitchain);
-
-            return result;
+            return null;
         }
     }
 
@@ -76,31 +51,14 @@ namespace msos
     {
         public ThreadWCTInfo(bool isDeadLock, uint threadId, WAITCHAIN_NODE_INFO[] info)
         {
-            IsDeadLocked = isDeadLock;
-            ThreadId = threadId;
-
-            WctBlockingObjects = new List<WaitChainInfoObject>();
-
-            foreach (var item in info)
-            {
-                var block = new WaitChainInfoObject(item);
-                WctBlockingObjects.Add(block);
-            }
+            IsDeadlocked = isDeadLock;
+            OSThreadId = threadId;
+            WaitChain.AddRange(info.Select(i => new WaitChainInfoObject(i)));
         }
 
-        /// <summary>
-        /// Specifies whether the Wait Chain is Cyclic - Deadlock
-        /// </summary>
-        public bool IsDeadLocked { get; private set; }
-        /// <summary>
-        /// OS Id of the thread
-        /// </summary>
-        public uint ThreadId { get; private set; }
-
-        /// <summary>
-        /// Thread blocking objects
-        /// </summary>
-        public List<WaitChainInfoObject> WctBlockingObjects { get; private set; }
+        public bool IsDeadlocked { get; private set; }
+        public uint OSThreadId { get; private set; }
+        public List<WaitChainInfoObject> WaitChain { get; } = new List<WaitChainInfoObject>();
     }
 
     class WaitChainInfoObject
@@ -115,15 +73,13 @@ namespace msos
 
             if (item.ObjectType == WCT_OBJECT_TYPE.WctThreadType)
             {
-                //Use the ThreadObject part of the union
-                this.ThreadId = item.Union.ThreadObject.ThreadId;
-                this.ProcessId = item.Union.ThreadObject.ProcessId;
-                this.ContextSwitches = item.Union.ThreadObject.ContextSwitches;
-                this.WaitTime = item.Union.ThreadObject.WaitTime;
+                OSThreadId = item.Union.ThreadObject.ThreadId;
+                OSProcessId = item.Union.ThreadObject.ProcessId;
+                ContextSwitches = item.Union.ThreadObject.ContextSwitches;
+                WaitTime = item.Union.ThreadObject.WaitTime;
             }
             else
             {
-                //Use the LockObject part of the union
                 unsafe
                 {
                     ObjectName = Marshal.PtrToStringUni((IntPtr)item.Union.LockObject.ObjectName);
@@ -135,31 +91,18 @@ namespace msos
         public WCT_OBJECT_STATUS ObjectStatus { get; private set; }
         public WCT_OBJECT_TYPE ObjectType { get; private set; }
 
-        /// <summary>
-        /// Is Current Objects Status is WCT_OBJECT_STATUS.WctStatusBlocked
-        /// </summary>
         public bool IsBlocked { get { return ObjectStatus == WCT_OBJECT_STATUS.WctStatusBlocked; } }
-        /// <summary>
-        /// The thread identifier. For COM and ALPC, this member can be 0.
-        /// </summary>
-        public uint ThreadId { get; private set; }
-        /// <summary>
-        /// The process identifier.
-        /// </summary>
-        public uint ProcessId { get; private set; }
+        public uint OSThreadId { get; private set; }
+        public uint OSProcessId { get; private set; }
+
         /// <summary>
         /// The name of the object. Object names are only available for certain object, such as mutexes. 
         /// If the object does not have a name, this member is an empty string.
         /// </summary>
         public string ObjectName { get; private set; }
-        /// <summary>
-        /// The wait time.
-        /// </summary>
         public uint WaitTime { get; private set; }
-        /// <summary>
-        /// The number of context switches.
-        /// </summary>
         public uint ContextSwitches { get; private set; }
+
         /// <summary>
         /// This member is reserved for future use.
         /// </summary>
