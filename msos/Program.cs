@@ -58,6 +58,11 @@ namespace msos
                 _target = new AnalysisTarget(_options.DumpFile, _context, _options.ClrVersion);
                 Console.Title = "msos - " + _options.DumpFile;
             }
+            else if (!String.IsNullOrEmpty(_options.SummaryDumpFile))
+            {
+                DisplayShortSummary();
+                return; // Do not proceed to the main loop
+            }
             else if (!String.IsNullOrEmpty(_options.ProcessName))
             {
                 AttachToProcessByName();
@@ -81,12 +86,38 @@ namespace msos
             RunMainLoop();
         }
 
+        private static string[] GetFilesFromPattern(string dumpPattern)
+        {
+            string directory = Path.GetDirectoryName(dumpPattern);
+            string pattern = Path.GetFileName(dumpPattern);
+            return Directory.GetFiles(directory, pattern, SearchOption.AllDirectories);
+        }
+
+        private void DisplayShortSummary()
+        {
+            // We are using the DbgEng dump reader here, because the CLRMD dump reader doesn't work
+            // well with mismatched architectures. For the sake of just getting basic information out
+            // there, the DbgEng reader is better.
+            string[] dumpFiles = GetFilesFromPattern(_options.SummaryDumpFile);
+            foreach (var dumpFile in dumpFiles)
+            {
+                using (var target = DataTarget.LoadCrashDump(dumpFile, CrashDumpReader.DbgEng))
+                {
+                    _context.WriteInfo("Summary for dump file {0}", dumpFile);
+                    _context.WriteLine("  Is minidump? {0}", target.IsMinidump);
+                    _context.WriteLine("  Target architecture: {0}", target.Architecture);
+                    _context.WriteLine("  {0} CLR versions in target", target.ClrVersions.Count);
+                    foreach (var clrInfo in target.ClrVersions)
+                        _context.WriteLine("    {0}", clrInfo.Version);
+                    _context.WriteLine();
+                }
+            }
+        }
+
         private void RunTriage()
         {
-            string directory = Path.GetDirectoryName(_options.TriagePattern);
-            string pattern = Path.GetFileName(_options.TriagePattern);
-            string[] dumpFiles = Directory.GetFiles(directory, pattern /* TODO: recursively enumerate? */);
-            _context.WriteInfo("Triage: enumerated {0} dump files in directory '{1}'", dumpFiles.Length, directory);
+            string[] dumpFiles = GetFilesFromPattern(_options.TriagePattern);
+            _context.WriteInfo("Triage: enumerated {0} dump files in directory '{1}'", dumpFiles.Length, Path.GetDirectoryName(_options.TriagePattern));
             Dictionary<string, TriageInformation> triages = new Dictionary<string, TriageInformation>();
             for (int i = 0; i < dumpFiles.Length; ++i)
             {
