@@ -296,6 +296,10 @@ namespace msos
             {
                 _context.WriteError("An unexpected error occurred.");
                 _context.WriteError("{0}: {1}", ex.GetType().Name, ex.Message);
+                if (_options.DisplayDiagnosticInformation)
+                {
+                    _context.WriteError("\n" + ex.StackTrace);
+                }
             }
         }
 
