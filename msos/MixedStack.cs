@@ -137,7 +137,7 @@ namespace msos
             }
         }
 
-        public UnifiedStackFrame(ClrStackFrame frame, SourceLocation sourceLocation)
+        public UnifiedStackFrame(ClrStackFrame frame, Microsoft.Diagnostics.RuntimeExt.SourceLocation sourceLocation)
         {
             if (frame.Kind == ClrStackFrameType.ManagedMethod)
                 Type = UnifiedStackFrameType.Managed;

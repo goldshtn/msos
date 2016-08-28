@@ -12,7 +12,7 @@ namespace msos
     {
         private HashSet<string> _failedToLoadSymbols = new HashSet<string>();
 
-        public SourceLocation GetFileAndLineNumberSafe(ClrStackFrame frame)
+        public Microsoft.Diagnostics.RuntimeExt.SourceLocation GetFileAndLineNumberSafe(ClrStackFrame frame)
         {
             if (frame.Method == null || frame.Method.Type == null || frame.Method.Type.Module == null)
                 return null;

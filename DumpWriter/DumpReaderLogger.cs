@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 
 namespace DumpWriter
 {
+#pragma warning disable 0612
     class DumpReaderLogger : IDataReader
     {
         const int PAGE_SIZE = 4096;
@@ -76,6 +77,14 @@ namespace DumpWriter
             get
             {
                 return _impl.IsHeapAvailable;
+            }
+        }
+
+        public bool CanReadAsync
+        {
+            get
+            {
+                return _impl.CanReadAsync;
             }
         }
 
@@ -149,6 +158,12 @@ namespace DumpWriter
             throw new NotImplementedException();
         }
 
+        public AsyncMemoryReadResult ReadMemoryAsync(ulong address, int bytesRequested)
+        {
+            return _impl.ReadMemoryAsync(address, bytesRequested);
+        }
+
         #endregion
     }
+#pragma warning restore
 }
