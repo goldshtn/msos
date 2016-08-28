@@ -73,6 +73,7 @@ namespace msos
         public string WindowsServicePack { get; private set; }
         public uint WindowsServicePackNumber { get; private set; }
         public string WindowsBuild { get; private set; }
+        public List<string> ClrVersions { get; } = new List<string>();
 
         public override bool Generate(CommandExecutionContext context)
         {
@@ -125,6 +126,11 @@ namespace msos
                     WindowsBuild = build.ToString();
                 }
             }
+            ClrVersions.AddRange(context.Runtime.DataTarget.ClrVersions.Select(v => v.Version.ToString()));
+
+            // TODO Recommend an upgrade in case old versions of the CLR are detected, especially if
+            //      there are some known serious issues with these versions.
+
             return true;
         }
     }
@@ -189,7 +195,19 @@ namespace msos
                 }
             }
 
+            if (Exception != null)
+                Recommendations.Add(new UnhandledExceptionOccurred { Exception = Exception });
+
             return true;
+        }
+
+        class UnhandledExceptionOccurred : IReportRecommendation
+        {
+            public ExceptionInfo Exception { get; set; }
+
+            public ReportRecommendationSeverity Severity => ReportRecommendationSeverity.Critical;
+
+            public string Description => "An unhandled exception occurred in the target process.";
         }
     }
 
@@ -324,8 +342,15 @@ namespace msos
             }
 
             RecommendFinalizerThreadHighCPU(context);
+            RecommendHighNumberOfThreads();
 
             return true;
+        }
+
+        private void RecommendHighNumberOfThreads()
+        {
+            if (Threads.Count > 200)
+                Recommendations.Add(new HighNumberOfThreads { Count = Threads.Count });
         }
 
         private void RecommendFinalizerThreadHighCPU(CommandExecutionContext context)
@@ -337,6 +362,18 @@ namespace msos
             double executionPercent = 100.0 * executionTimeIn100Ns / totalTimeIn100Ns;
             if (executionPercent > 5.0)
                 Recommendations.Add(new FinalizerThreadHighCPU { ExecutionPercent = executionPercent });
+        }
+
+        class HighNumberOfThreads : IReportRecommendation
+        {
+            public int Count { get; set; }
+
+            public ReportRecommendationSeverity Severity => ReportRecommendationSeverity.Warning;
+
+            public string Description =>
+                "The process has a relatively high number of threads. This can be an indicator of " +
+                "inefficient use of the thread pool and the TPL. Threads can also be responsible for " +
+                "high address space consumption -- each thread stack can consume up to 1MB of memory.";
         }
 
         class FinalizerThreadHighCPU : IReportRecommendation
@@ -419,8 +456,14 @@ namespace msos
             }
 
             RecommendFinalizerThreadBlocked(context);
+            RecommendDeadlockedThreads();
 
             return Threads.Any();
+        }
+
+        private void RecommendDeadlockedThreads()
+        {
+            // TODO If there's a deadlock, report it and indicate which threads are involved
         }
 
         private void RecommendFinalizerThreadBlocked(CommandExecutionContext context)
@@ -591,6 +634,9 @@ namespace msos
                 });
             }
             HeapFragmentationPercent = 100.0 * freeSpaceBySegment.Values.Sum(l => (long)l) / context.Heap.TotalHeapSize;
+
+            // TODO If total / LOH fragmentation is particularly bad, provide a recommendation and mention
+            //      the ability to compact the LOH in .NET 4.5.1+ (?)
 
             return true;
         }
