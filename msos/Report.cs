@@ -29,15 +29,40 @@ namespace msos
         public List<IReportComponent> Components { get; } = new List<IReportComponent>();
     }
 
+    enum ReportRecommendationSeverity
+    {
+        Critical,
+        Warning,
+        Informational
+    }
+
+    interface IReportRecommendation
+    {
+        string Description { get; }
+        ReportRecommendationSeverity Severity { get; }
+    }
+
     interface IReportComponent
     {
         string Title { get; }
         bool Generate(CommandExecutionContext context);
+        List<IReportRecommendation> Recommendations { get; }
     }
 
-    class DumpInformationComponent : IReportComponent
+    abstract class ReportComponent : IReportComponent
     {
-        public string Title { get; private set; }
+        public abstract string Title { get; }
+
+        public abstract bool Generate(CommandExecutionContext context);
+
+        public List<IReportRecommendation> Recommendations { get; } = new List<IReportRecommendation>();
+    }
+
+    class DumpInformationComponent : ReportComponent
+    {
+        private string _title;
+
+        public override string Title { get { return _title; } }
         public string DumpType { get; private set; }
         public string ExecutableName { get; private set; }
         public uint ProcessUpTimeInSeconds { get; private set; }
@@ -49,9 +74,9 @@ namespace msos
         public uint WindowsServicePackNumber { get; private set; }
         public string WindowsBuild { get; private set; }
 
-        public bool Generate(CommandExecutionContext context)
+        public override bool Generate(CommandExecutionContext context)
         {
-            Title = Path.GetFileName(context.DumpFile);
+            _title = Path.GetFileName(context.DumpFile);
             switch (context.TargetType)
             {
                 case TargetType.DumpFile:
@@ -104,17 +129,7 @@ namespace msos
         }
     }
 
-    class RecommendationsComponent : IReportComponent
-    {
-        public string Title => "Issues and next steps";
-
-        public bool Generate(CommandExecutionContext context)
-        {
-            return false;
-        }
-    }
-
-    class UnhandledExceptionComponent : IReportComponent
+    class UnhandledExceptionComponent : ReportComponent
     {
         public class ExceptionInfo
         {
@@ -124,14 +139,14 @@ namespace msos
             public ExceptionInfo InnerException { get; set; }
         }
 
-        public string Title => "The process encountered an unhandled exception";
+        public override string Title => "The process encountered an unhandled exception";
         public uint ExceptionCode { get; private set; }
         public ExceptionInfo Exception { get; private set; }
         public uint OSThreadId { get; private set; }
         public int ManagedThreadId { get; private set; }
         public string ThreadName { get; private set; }
 
-        public bool Generate(CommandExecutionContext context)
+        public override bool Generate(CommandExecutionContext context)
         {
             using (var target = context.CreateTemporaryDbgEngTarget())
             {
@@ -178,7 +193,7 @@ namespace msos
         }
     }
 
-    class LoadedModulesComponent : IReportComponent
+    class LoadedModulesComponent : ReportComponent
     {
         public class LoadedModule
         {
@@ -189,10 +204,10 @@ namespace msos
             public bool IsManaged { get; set; }
         }
 
-        public string Title { get { return "Loaded modules"; } }
+        public override string Title => "Loaded modules";
         public List<LoadedModule> Modules { get; } = new List<LoadedModule>();
 
-        public bool Generate(CommandExecutionContext context)
+        public override bool Generate(CommandExecutionContext context)
         {
             foreach (var module in context.Runtime.DataTarget.EnumerateModules())
             {
@@ -210,7 +225,7 @@ namespace msos
         }
     }
 
-    class ThreadStacksComponent : IReportComponent
+    class ThreadStacksComponent : ReportComponent
     {
         public class StackFrame
         {
@@ -269,13 +284,19 @@ namespace msos
             }
         }
 
-        public string Title => "Thread stacks";
+        public override string Title => "Thread stacks";
         public List<ThreadInfo> Threads { get; } = new List<ThreadInfo>();
 
-        public bool Generate(CommandExecutionContext context)
+        private const ulong SEC_TO_100NSEC = 10000000;
+        private uint _processUpTimeInSeconds;
+
+        public override bool Generate(CommandExecutionContext context)
         {
             using (var target = context.CreateTemporaryDbgEngTarget())
             {
+                IDebugSystemObjects3 sysObjects = (IDebugSystemObjects3)target.DebuggerInterface;
+                sysObjects.GetCurrentProcessUpTime(out _processUpTimeInSeconds);
+
                 var debugAdvanced = (IDebugAdvanced2)target.DebuggerInterface;
                 var stackTraces = new UnifiedStackTraces(target.DebuggerInterface, context);
                 foreach (var thread in stackTraces.Threads)
@@ -301,11 +322,49 @@ namespace msos
                     Threads.Add(threadInfo);
                 }
             }
+
+            RecommendFinalizerThreadHighCPU(context);
+
             return true;
+        }
+
+        private void RecommendFinalizerThreadHighCPU(CommandExecutionContext context)
+        {
+            var finalizerThread = context.Runtime.Threads.SingleOrDefault(t => t.IsFinalizer);
+            var info = Threads.SingleOrDefault(t => t.OSThreadId == finalizerThread.OSThreadId);
+            ulong executionTimeIn100Ns = info.KernelTime + info.UserTime;
+            ulong totalTimeIn100Ns = _processUpTimeInSeconds * SEC_TO_100NSEC;
+            double executionPercent = 100.0 * executionTimeIn100Ns / totalTimeIn100Ns;
+            if (executionPercent > 5.0)
+                Recommendations.Add(new FinalizerThreadHighCPU { ExecutionPercent = executionPercent });
+        }
+
+        class FinalizerThreadHighCPU : IReportRecommendation
+        {
+            public double ExecutionPercent { get; set; }
+
+            public ReportRecommendationSeverity Severity
+            {
+                get
+                {
+                    if (ExecutionPercent < 10.0)
+                        return ReportRecommendationSeverity.Informational;
+                    if (ExecutionPercent < 25.0)
+                        return ReportRecommendationSeverity.Warning;
+                    else
+                        return ReportRecommendationSeverity.Critical;
+                }
+            }
+
+            public string Description =>
+                "The finalizer thread has excessive CPU usage. This can be an indication that there " +
+                "are too many resources to dispose of, and the finalizer thread isn't able to keep up " +
+                "with the pace. Use the Dispose pattern to avoid putting pressure on the finalizer " +
+                "thread and dispose resources deterministically.";
         }
     }
 
-    class LocksAndWaitsComponent : IReportComponent
+    class LocksAndWaitsComponent : ReportComponent
     {
         public class LockInfo
         {
@@ -323,7 +382,7 @@ namespace msos
             public List<LockInfo> Locks { get; } = new List<LockInfo>();
         }
 
-        public string Title => "Locks and waits";
+        public override string Title => "Locks and waits";
         public List<ThreadInfo> Threads { get; } = new List<ThreadInfo>();
 
         private static ThreadInfo ThreadInfoFromThread(ClrThread thread)
@@ -335,7 +394,7 @@ namespace msos
             };
         }
 
-        public bool Generate(CommandExecutionContext context)
+        public override bool Generate(CommandExecutionContext context)
         {
             foreach (var thread in context.Runtime.Threads)
             {
@@ -343,6 +402,7 @@ namespace msos
                     continue;
 
                 var ti = ThreadInfoFromThread(thread);
+                // TODO Use new waits information from WaitChains.cs
                 foreach (var blockingObject in thread.BlockingObjects)
                 {
                     var li = new LockInfo
@@ -357,13 +417,40 @@ namespace msos
                 }
                 Threads.Add(ti);
             }
+
+            RecommendFinalizerThreadBlocked(context);
+
             return Threads.Any();
+        }
+
+        private void RecommendFinalizerThreadBlocked(CommandExecutionContext context)
+        {
+            var finalizerThread = context.Runtime.Threads.SingleOrDefault(t => t.IsFinalizer);
+            var threadWithLocks = Threads.SingleOrDefault(t => t.OSThreadId == finalizerThread?.OSThreadId);
+            if (threadWithLocks != null)
+                Recommendations.Add(new FinalizerThreadBlocked(threadWithLocks));
+        }
+
+        class FinalizerThreadBlocked : IReportRecommendation
+        {
+            public ReportRecommendationSeverity Severity => ReportRecommendationSeverity.Warning;
+
+            public string Description =>
+                "The finalizer thread is blocked. Long blocks in the finalizer thread may lead to " +
+                "memory leaks and unmanaged resources not being cleaned up in a timely manner.";
+
+            public int LockCount { get; private set; }
+
+            public FinalizerThreadBlocked(ThreadInfo info)
+            {
+                LockCount = info.Locks.Count;
+            }
         }
     }
 
-    class MemoryUsageComponent : IReportComponent
+    class MemoryUsageComponent : ReportComponent
     {
-        public string Title => "Memory usage";
+        public override string Title => "Memory usage";
         public ProcessorArchitecture Architecture =>
             Environment.Is64BitProcess ? ProcessorArchitecture.Amd64 : ProcessorArchitecture.X86;
         public ulong AddressSpaceSize { get; private set; }
@@ -384,7 +471,7 @@ namespace msos
         public ulong Win32HeapSize { get; private set; }
         public ulong ModulesSize { get; private set; }
 
-        public bool Generate(CommandExecutionContext context)
+        public override bool Generate(CommandExecutionContext context)
         {
             if (context.TargetType == TargetType.DumpFileNoHeap)
                 return false;
@@ -447,13 +534,13 @@ namespace msos
         }
     }
 
-    class TopMemoryConsumersComponent : IReportComponent
+    class TopMemoryConsumersComponent : ReportComponent
     {
-        public string Title => "Top .NET memory consumers";
+        public override string Title => "Top .NET memory consumers";
 
         public List<HeapTypeStatistics> TopConsumers { get; } = new List<HeapTypeStatistics>();
 
-        public bool Generate(CommandExecutionContext context)
+        public override bool Generate(CommandExecutionContext context)
         {
             if (context.TargetType == TargetType.DumpFileNoHeap)
                 return false;
@@ -466,7 +553,7 @@ namespace msos
         }
     }
 
-    class MemoryFragmentationComponent : IReportComponent
+    class MemoryFragmentationComponent : ReportComponent
     {
         public class SegmentInfo
         {
@@ -477,12 +564,12 @@ namespace msos
             public double FragmentationPercent { get; set; }
         }
 
-        public string Title => "Memory fragmentation";
+        public override string Title => "Memory fragmentation";
         public ulong LargeObjectHeapSize { get; private set; }
         public double HeapFragmentationPercent { get; private set; }
         public List<SegmentInfo> HeapSegments { get; } = new List<SegmentInfo>();
 
-        public bool Generate(CommandExecutionContext context)
+        public override bool Generate(CommandExecutionContext context)
         {
             if (context.TargetType == TargetType.DumpFileNoHeap)
                 return false;
@@ -509,9 +596,9 @@ namespace msos
         }
     }
 
-    class FinalizationComponent : IReportComponent
+    class FinalizationComponent : ReportComponent
     {
-        public string Title => "Finalization statistics";
+        public override string Title => "Finalization statistics";
 
         public List<HeapTypeStatistics> ObjectsWaitingForFinalization { get; } = new List<HeapTypeStatistics>();
         public List<HeapTypeStatistics> ObjectsWithFinalizers { get; } = new List<HeapTypeStatistics>();
@@ -520,13 +607,7 @@ namespace msos
 
         // The finalizer thread stack can be obtained from the threads stack report.
 
-        // Whether the finalizer thread is currently blocked can be obtained from the
-        // locks and waits report, including what it is blocked on.
-
-        // If there is very high CPU usage on this thread (obtained from the thread stacks component),
-        // display a warning that indicates the finalizer thread has been excessively busy.
-
-        public bool Generate(CommandExecutionContext context)
+        public override bool Generate(CommandExecutionContext context)
         {
             if (context.TargetType == TargetType.DumpFileNoHeap)
                 return false;
@@ -540,7 +621,56 @@ namespace msos
             ObjectsWithFinalizers.AddRange(context.Heap.GroupTypesInObjectSetAndSortBySize(
                 context.Heap.EnumerateFinalizableObjectAddresses()));
 
+            if (readyForFinalization.Count > 100)
+            {
+                Recommendations.Add(new FinalizationQueueTooBig
+                {
+                    Count = (ulong)readyForFinalization.Count,
+                    Size = MemoryBytesReachableFromFinalizationQueue
+                });
+            }
+            if (ObjectsWithFinalizers.Count > 10000)
+            {
+                Recommendations.Add(new TooManyFinalizableObjects { Count = (ulong)ObjectsWithFinalizers.Count });
+            }
+
             return true;
+        }
+
+        class FinalizationQueueTooBig : IReportRecommendation
+        {
+            public ulong Count { get; set; }
+            public ulong Size { get; set; }
+
+            public ReportRecommendationSeverity Severity
+            {
+                get
+                {
+                    if (Count < 1000 && Size < 1000000)
+                        return ReportRecommendationSeverity.Warning;
+                    else
+                        return ReportRecommendationSeverity.Critical;
+                }
+            }
+
+            public string Description =>
+                "There are too many objects waiting for finalization. This can be an indication " +
+                "that the finalizer thread can't keep up with the load, and can lead to memory leaks. " +
+                "Investigate the objects waiting for finalization and try to destroy them in a more " +
+                "deterministic fashion.";
+        }
+
+        class TooManyFinalizableObjects : IReportRecommendation
+        {
+            public ulong Count { get; set; }
+
+            public ReportRecommendationSeverity Severity => ReportRecommendationSeverity.Warning;
+
+            public string Description =>
+                "There are many objects with finalizers that have the potential for finalization. " +
+                "If these objects are properly Dispose()-d, they will not put additional pressure " +
+                "on the memory system, but if they are left to the finalizer thread, they can cause " +
+                "leaks and delays.";
         }
     }
 
@@ -557,6 +687,7 @@ namespace msos
 
             var components = from type in Assembly.GetExecutingAssembly().GetTypes()
                              where type.GetInterface(typeof(IReportComponent).FullName) != null
+                             where !type.IsAbstract
                              select (IReportComponent)Activator.CreateInstance(type);
 
             try
