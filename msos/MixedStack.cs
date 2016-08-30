@@ -452,12 +452,12 @@ namespace msos
             }
         }
 
-        public UnifiedBlockingObject(CRITICAL_SECTION section, ulong handle) : this(BlockingObjectOrigin.StackWalker)
+        public UnifiedBlockingObject(CRITICAL_SECTION section, ulong address) : this(BlockingObjectOrigin.StackWalker)
         {
             OwnerOSThreadIds.Add((uint)section.OwningThread);
             Reason = UnifiedBlockingReason.CriticalSection;
             Type = UnifiedBlockingType.CriticalSectionObject;
-            Handle = handle;
+            Handle = address;
         }
 
         public UnifiedBlockingObject(ulong handle, string objectName, string objectType) : this(BlockingObjectOrigin.StackWalker)

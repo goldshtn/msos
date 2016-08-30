@@ -407,9 +407,9 @@ namespace msos
         {
             public string Reason { get; set; }
             public ulong Object { get; set; }
-            public string ObjectType { get; set; }
-            public List<ThreadInfo> OwnerThreads { get; } = new List<ThreadInfo>();
-            public List<ThreadInfo> WaitingThreads { get; } = new List<ThreadInfo>();
+            public string ManagedObjectType { get; set; }
+            public string OSObjectName { get; set; }
+            public List<uint> OwnerThreadOSIds { get; } = new List<uint>();
         }
 
         public class ThreadInfo
@@ -417,6 +417,7 @@ namespace msos
             public uint OSThreadId { get; set; }
             public int ManagedThreadId { get; set; }
             public List<LockInfo> Locks { get; } = new List<LockInfo>();
+            [JsonIgnore] public Func<bool> IsRunningManagedCode { get; set; }
         }
 
         public override string Title => "Locks and waits";
@@ -433,30 +434,51 @@ namespace msos
 
         public override bool Generate(CommandExecutionContext context)
         {
-            foreach (var thread in context.Runtime.Threads)
+            using (var target = context.CreateTemporaryDbgEngTarget())
             {
-                if (thread.BlockingObjects.Count == 0)
-                    continue;
-
-                var ti = ThreadInfoFromThread(thread);
-                // TODO Use new waits information from WaitChains.cs
-                foreach (var blockingObject in thread.BlockingObjects)
+                var unifiedStackTraces = new UnifiedStackTraces(target.DebuggerInterface, context);
+                var blockingObjectsStrategy = new DumpFileBlockingObjectsStrategy(context.Runtime, unifiedStackTraces, target);
+                foreach (var thread in unifiedStackTraces.Threads)
                 {
-                    var li = new LockInfo
+                    // This function is created lazily because we don't need the managed
+                    // code state for each thread.
+                    Func<bool> checkManagedCodeStateForThisThread = () =>
+                            unifiedStackTraces.GetStackTrace(thread.EngineThreadId)
+                                              .Any(f => f.Type == UnifiedStackFrameType.Managed);
+                    var threadWithBlockingInfo = blockingObjectsStrategy.GetThreadWithBlockingObjects(thread);
+                    var threadInfo = new ThreadInfo
                     {
-                        Reason = blockingObject.Reason.ToString(),
-                        Object = blockingObject.Object,
-                        ObjectType = context.Heap.GetObjectType(blockingObject.Object)?.Name
+                        ManagedThreadId = threadWithBlockingInfo.ManagedThreadId,
+                        OSThreadId = threadWithBlockingInfo.OSThreadId,
+                        IsRunningManagedCode = checkManagedCodeStateForThisThread
                     };
-                    li.OwnerThreads.AddRange(blockingObject.Owners.Where(o => o != null).Select(ThreadInfoFromThread));
-                    li.WaitingThreads.AddRange(blockingObject.Waiters.Select(ThreadInfoFromThread));
-                    ti.Locks.Add(li);
-                }
-                Threads.Add(ti);
-            }
 
-            RecommendFinalizerThreadBlocked(context);
-            RecommendDeadlockedThreads();
+                    foreach (var blockingObject in threadWithBlockingInfo.BlockingObjects)
+                    {
+                        var lockInfo = new LockInfo
+                        {
+                            Reason = blockingObject.Reason.ToString()
+                        };
+                        if (blockingObject.Type == UnifiedBlockingType.ClrBlockingObject)
+                        {
+                            lockInfo.Object = blockingObject.ManagedObjectAddress;
+                            lockInfo.ManagedObjectType = context.Heap.GetObjectType(lockInfo.Object)?.Name;
+                        }
+                        else
+                        {
+                            lockInfo.Object = blockingObject.Handle;
+                            lockInfo.OSObjectName = blockingObject.KernelObjectName;
+                        }
+                        lockInfo.OwnerThreadOSIds.AddRange(blockingObject.OwnerOSThreadIds);
+                        threadInfo.Locks.Add(lockInfo);
+                    }
+
+                    Threads.Add(threadInfo);
+                }
+
+                RecommendFinalizerThreadBlocked(context);
+                RecommendDeadlockedThreads();
+            }
 
             return Threads.Any();
         }
@@ -470,13 +492,13 @@ namespace msos
 
             foreach (var @lock in thread.Locks)
             {
-                foreach (var owner in @lock.OwnerThreads)
+                foreach (var ownerThreadOSId in @lock.OwnerThreadOSIds)
                 {
-                    var ownerWithInfo = Threads.SingleOrDefault(t => t.OSThreadId == owner.OSThreadId);
-                    if (ownerWithInfo == null)
+                    var ownerThread = Threads.SingleOrDefault(t => t.OSThreadId == ownerThreadOSId);
+                    if (ownerThread == null)
                         continue;
 
-                    if (HasCycle(ownerWithInfo, visitedThreadIds))
+                    if (HasCycle(ownerThread, visitedThreadIds))
                         return true;
                 }
             }
@@ -505,7 +527,7 @@ namespace msos
         {
             var finalizerThread = context.Runtime.Threads.SingleOrDefault(t => t.IsFinalizer);
             var threadWithLocks = Threads.SingleOrDefault(t => t.OSThreadId == finalizerThread?.OSThreadId);
-            if (threadWithLocks != null)
+            if (threadWithLocks != null && threadWithLocks.Locks.Any() && threadWithLocks.IsRunningManagedCode())
                 Recommendations.Add(new FinalizerThreadBlocked(threadWithLocks));
         }
 
@@ -531,10 +553,12 @@ namespace msos
                 "memory leaks and unmanaged resources not being cleaned up in a timely manner.";
 
             public int LockCount { get; private set; }
+            public uint FinalizerThreadOSId { get; private set; }
 
             public FinalizerThreadBlocked(ThreadInfo info)
             {
                 LockCount = info.Locks.Count;
+                FinalizerThreadOSId = info.OSThreadId;
             }
         }
     }
