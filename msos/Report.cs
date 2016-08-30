@@ -128,10 +128,20 @@ namespace msos
             }
             ClrVersions.AddRange(context.Runtime.DataTarget.ClrVersions.Select(v => v.Version.ToString()));
 
-            // TODO Recommend an upgrade in case old versions of the CLR are detected, especially if
-            //      there are some known serious issues with these versions.
+            if (context.Runtime.DataTarget.ClrVersions.Any(v => v.Version.Minor == 2))
+                Recommendations.Add(new CLRV2Detected());
 
             return true;
+        }
+
+        class CLRV2Detected : IReportRecommendation
+        {
+            public ReportRecommendationSeverity Severity => ReportRecommendationSeverity.Informational;
+
+            public string Description =>
+                "CLR 2.0 was detected in this process. CLR 2.0 is an extremely old version " +
+                "of the CLR. Although it may still be supported by Microsoft, it is strongly " +
+                "advised to migrate to a newer version of the runtime if possible.";
         }
     }
 
