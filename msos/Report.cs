@@ -461,9 +461,44 @@ namespace msos
             return Threads.Any();
         }
 
+        private bool HasCycle(ThreadInfo thread, HashSet<uint> visitedThreadIds)
+        {
+            if (visitedThreadIds.Contains(thread.OSThreadId))
+                return true;
+
+            visitedThreadIds.Add(thread.OSThreadId);
+
+            foreach (var @lock in thread.Locks)
+            {
+                foreach (var owner in @lock.OwnerThreads)
+                {
+                    var ownerWithInfo = Threads.SingleOrDefault(t => t.OSThreadId == owner.OSThreadId);
+                    if (ownerWithInfo == null)
+                        continue;
+
+                    if (HasCycle(ownerWithInfo, visitedThreadIds))
+                        return true;
+                }
+            }
+
+            return false;
+        }
+
         private void RecommendDeadlockedThreads()
         {
-            // TODO If there's a deadlock, report it and indicate which threads are involved
+            var visitedThreadIds = new HashSet<uint>();
+            foreach (var thread in Threads)
+            {
+                // We don't want to repeat the same deadlock multiple times
+                // for the same threads that are involved. It doesn't matter
+                // which thread we start from, we will end up with the same
+                // deadlock "picture".
+                if (visitedThreadIds.Contains(thread.OSThreadId))
+                    continue;
+
+                if (HasCycle(thread, visitedThreadIds))
+                    Recommendations.Add(new DeadlockedThreads { StartingThreadOSId = thread.OSThreadId });
+            }
         }
 
         private void RecommendFinalizerThreadBlocked(CommandExecutionContext context)
@@ -472,6 +507,19 @@ namespace msos
             var threadWithLocks = Threads.SingleOrDefault(t => t.OSThreadId == finalizerThread?.OSThreadId);
             if (threadWithLocks != null)
                 Recommendations.Add(new FinalizerThreadBlocked(threadWithLocks));
+        }
+
+        class DeadlockedThreads : IReportRecommendation
+        {
+            public uint StartingThreadOSId { get; set; }
+
+            public ReportRecommendationSeverity Severity => ReportRecommendationSeverity.Critical;
+
+            public string Description =>
+                "There are threads involved in a deadlock. Deadlocked threads will never be " +
+                "able to run again, unless their wait operations time out. Break the deadlock " +
+                "by inspecting the specific wait operations, and making sure locks are always " +
+                "acquired in the same order.";
         }
 
         class FinalizerThreadBlocked : IReportRecommendation
