@@ -150,7 +150,6 @@ namespace msos
         public ExceptionInfo Exception { get; private set; }
         public uint OSThreadId { get; private set; }
         public int ManagedThreadId { get; private set; }
-        public string ThreadName { get; private set; }
 
         public override bool Generate(CommandExecutionContext context)
         {
@@ -170,12 +169,10 @@ namespace msos
 
                 OSThreadId = threadWithException.OSThreadId;
                 ManagedThreadId = threadWithException.ManagedThreadId;
-                ThreadName = threadWithException.SpecialDescription(); // TODO Get the actual name if possible
 
                 // Note that we might have an exception, but if it wasn't managed
                 // then the Thread.CurrentException field will be null. In that case,
                 // we report only the Win32 exception code.
-                // TODO We could try to translate to a human-readable exception string?
                 var exception = threadWithException.CurrentException;
                 if (exception == null)
                     return true;
@@ -259,6 +256,8 @@ namespace msos
             public uint EngineThreadId { get; set; }
             public uint OSThreadId { get; set; }
             public int ManagedThreadId { get; set; }
+            public string SpecialDescription { get; set; }
+            public string ThreadName { get; set; }
             public uint PriorityClass { get; set; }
             public uint Priority { get; set; }
             public ulong Affinity { get; set; }
@@ -308,8 +307,34 @@ namespace msos
         private const ulong SEC_TO_100NSEC = 10000000;
         private uint _processUpTimeInSeconds;
 
+        private Dictionary<int, string> GetManagedThreadNames(ClrHeap heap)
+        {
+            var result = new Dictionary<int, string>();
+            if (!heap.CanWalkHeap)
+                return result;
+
+            var threadObjects = from obj in heap.EnumerateObjectAddresses()
+                                let type = heap.GetObjectType(obj)
+                                where type != null && type.Name == "System.Threading.Thread"
+                                select obj;
+            var threadType = heap.GetTypeByName("System.Threading.Thread");
+            var nameField = threadType.GetFieldByName("m_Name");
+            var managedIdField = threadType.GetFieldByName("m_ManagedThreadId");
+
+            foreach (var threadObject in threadObjects)
+            {
+                string name = (string)nameField.GetValue(threadObject);
+                int id = (int)managedIdField.GetValue(threadObject);
+                result.Add(id, name);
+            }
+
+            return result;
+        }
+
         public override bool Generate(CommandExecutionContext context)
         {
+            var managedThreadNames = GetManagedThreadNames(context.Heap);
+
             using (var target = context.CreateTemporaryDbgEngTarget())
             {
                 IDebugSystemObjects3 sysObjects = (IDebugSystemObjects3)target.DebuggerInterface;
@@ -324,8 +349,14 @@ namespace msos
                     {
                         EngineThreadId = thread.EngineThreadId,
                         OSThreadId = thread.OSThreadId,
-                        ManagedThreadId = thread.ManagedThread?.ManagedThreadId ?? -1
+                        ManagedThreadId = thread.ManagedThread?.ManagedThreadId ?? -1,
+                        SpecialDescription = thread.ManagedThread?.SpecialDescription()
                     };
+
+                    string threadName;
+                    if (managedThreadNames.TryGetValue(threadInfo.ManagedThreadId, out threadName))
+                        threadInfo.ThreadName = threadName;
+
                     threadInfo.Fill(debugAdvanced);
                     foreach (var frame in stackTrace)
                     {
