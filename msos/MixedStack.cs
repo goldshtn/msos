@@ -260,26 +260,33 @@ namespace msos
 
         private List<UnifiedStackFrame> GetNativeStackTrace(uint engineThreadId, CONTEXT? context)
         {
-            ulong frameOffset = 0, stackOffset = 0, instructionOffset = 0;
-            if (context.HasValue)
-            {
-#if X86
-                frameOffset = context.Value.Ebp;
-                stackOffset = context.Value.Esp;
-                instructionOffset = context.Value.Eip;
-#elif X64
-                frameOffset = context.Value.Rbp;
-                stackOffset = context.Value.Rsp;
-                instructionOffset = context.Value.Rip;
-#endif
-            }
-
             Util.VerifyHr(((IDebugSystemObjects)_debugClient).SetCurrentThreadId(engineThreadId));
 
             DEBUG_STACK_FRAME[] stackFrames = new DEBUG_STACK_FRAME[200];
             uint framesFilled;
-            Util.VerifyHr(((IDebugControl)_debugClient).GetStackTrace(
-                frameOffset, stackOffset, instructionOffset, stackFrames, stackFrames.Length, out framesFilled));
+
+            if (context.HasValue)
+            {
+                int ctxSize = Marshal.SizeOf(context);
+                IntPtr ctxPtr = Marshal.AllocHGlobal(ctxSize);
+                IntPtr frameCtxsPtr = Marshal.AllocHGlobal(ctxSize * stackFrames.Length);
+                try
+                {
+                    Marshal.StructureToPtr(context, ctxPtr, false);
+                    Util.VerifyHr(((IDebugControl4)_debugClient).GetContextStackTrace(
+                        ctxPtr, (uint)ctxSize, stackFrames, stackFrames.Length, frameCtxsPtr, (uint)(stackFrames.Length * ctxSize), (uint)ctxSize, out framesFilled));
+                }
+                finally
+                {
+                    Marshal.FreeHGlobal(ctxPtr);
+                    Marshal.FreeHGlobal(frameCtxsPtr);
+                }
+            }
+            else
+            {
+                Util.VerifyHr(((IDebugControl)_debugClient).GetStackTrace(
+                    0, 0, 0, stackFrames, stackFrames.Length, out framesFilled));
+            }
 
             List<UnifiedStackFrame> stackTrace = new List<UnifiedStackFrame>();
             for (uint i = 0; i < framesFilled; ++i)
