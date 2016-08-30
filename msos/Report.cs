@@ -51,6 +51,8 @@ namespace msos
 
     abstract class ReportComponent : IReportComponent
     {
+        public string ComponentName => GetType().Name;
+
         public abstract string Title { get; }
 
         public abstract bool Generate(CommandExecutionContext context);
@@ -149,6 +151,7 @@ namespace msos
     {
         public class ExceptionInfo
         {
+            public uint ExceptionCode { get; set; }
             public string ExceptionType { get; set; }
             public string ExceptionMessage { get; set; }
             public List<string> StackFrames { get; set; }
@@ -156,7 +159,6 @@ namespace msos
         }
 
         public override string Title => "The process encountered an unhandled exception";
-        public uint ExceptionCode { get; private set; }
         public ExceptionInfo Exception { get; private set; }
         public uint OSThreadId { get; private set; }
         public int ManagedThreadId { get; private set; }
@@ -169,36 +171,49 @@ namespace msos
                 if (lastEvent == null)
                     return false;
 
-                var threadWithException = context.Runtime.Threads.SingleOrDefault(t => t.OSThreadId == lastEvent.OSThreadId);
+                var stackTraces = new UnifiedStackTraces(target.DebuggerInterface, context);
+                var threadWithException = stackTraces.Threads.SingleOrDefault(t => t.OSThreadId == lastEvent.OSThreadId);
                 if (threadWithException == null)
                     return false;
 
-                ExceptionCode = lastEvent.ExceptionRecord?.ExceptionCode ?? 0;
-                if (ExceptionCode == 0)
+                Exception = new ExceptionInfo
+                {
+                    ExceptionCode = lastEvent.ExceptionRecord?.ExceptionCode ?? 0
+                };
+                if (Exception.ExceptionCode== 0)
                     return false;
 
                 OSThreadId = threadWithException.OSThreadId;
-                ManagedThreadId = threadWithException.ManagedThreadId;
+                ManagedThreadId = threadWithException.ManagedThread?.ManagedThreadId ?? 0;
+
+                // Note that we want the thread's stack from the exception context,
+                // and not from wherever it is right now.
+                Exception.StackFrames = stackTraces.GetStackTraceFromContext(threadWithException.EngineThreadId, lastEvent.ExceptionContext)
+                                                   .Where(f => f.Type != UnifiedStackFrameType.Special)
+                                                   .Select(f => f.DisplayString)
+                                                   .ToList();
 
                 // Note that we might have an exception, but if it wasn't managed
-                // then the Thread.CurrentException field will be null. In that case,
-                // we report only the Win32 exception code.
-                var exception = threadWithException.CurrentException;
+                // then the Thread.CurrentException field will be null.
+                var exception = threadWithException.ManagedThread?.CurrentException;
                 if (exception == null)
                     return true;
 
-                var exceptionInfo = Exception = new ExceptionInfo();
-                while (true)
+                Exception.ExceptionType = exception.Type.Name;
+                Exception.ExceptionMessage = exception.Message;
+
+                exception = exception.Inner;
+                var exceptionInfo = Exception;
+                while (exception != null)
                 {
+                    exceptionInfo.InnerException = new ExceptionInfo();
+                    exceptionInfo = exceptionInfo.InnerException;
+
                     exceptionInfo.ExceptionType = exception.Type.Name;
                     exceptionInfo.ExceptionMessage = exception.Message;
                     exceptionInfo.StackFrames = exception.StackTrace.Select(f => f.DisplayString).ToList();
 
                     exception = exception.Inner;
-                    if (exception == null)
-                        break;
-                    exceptionInfo.InnerException = new ExceptionInfo();
-                    exceptionInfo = exceptionInfo.InnerException;
                 }
             }
 
@@ -876,6 +891,8 @@ namespace msos
                              where !type.IsAbstract
                              select (IReportComponent)Activator.CreateInstance(type);
 
+            // TODO Use a single DbgEng DataTarget for all components that need it instead
+            //      of initializing and destroying it multiple times.
             try
             {
                 foreach (var component in components)

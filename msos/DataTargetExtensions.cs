@@ -17,6 +17,7 @@ namespace msos
         public string EventDescription { get; set; }
         public DEBUG_EVENT EventType { get; set; }
         public EXCEPTION_RECORD64? ExceptionRecord { get; set; }
+        public CONTEXT? ExceptionContext { get; set; }
     }
 
     static class DataTargetExtensions
@@ -29,10 +30,10 @@ namespace msos
             StringBuilder description = new StringBuilder(2048);
             uint unused;
             uint descriptionSize;
-            if (0 != control.GetLastEventInformation(
+            if (HR.Failed(control.GetLastEventInformation(
                 out eventType, out procId, out threadId,
                 IntPtr.Zero, 0, out unused,
-                description, description.Capacity, out descriptionSize))
+                description, description.Capacity, out descriptionSize)))
             {
                 return null;
             }
@@ -49,12 +50,37 @@ namespace msos
             int outSize;
             byte[] buffer = new byte[Marshal.SizeOf(typeof(EXCEPTION_RECORD64))];
             int hr = debugAdvanced.Request(DEBUG_REQUEST.TARGET_EXCEPTION_RECORD, null, 0, buffer, buffer.Length, out outSize);
-            if (hr == 0)
+            if (HR.Succeeded(hr))
             {
                 GCHandle gch = GCHandle.Alloc(buffer, GCHandleType.Pinned);
                 try
                 {
                     eventInformation.ExceptionRecord = (EXCEPTION_RECORD64)Marshal.PtrToStructure(gch.AddrOfPinnedObject(), typeof(EXCEPTION_RECORD64));
+                }
+                finally
+                {
+                    gch.Free();
+                }
+            }
+
+            buffer = new byte[Marshal.SizeOf(typeof(uint))];
+            hr = debugAdvanced.Request(DEBUG_REQUEST.TARGET_EXCEPTION_THREAD, null, 0, buffer, buffer.Length, out outSize);
+            if (HR.Succeeded(hr))
+            {
+                // If there is a stored exception event with a thread id, use that instead
+                // of what GetLastEventInformation returns, because it might be different.
+                eventInformation.OSThreadId = (int)BitConverter.ToUInt32(buffer, 0);
+            }
+
+            buffer = new byte[Marshal.SizeOf(typeof(CONTEXT))];
+            hr = debugAdvanced.Request(DEBUG_REQUEST.TARGET_EXCEPTION_CONTEXT, null, 0, buffer, buffer.Length, out outSize);
+            if (HR.Succeeded(hr))
+            {
+                var gch = GCHandle.Alloc(buffer, GCHandleType.Pinned);
+                try
+                {
+                    eventInformation.ExceptionContext = (CONTEXT)Marshal.PtrToStructure(
+                        gch.AddrOfPinnedObject(), typeof(CONTEXT));
                 }
                 finally
                 {

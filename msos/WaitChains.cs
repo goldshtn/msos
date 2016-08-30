@@ -244,7 +244,14 @@ namespace msos
         {
             if (_dataTarget != null)
             {
-                _handles = runtime.DataTarget.DataReader.EnumerateHandles().ToList();
+                try
+                {
+                    _handles = runtime.DataTarget.DataReader.EnumerateHandles().ToList();
+                }
+                catch (ClrDiagnosticsException)
+                {
+                    // The dump file probably doesn't contain the handle stream.
+                }
             }
         }
 

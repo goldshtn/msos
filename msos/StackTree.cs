@@ -43,7 +43,7 @@ namespace msos
                     var allStacks = from thread in tracer.Threads
                                 let frames = from frame in tracer.GetStackTrace(thread.Index)
                                              where frame.Type != UnifiedStackFrameType.Special
-                                             select String.Format("{0}!{1}", frame.Module, frame.Method)
+                                             select frame.DisplayString
                                 select new ThreadAndStack
                                 {
                                     ManagedThreadId = thread.IsManagedThread ? thread.ManagedThread.ManagedThreadId : 0,

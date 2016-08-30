@@ -86,6 +86,7 @@ namespace msos
 
         public int Output(DEBUG_OUTPUT mask, string text)
         {
+            // TODO There are redundant newlines if `text` doesn't end with a newline.
             switch (mask)
             {
                 case DEBUG_OUTPUT.ERROR:
