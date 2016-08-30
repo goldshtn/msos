@@ -610,6 +610,7 @@ namespace msos
         public override string Title => "Memory fragmentation";
         public ulong LargeObjectHeapSize { get; private set; }
         public double HeapFragmentationPercent { get; private set; }
+        public double LargeObjectHeapFragmentationPercent { get; private set; }
         public List<SegmentInfo> HeapSegments { get; } = new List<SegmentInfo>();
 
         public override bool Generate(CommandExecutionContext context)
@@ -634,11 +635,36 @@ namespace msos
                 });
             }
             HeapFragmentationPercent = 100.0 * freeSpaceBySegment.Values.Sum(l => (long)l) / context.Heap.TotalHeapSize;
+            LargeObjectHeapFragmentationPercent = 100.0 * freeSpaceBySegment.Where(s => s.Key.IsLarge).Sum(l => (long)l.Value) / context.Heap.GetSizeByGen(3);
 
-            // TODO If total / LOH fragmentation is particularly bad, provide a recommendation and mention
-            //      the ability to compact the LOH in .NET 4.5.1+ (?)
+            if (LargeObjectHeapFragmentationPercent > 20.0)
+                Recommendations.Add(new LargeObjectHeapFragmented { FragmentationPercent = LargeObjectHeapFragmentationPercent });
 
             return true;
+        }
+
+        class LargeObjectHeapFragmented : IReportRecommendation
+        {
+            public double FragmentationPercent { get; set; }
+
+            public ReportRecommendationSeverity Severity
+            {
+                get
+                {
+                    if (FragmentationPercent < 30.0)
+                        return ReportRecommendationSeverity.Warning;
+                    else
+                        return ReportRecommendationSeverity.Critical;
+                }
+            }
+
+            public string Description =>
+                "The large object heap is extremely fragmented. This can lead to out-of-memory " +
+                "conditions, even though there is free space in the heap. In .NET 4.5.1, you " +
+                "can compact the LOH on demand by using the GCSettings.LargeObjectHeapCompactionMode " +
+                "property. Compacting the LOH occasionally is recommended if you experience " +
+                "severe fragmentation. Alternatively, try to avoid allocating large, temporary " +
+                "objects by using pooling and buffering.";
         }
     }
 
