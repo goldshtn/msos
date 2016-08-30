@@ -675,9 +675,10 @@ namespace msos
                     Size = MemoryBytesReachableFromFinalizationQueue
                 });
             }
-            if (ObjectsWithFinalizers.Count > 10000)
+            var numberOfObjectsWithFinalizers = ObjectsWithFinalizers.Sum(group => (long)group.Size);
+            if (numberOfObjectsWithFinalizers > 10000)
             {
-                Recommendations.Add(new TooManyFinalizableObjects { Count = (ulong)ObjectsWithFinalizers.Count });
+                Recommendations.Add(new TooManyFinalizableObjects { Count = (ulong)numberOfObjectsWithFinalizers });
             }
 
             return true;
