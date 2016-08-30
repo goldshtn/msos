@@ -243,24 +243,36 @@ namespace msos
         public uint NumThreads { get { return _numThreads; } }
         public List<ThreadInformation> Threads { get; } = new List<ThreadInformation>();
 
-        private ThreadInformation GetThreadInfo(uint threadIndex)
+        private ThreadInformation GetThreadInfo(uint? threadIndex)
         {
-            uint[] engineThreadIds = new uint[1];
-            uint[] osThreadIds = new uint[1];
-            Util.VerifyHr(((IDebugSystemObjects)_debugClient).GetThreadIdsByIndex(threadIndex, 1, engineThreadIds, osThreadIds));
-            ClrThread managedThread = _runtime.Threads.FirstOrDefault(thread => thread.OSThreadId == osThreadIds[0]);
+            uint engineThreadId, osThreadId;
+            if (threadIndex.HasValue)
+            {
+                uint[] engineThreadIds = new uint[1];
+                uint[] osThreadIds = new uint[1];
+                Util.VerifyHr(((IDebugSystemObjects)_debugClient).GetThreadIdsByIndex(threadIndex.Value, 1, engineThreadIds, osThreadIds));
+                engineThreadId = engineThreadIds[0];
+                osThreadId = osThreadIds[0];
+            }
+            else
+            {
+                Util.VerifyHr(((IDebugSystemObjects)_debugClient).GetCurrentThreadId(out engineThreadId));
+                Util.VerifyHr(((IDebugSystemObjects)_debugClient).GetCurrentThreadSystemId(out osThreadId));
+            }
+            ClrThread managedThread = _runtime.Threads.FirstOrDefault(thread => thread.OSThreadId == osThreadId);
             return new ThreadInformation
             {
-                Index = threadIndex,
-                EngineThreadId = engineThreadIds[0],
-                OSThreadId = osThreadIds[0],
+                Index = threadIndex ?? uint.MaxValue,
+                EngineThreadId = engineThreadId,
+                OSThreadId = osThreadId,
                 ManagedThread = managedThread
             };
         }
 
-        private List<UnifiedStackFrame> GetNativeStackTrace(uint engineThreadId, CONTEXT? context)
+        private List<UnifiedStackFrame> GetNativeStackTrace(uint? engineThreadId, CONTEXT? context)
         {
-            Util.VerifyHr(((IDebugSystemObjects)_debugClient).SetCurrentThreadId(engineThreadId));
+            if (engineThreadId.HasValue)
+                Util.VerifyHr(((IDebugSystemObjects)_debugClient).SetCurrentThreadId(engineThreadId.Value));
 
             DEBUG_STACK_FRAME[] stackFrames = new DEBUG_STACK_FRAME[200];
             uint framesFilled;
@@ -309,11 +321,18 @@ namespace msos
             return GetStackTraceFromContext(threadIndex, null);
         }
 
-        public List<UnifiedStackFrame> GetStackTraceFromContext(uint threadIndex, CONTEXT? context)
+        public List<UnifiedStackFrame> GetStackTraceFromStoredEvent()
+        {
+            Util.VerifyHr(((IDebugSymbols3)_debugClient).SetScopeFromStoredEvent());
+            return GetStackTraceFromContext(null, null);
+        }
+
+        public List<UnifiedStackFrame> GetStackTraceFromContext(uint? threadIndex, CONTEXT? context)
         {
             ThreadInformation threadInfo = GetThreadInfo(threadIndex);
             List<UnifiedStackFrame> unifiedStackTrace = new List<UnifiedStackFrame>();
-            List<UnifiedStackFrame> nativeStackTrace = GetNativeStackTrace(threadInfo.EngineThreadId, context);
+            List<UnifiedStackFrame> nativeStackTrace = GetNativeStackTrace(
+                threadIndex.HasValue ? (uint?)threadInfo.EngineThreadId : null, context);
 
             if (threadInfo.IsManagedThread)
             {

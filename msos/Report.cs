@@ -188,7 +188,7 @@ namespace msos
 
                 // Note that we want the thread's stack from the exception context,
                 // and not from wherever it is right now.
-                Exception.StackFrames = stackTraces.GetStackTraceFromContext(threadWithException.EngineThreadId, lastEvent.ExceptionContext)
+                Exception.StackFrames = stackTraces.GetStackTraceFromStoredEvent()
                                                    .Where(f => f.Type != UnifiedStackFrameType.Special)
                                                    .Select(f => f.DisplayString)
                                                    .ToList();
