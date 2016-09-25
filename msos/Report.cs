@@ -92,42 +92,41 @@ namespace msos
                     DumpType = "Unsupported dump file type";
                     break;
             }
-            using (var target = context.CreateTemporaryDbgEngTarget())
+            var target = context.NativeDbgEngTarget;
+            IDebugSystemObjects2 sysObjects = (IDebugSystemObjects2)target.DebuggerInterface;
+            IDebugControl2 control = (IDebugControl2)target.DebuggerInterface;
+
+            uint dummy;
+            StringBuilder exeName = new StringBuilder(2048);
+            if (HR.Succeeded(sysObjects.GetCurrentProcessExecutableName(exeName, exeName.Capacity, out dummy)))
+                ExecutableName = exeName.ToString();
+
+            uint uptime;
+            if (HR.Succeeded(sysObjects.GetCurrentProcessUpTime(out uptime)))
+                ProcessUpTimeInSeconds = uptime;
+
+            if (HR.Succeeded(control.GetCurrentSystemUpTime(out uptime)))
+                SystemUpTimeInSeconds = uptime;
+
+            uint time;
+            if (HR.Succeeded(control.GetCurrentTimeDate(out time)))
+                SessionTime = DateTimeOffset.FromUnixTimeSeconds(time);
+
+            uint num;
+            if (HR.Succeeded(control.GetNumberProcessors(out num)))
+                NumberOfProcessors = num;
+
+            uint platformId, major, minor, servicePackNumber;
+            StringBuilder servicePack = new StringBuilder(1048);
+            StringBuilder build = new StringBuilder(1048);
+            if (HR.Succeeded(control.GetSystemVersion(out platformId, out major, out minor, servicePack, servicePack.Capacity, out dummy, out servicePackNumber, build, build.Capacity, out dummy)))
             {
-                IDebugSystemObjects2 sysObjects = (IDebugSystemObjects2)target.DebuggerInterface;
-                IDebugControl2 control = (IDebugControl2)target.DebuggerInterface;
-
-                uint dummy;
-                StringBuilder exeName = new StringBuilder(2048);
-                if (HR.Succeeded(sysObjects.GetCurrentProcessExecutableName(exeName, exeName.Capacity, out dummy)))
-                    ExecutableName = exeName.ToString();
-
-                uint uptime;
-                if (HR.Succeeded(sysObjects.GetCurrentProcessUpTime(out uptime)))
-                    ProcessUpTimeInSeconds = uptime;
-
-                if (HR.Succeeded(control.GetCurrentSystemUpTime(out uptime)))
-                    SystemUpTimeInSeconds = uptime;
-
-                uint time;
-                if (HR.Succeeded(control.GetCurrentTimeDate(out time)))
-                    SessionTime = DateTimeOffset.FromUnixTimeSeconds(time);
-
-                uint num;
-                if (HR.Succeeded(control.GetNumberProcessors(out num)))
-                    NumberOfProcessors = num;
-
-                uint platformId, major, minor, servicePackNumber;
-                StringBuilder servicePack = new StringBuilder(1048);
-                StringBuilder build = new StringBuilder(1048);
-                if (HR.Succeeded(control.GetSystemVersion(out platformId, out major, out minor, servicePack, servicePack.Capacity, out dummy, out servicePackNumber, build, build.Capacity, out dummy)))
-                {
-                    WindowsBuildNumber = minor;
-                    WindowsServicePack = servicePack.ToString();
-                    WindowsServicePackNumber = servicePackNumber;
-                    WindowsBuild = build.ToString();
-                }
+                WindowsBuildNumber = minor;
+                WindowsServicePack = servicePack.ToString();
+                WindowsServicePackNumber = servicePackNumber;
+                WindowsBuild = build.ToString();
             }
+
             ClrVersions.AddRange(context.Runtime.DataTarget.ClrVersions.Select(v => v.Version.ToString()));
 
             if (context.Runtime.DataTarget.ClrVersions.Any(v => v.Version.Minor == 2))
@@ -165,56 +164,54 @@ namespace msos
 
         public override bool Generate(CommandExecutionContext context)
         {
-            using (var target = context.CreateTemporaryDbgEngTarget())
+            var target = context.NativeDbgEngTarget;
+            var lastEvent = target.GetLastEventInformation();
+            if (lastEvent == null)
+                return false;
+
+            var stackTraces = new UnifiedStackTraces(target.DebuggerInterface, context);
+            var threadWithException = stackTraces.Threads.SingleOrDefault(t => t.OSThreadId == lastEvent.OSThreadId);
+            if (threadWithException == null)
+                return false;
+
+            Exception = new ExceptionInfo
             {
-                var lastEvent = target.GetLastEventInformation();
-                if (lastEvent == null)
-                    return false;
+                ExceptionCode = lastEvent.ExceptionRecord?.ExceptionCode ?? 0
+            };
+            if (Exception.ExceptionCode== 0)
+                return false;
 
-                var stackTraces = new UnifiedStackTraces(target.DebuggerInterface, context);
-                var threadWithException = stackTraces.Threads.SingleOrDefault(t => t.OSThreadId == lastEvent.OSThreadId);
-                if (threadWithException == null)
-                    return false;
+            OSThreadId = threadWithException.OSThreadId;
+            ManagedThreadId = threadWithException.ManagedThread?.ManagedThreadId ?? 0;
 
-                Exception = new ExceptionInfo
-                {
-                    ExceptionCode = lastEvent.ExceptionRecord?.ExceptionCode ?? 0
-                };
-                if (Exception.ExceptionCode== 0)
-                    return false;
+            // Note that we want the thread's stack from the exception context,
+            // and not from wherever it is right now.
+            Exception.StackFrames = stackTraces.GetStackTraceFromStoredEvent()
+                                                .Where(f => f.Type != UnifiedStackFrameType.Special)
+                                                .Select(f => f.DisplayString)
+                                                .ToList();
 
-                OSThreadId = threadWithException.OSThreadId;
-                ManagedThreadId = threadWithException.ManagedThread?.ManagedThreadId ?? 0;
+            // Note that we might have an exception, but if it wasn't managed
+            // then the Thread.CurrentException field will be null.
+            var exception = threadWithException.ManagedThread?.CurrentException;
+            if (exception == null)
+                return true;
 
-                // Note that we want the thread's stack from the exception context,
-                // and not from wherever it is right now.
-                Exception.StackFrames = stackTraces.GetStackTraceFromStoredEvent()
-                                                   .Where(f => f.Type != UnifiedStackFrameType.Special)
-                                                   .Select(f => f.DisplayString)
-                                                   .ToList();
+            Exception.ExceptionType = exception.Type.Name;
+            Exception.ExceptionMessage = exception.Message;
 
-                // Note that we might have an exception, but if it wasn't managed
-                // then the Thread.CurrentException field will be null.
-                var exception = threadWithException.ManagedThread?.CurrentException;
-                if (exception == null)
-                    return true;
+            exception = exception.Inner;
+            var exceptionInfo = Exception;
+            while (exception != null)
+            {
+                exceptionInfo.InnerException = new ExceptionInfo();
+                exceptionInfo = exceptionInfo.InnerException;
 
-                Exception.ExceptionType = exception.Type.Name;
-                Exception.ExceptionMessage = exception.Message;
+                exceptionInfo.ExceptionType = exception.Type.Name;
+                exceptionInfo.ExceptionMessage = exception.Message;
+                exceptionInfo.StackFrames = exception.StackTrace.Select(f => f.DisplayString).ToList();
 
                 exception = exception.Inner;
-                var exceptionInfo = Exception;
-                while (exception != null)
-                {
-                    exceptionInfo.InnerException = new ExceptionInfo();
-                    exceptionInfo = exceptionInfo.InnerException;
-
-                    exceptionInfo.ExceptionType = exception.Type.Name;
-                    exceptionInfo.ExceptionMessage = exception.Message;
-                    exceptionInfo.StackFrames = exception.StackTrace.Select(f => f.DisplayString).ToList();
-
-                    exception = exception.Inner;
-                }
             }
 
             if (Exception != null)
@@ -360,41 +357,39 @@ namespace msos
         {
             var managedThreadNames = GetManagedThreadNames(context.Heap);
 
-            using (var target = context.CreateTemporaryDbgEngTarget())
+            var target = context.NativeDbgEngTarget;
+            IDebugSystemObjects3 sysObjects = (IDebugSystemObjects3)target.DebuggerInterface;
+            sysObjects.GetCurrentProcessUpTime(out _processUpTimeInSeconds);
+
+            var debugAdvanced = (IDebugAdvanced2)target.DebuggerInterface;
+            var stackTraces = new UnifiedStackTraces(target.DebuggerInterface, context);
+            foreach (var thread in stackTraces.Threads)
             {
-                IDebugSystemObjects3 sysObjects = (IDebugSystemObjects3)target.DebuggerInterface;
-                sysObjects.GetCurrentProcessUpTime(out _processUpTimeInSeconds);
-
-                var debugAdvanced = (IDebugAdvanced2)target.DebuggerInterface;
-                var stackTraces = new UnifiedStackTraces(target.DebuggerInterface, context);
-                foreach (var thread in stackTraces.Threads)
+                var stackTrace = stackTraces.GetStackTrace(thread.Index);
+                var threadInfo = new ThreadInfo
                 {
-                    var stackTrace = stackTraces.GetStackTrace(thread.Index);
-                    var threadInfo = new ThreadInfo
-                    {
-                        EngineThreadId = thread.EngineThreadId,
-                        OSThreadId = thread.OSThreadId,
-                        ManagedThreadId = thread.ManagedThread?.ManagedThreadId ?? -1,
-                        SpecialDescription = thread.ManagedThread?.SpecialDescription()
-                    };
+                    EngineThreadId = thread.EngineThreadId,
+                    OSThreadId = thread.OSThreadId,
+                    ManagedThreadId = thread.ManagedThread?.ManagedThreadId ?? -1,
+                    SpecialDescription = thread.ManagedThread?.SpecialDescription()
+                };
 
-                    string threadName;
-                    if (managedThreadNames.TryGetValue(threadInfo.ManagedThreadId, out threadName))
-                        threadInfo.ThreadName = threadName;
+                string threadName;
+                if (managedThreadNames.TryGetValue(threadInfo.ManagedThreadId, out threadName))
+                    threadInfo.ThreadName = threadName;
 
-                    threadInfo.Fill(debugAdvanced);
-                    foreach (var frame in stackTrace)
+                threadInfo.Fill(debugAdvanced);
+                foreach (var frame in stackTrace)
+                {
+                    threadInfo.StackFrames.Add(new StackFrame
                     {
-                        threadInfo.StackFrames.Add(new StackFrame
-                        {
-                            Module = frame.Module,
-                            Method = frame.Method,
-                            SourceFileName = frame.SourceFileName,
-                            SourceLineNumber = frame.SourceLineNumber
-                        });
-                    }
-                    Threads.Add(threadInfo);
+                        Module = frame.Module,
+                        Method = frame.Method,
+                        SourceFileName = frame.SourceFileName,
+                        SourceLineNumber = frame.SourceLineNumber
+                    });
                 }
+                Threads.Add(threadInfo);
             }
 
             RecommendFinalizerThreadHighCPU(context);
@@ -490,47 +485,45 @@ namespace msos
 
         public override bool Generate(CommandExecutionContext context)
         {
-            using (var target = context.CreateTemporaryDbgEngTarget())
+            var target = context.NativeDbgEngTarget;
+            var unifiedStackTraces = new UnifiedStackTraces(target.DebuggerInterface, context);
+            var blockingObjectsStrategy = new DumpFileBlockingObjectsStrategy(context.Runtime, unifiedStackTraces, target);
+            foreach (var thread in unifiedStackTraces.Threads)
             {
-                var unifiedStackTraces = new UnifiedStackTraces(target.DebuggerInterface, context);
-                var blockingObjectsStrategy = new DumpFileBlockingObjectsStrategy(context.Runtime, unifiedStackTraces, target);
-                foreach (var thread in unifiedStackTraces.Threads)
+                // This function is created lazily because we don't need the managed
+                // code state for each thread.
+                Func<bool> checkManagedCodeStateForThisThread = () =>
+                        unifiedStackTraces.GetStackTrace(thread.EngineThreadId)
+                                            .Any(f => f.Type == UnifiedStackFrameType.Managed);
+                var threadWithBlockingInfo = blockingObjectsStrategy.GetThreadWithBlockingObjects(thread);
+                var threadInfo = new ThreadInfo
                 {
-                    // This function is created lazily because we don't need the managed
-                    // code state for each thread.
-                    Func<bool> checkManagedCodeStateForThisThread = () =>
-                            unifiedStackTraces.GetStackTrace(thread.EngineThreadId)
-                                              .Any(f => f.Type == UnifiedStackFrameType.Managed);
-                    var threadWithBlockingInfo = blockingObjectsStrategy.GetThreadWithBlockingObjects(thread);
-                    var threadInfo = new ThreadInfo
+                    ManagedThreadId = threadWithBlockingInfo.ManagedThreadId,
+                    OSThreadId = threadWithBlockingInfo.OSThreadId,
+                    IsRunningManagedCode = checkManagedCodeStateForThisThread
+                };
+
+                foreach (var blockingObject in threadWithBlockingInfo.BlockingObjects)
+                {
+                    var lockInfo = new LockInfo
                     {
-                        ManagedThreadId = threadWithBlockingInfo.ManagedThreadId,
-                        OSThreadId = threadWithBlockingInfo.OSThreadId,
-                        IsRunningManagedCode = checkManagedCodeStateForThisThread
+                        Reason = blockingObject.Reason.ToString()
                     };
-
-                    foreach (var blockingObject in threadWithBlockingInfo.BlockingObjects)
+                    if (blockingObject.Type == UnifiedBlockingType.ClrBlockingObject)
                     {
-                        var lockInfo = new LockInfo
-                        {
-                            Reason = blockingObject.Reason.ToString()
-                        };
-                        if (blockingObject.Type == UnifiedBlockingType.ClrBlockingObject)
-                        {
-                            lockInfo.Object = blockingObject.ManagedObjectAddress;
-                            lockInfo.ManagedObjectType = context.Heap.GetObjectType(lockInfo.Object)?.Name;
-                        }
-                        else
-                        {
-                            lockInfo.Object = blockingObject.Handle;
-                            lockInfo.OSObjectName = blockingObject.KernelObjectName;
-                        }
-                        lockInfo.OwnerThreadOSIds.AddRange(blockingObject.OwnerOSThreadIds);
-                        threadInfo.Locks.Add(lockInfo);
+                        lockInfo.Object = blockingObject.ManagedObjectAddress;
+                        lockInfo.ManagedObjectType = context.Heap.GetObjectType(lockInfo.Object)?.Name;
                     }
-
-                    Threads.Add(threadInfo);
+                    else
+                    {
+                        lockInfo.Object = blockingObject.Handle;
+                        lockInfo.OSObjectName = blockingObject.KernelObjectName;
+                    }
+                    lockInfo.OwnerThreadOSIds.AddRange(blockingObject.OwnerOSThreadIds);
+                    threadInfo.Locks.Add(lockInfo);
                 }
+
+                Threads.Add(threadInfo);
 
                 RecommendFinalizerThreadBlocked(context);
                 RecommendDeadlockedThreads();
@@ -647,34 +640,32 @@ namespace msos
             if (context.TargetType == TargetType.DumpFileNoHeap)
                 return false;
 
-            using (var target = context.CreateTemporaryDbgEngTarget())
-            {
-                var vmRegions = target.EnumerateVMRegions().ToList();
-                AddressSpaceSize = vmRegions.Last().BaseAddress + vmRegions.Last().RegionSize;
-                VirtualSize = (ulong)vmRegions
-                    .Where(r => (r.State & Microsoft.Diagnostics.Runtime.Interop.MEM.FREE) == 0)
-                    .Sum(r => (long)r.RegionSize);
-                FreeSize = AddressSpaceSize - VirtualSize;
-                LargestFreeBlockSize = vmRegions
-                    .Where(r => (r.State & Microsoft.Diagnostics.Runtime.Interop.MEM.FREE) != 0)
-                    .Max(r => r.RegionSize);
-                CommitSize = (ulong)vmRegions
-                    .Where(r => (r.State & Microsoft.Diagnostics.Runtime.Interop.MEM.COMMIT) != 0)
-                    .Sum(r => (long)r.RegionSize);
-                PrivateSize = (ulong)vmRegions
-                    .Where(r => (r.Type & Microsoft.Diagnostics.Runtime.Interop.MEM.PRIVATE) != 0)
-                    .Sum(r => (long)r.RegionSize);
-                ManagedHeapSize = context.Heap.TotalHeapSize;
-                ManagedHeapCommittedSize = (ulong)context.Heap.Segments.Sum(s => (long)(s.CommittedEnd - s.Start));
-                ManagedHeapReservedSize = (ulong)context.Heap.Segments.Sum(s => (long)(s.ReservedEnd - s.Start));
-                Generation0Size = context.Heap.GetSizeByGen(0);
-                Generation1Size = context.Heap.GetSizeByGen(1);
-                Generation2Size = context.Heap.GetSizeByGen(2);
-                LargeObjectHeapSize = context.Heap.GetSizeByGen(3);
-                StacksSize = GetStacksSize(target);
-                Win32HeapSize = GetWin32HeapSize(target);
-                ModulesSize = (ulong)target.EnumerateModules().Sum(m => m.FileSize);
-            }
+            var target = context.NativeDbgEngTarget;
+            var vmRegions = target.EnumerateVMRegions().ToList();
+            AddressSpaceSize = vmRegions.Last().BaseAddress + vmRegions.Last().RegionSize;
+            VirtualSize = (ulong)vmRegions
+                .Where(r => (r.State & Microsoft.Diagnostics.Runtime.Interop.MEM.FREE) == 0)
+                .Sum(r => (long)r.RegionSize);
+            FreeSize = AddressSpaceSize - VirtualSize;
+            LargestFreeBlockSize = vmRegions
+                .Where(r => (r.State & Microsoft.Diagnostics.Runtime.Interop.MEM.FREE) != 0)
+                .Max(r => r.RegionSize);
+            CommitSize = (ulong)vmRegions
+                .Where(r => (r.State & Microsoft.Diagnostics.Runtime.Interop.MEM.COMMIT) != 0)
+                .Sum(r => (long)r.RegionSize);
+            PrivateSize = (ulong)vmRegions
+                .Where(r => (r.Type & Microsoft.Diagnostics.Runtime.Interop.MEM.PRIVATE) != 0)
+                .Sum(r => (long)r.RegionSize);
+            ManagedHeapSize = context.Heap.TotalHeapSize;
+            ManagedHeapCommittedSize = (ulong)context.Heap.Segments.Sum(s => (long)(s.CommittedEnd - s.Start));
+            ManagedHeapReservedSize = (ulong)context.Heap.Segments.Sum(s => (long)(s.ReservedEnd - s.Start));
+            Generation0Size = context.Heap.GetSizeByGen(0);
+            Generation1Size = context.Heap.GetSizeByGen(1);
+            Generation2Size = context.Heap.GetSizeByGen(2);
+            LargeObjectHeapSize = context.Heap.GetSizeByGen(3);
+            StacksSize = GetStacksSize(target);
+            Win32HeapSize = GetWin32HeapSize(target);
+            ModulesSize = (ulong)target.EnumerateModules().Sum(m => m.FileSize);
 
             return true;
         }
@@ -891,8 +882,9 @@ namespace msos
                              where !type.IsAbstract
                              select (IReportComponent)Activator.CreateInstance(type);
 
-            // TODO Use a single DbgEng DataTarget for all components that need it instead
-            //      of initializing and destroying it multiple times.
+            // Many commands require a DbgEng target to be available, so it makes sense to
+            // initialize it early-on and use it across all components that need it.
+            context.EnterDbgEngNativeMode();
             try
             {
                 foreach (var component in components)
@@ -906,6 +898,7 @@ namespace msos
                 reportDocument.AnalysisResult = AnalysisResult.InternalError;
                 reportDocument.AnalysisError = ex.ToString();
             }
+            context.ExitDbgEngNativeMode();
 
             reportDocument.AnalysisEndTime = DateTime.Now;
 
