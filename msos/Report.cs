@@ -631,7 +631,7 @@ namespace msos
         public ulong Generation1Size { get; private set; }
         public ulong Generation2Size { get; private set; }
         public ulong LargeObjectHeapSize { get; private set; }
-        public ulong StacksSize { get; private set; }
+        public ulong StacksCommitSize { get; private set; }
         public ulong Win32HeapSize { get; private set; }
         public ulong ModulesSize { get; private set; }
 
@@ -663,7 +663,7 @@ namespace msos
             Generation1Size = context.Heap.GetSizeByGen(1);
             Generation2Size = context.Heap.GetSizeByGen(2);
             LargeObjectHeapSize = context.Heap.GetSizeByGen(3);
-            StacksSize = GetStacksSize(target);
+            StacksCommitSize = GetStacksSize(target);
             Win32HeapSize = GetWin32HeapSize(target);
             ModulesSize = (ulong)target.EnumerateModules().Sum(m => m.FileSize);
 
@@ -685,14 +685,50 @@ namespace msos
 
         private ulong GetStacksSize(DataTarget target)
         {
-            // TODO Find all the TEBs and then sum StackBase - StackLimit for all of them
-            //      This is just the committed size. To get the reserved size, need
-            //      to enumerate adjacent memory regions? Also, what of WoW64 threads, which
-            //      really have two thread stacks? Ignore the x64 stack because it doesn't
-            //      live in the 4GB address space anyway?
-            //      To find the TEB for all threads, use IDebugSystemObjects::GetCurrentThreadTeb()
-            //      for each of the threads (calling SetCurrentThreadId() every time).
-            return 0;
+            // Find all the TEBs and then sum StackBase - StackLimit for all of them.
+            // This gives us the committed size for each thread, but we don't have the
+            // reserved size (which is the actual address space consumed). Theoretically,
+            // we could get it from enumerating the memory region adjacent to the committed
+            // pages and the guard page that follows. Also, for WoW64 threads, we are only
+            // reporting the x86 stack (the x64 stack doesn't live in the 4GB address space
+            // anyway, so it's not that relevant).
+
+            IDebugSystemObjects sysObjects = (IDebugSystemObjects)target.DebuggerInterface;
+            uint numThreads;
+            HR.Verify(sysObjects.GetNumberThreads(out numThreads));
+
+            ulong totalCommit = 0;
+            for (uint i = 0; i < numThreads; ++i)
+            {
+                HR.Verify(sysObjects.SetCurrentThreadId(i));
+
+                ulong tebAddress;
+                HR.Verify(sysObjects.GetCurrentThreadTeb(out tebAddress));
+
+                int read;
+                byte[] teb = new byte[IntPtr.Size * 3]; // ExceptionList, StackBase, StackLimit
+                if (target.ReadProcessMemory(tebAddress, teb, teb.Length, out read) &&
+                    read == teb.Length)
+                {
+                    ulong stackBase = AddressFromBytes(teb, IntPtr.Size);
+                    ulong stackLimit = AddressFromBytes(teb, IntPtr.Size * 2);
+                    totalCommit = stackBase - stackLimit;
+                }
+            }
+
+            return totalCommit;
+        }
+
+        private static ulong AddressFromBytes(byte[] bytes, int offset)
+        {
+            if (IntPtr.Size == 4)
+            {
+                return BitConverter.ToUInt32(bytes, offset);
+            }
+            else
+            {
+                return BitConverter.ToUInt64(bytes, offset);
+            }
         }
     }
 
