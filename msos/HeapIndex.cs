@@ -42,7 +42,7 @@ namespace msos
             {
                 if (context.TargetType == TargetType.LiveProcess)
                 {
-                    context.WriteError(
+                    context.WriteErrorLine(
                         "Generating a persistent heap index for a live process is not recommended. " +
                         "Use the --nofile switch to generate an in-memory index instead.");
                     return;
@@ -56,7 +56,7 @@ namespace msos
             
             if (InMemoryOnly && !String.IsNullOrEmpty(HeapIndexFileName))
             {
-                context.WriteError("The --nofile and -f options are incompatible.");
+                context.WriteErrorLine("The --nofile and -f options are incompatible.");
                 return;
             }
 
@@ -90,7 +90,7 @@ namespace msos
             {
                 if (context.TargetType != TargetType.DumpFile)
                 {
-                    context.WriteError("You must specify the heap index's location.");
+                    context.WriteErrorLine("You must specify the heap index's location.");
                     return;
                 }
                 HeapIndexFileName = Path.ChangeExtension(context.DumpFile, ".heapindex");
@@ -99,7 +99,7 @@ namespace msos
 
             if (!File.Exists(HeapIndexFileName))
             {
-                context.WriteError("The heap index file '{0}' does not exist.", HeapIndexFileName);
+                context.WriteErrorLine("The heap index file '{0}' does not exist.", HeapIndexFileName);
                 return;
             }
 
@@ -138,7 +138,7 @@ namespace msos
         {
             if (chunkSize < 256 || chunkSize > 1048576 || chunkSize % 16 != 0)
             {
-                _context.WriteError("Chunk size must be between 256 bytes and 1MB, and must be a multiple of 16.");
+                _context.WriteErrorLine("Chunk size must be between 256 bytes and 1MB, and must be a multiple of 16.");
                 return false;
             }
 
@@ -173,7 +173,7 @@ namespace msos
             }
             else
             {
-                _context.WriteWarning("You did not specify a file name, so the index will be stored only in memory. " +
+                _context.WriteWarningLine("You did not specify a file name, so the index will be stored only in memory. " +
                     "If you plan to perform further analysis in another session, it is recommended that you store " +
                     "the index to disk and later load it using the !lhi command.");
             }
@@ -228,7 +228,7 @@ namespace msos
 
             if (!_staticRootsEnumerated)
             {
-                _context.WriteWarning("This heap index does not have detailed static root information. " +
+                _context.WriteWarningLine("This heap index does not have detailed static root information. " +
                     "As a result, you will not see the names of static variables referencing your objects, " +
                     "only their addresses. Recreate the index without the --fast switch to get full " +
                     "information. This may be slower.");

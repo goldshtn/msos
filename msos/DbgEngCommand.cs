@@ -61,7 +61,7 @@ namespace msos
             string sosLocation = context.Runtime.TryDownloadSos();
             if (sosLocation == null)
             {
-                context.WriteWarning(
+                context.WriteWarningLine(
                     "Unable to load SOS automatically from symbol server, " +
                     "try to find and .load it manually if needed.");
             }
@@ -89,14 +89,14 @@ namespace msos
             switch (mask)
             {
                 case DEBUG_OUTPUT.ERROR:
-                    _context.WriteError(text.TrimEnd('\n', '\r'));
+                    _context.WriteError(text);
                     break;
                 case DEBUG_OUTPUT.EXTENSION_WARNING:
                 case DEBUG_OUTPUT.WARNING:
-                    _context.WriteWarning(text.TrimEnd('\n', '\r'));
+                    _context.WriteWarning(text);
                     break;
                 case DEBUG_OUTPUT.SYMBOLS:
-                    _context.WriteInfo(text.TrimEnd('\n', '\r'));
+                    _context.WriteInfo(text);
                     break;
                 default:
                     _context.Write(text);

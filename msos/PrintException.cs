@@ -27,7 +27,7 @@ namespace msos
                 var type = heap.GetObjectType(ExceptionAddress);
                 if (type == null || !type.IsException)
                 {
-                    context.WriteError("The specified address is not the address of an Exception-derived object.");
+                    context.WriteErrorLine("The specified address is not the address of an Exception-derived object.");
                     return;
                 }
 
@@ -38,7 +38,7 @@ namespace msos
                 var thread = context.CurrentThread;
                 if (thread == null)
                 {
-                    context.WriteError("There is no current managed thread");
+                    context.WriteErrorLine("There is no current managed thread");
                     return;
                 }
                 if (thread.CurrentException == null)

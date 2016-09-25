@@ -7,6 +7,16 @@ using System.Threading.Tasks;
 
 namespace msos
 {
+    class HeapTypeStatistics
+    {
+        public string Type { get; set; }
+        public ulong Count { get; set; }
+        public ulong Size { get; set; }
+        public double AverageSize { get; set; }
+        public ulong MinimumSize { get; set; }
+        public ulong MaximumSize { get; set; }
+    }
+
     static class ClrHeapExtensions
     {
         /// <summary>
@@ -107,6 +117,62 @@ namespace msos
                     }
                 });
             }
+        }
+
+        private static HeapTypeStatistics GetStats(string type, IEnumerable<long> objectSizes)
+        {
+            ulong min = ulong.MaxValue, max = ulong.MinValue, sum = 0, count = 0;
+            foreach (ulong size in objectSizes)
+            {
+                ++count;
+                sum += size;
+                min = Math.Min(min, size);
+                max = Math.Max(max, size);
+            }
+            return new HeapTypeStatistics
+            {
+                Type = type,
+                Count = count,
+                Size = sum,
+                MaximumSize = max,
+                MinimumSize = min,
+                AverageSize = sum / (double)count
+            };
+        }
+
+        public static IEnumerable<HeapTypeStatistics> GroupTypesInObjectSetAndSortBySize(this ClrHeap heap, IEnumerable<ulong> addresses)
+        {
+            // TODO If this LINQ query is too slow, optimize by hand-rolling a loop.
+            return from obj in addresses
+                   let type = heap.GetObjectType(obj)
+                   where type != null && !type.IsFree
+                   let size = type.GetSize(obj)
+                   group (long)size by type.Name into g
+                   let totalSize = g.Sum()
+                   orderby totalSize descending
+                   select GetStats(g.Key, g);
+        }
+
+        public static IDictionary<ClrSegment, ulong> GetFreeSpaceBySegment(this ClrHeap heap)
+        {
+            var freeSpaceBySegment = new Dictionary<ClrSegment, ulong>();
+            foreach (ClrSegment segment in heap.Segments)
+            {
+                for (ulong currentObject = segment.FirstObject; currentObject != 0;
+                    currentObject = segment.NextObject(currentObject))
+                {
+                    ClrType type = heap.GetObjectType(currentObject);
+                    if (type != null && type.IsFree)
+                    {
+                        ulong size = type.GetSize(currentObject);
+                        if (!freeSpaceBySegment.ContainsKey(segment))
+                            freeSpaceBySegment.Add(segment, size);
+                        else
+                            freeSpaceBySegment[segment] += size;
+                    }
+                }
+            }
+            return freeSpaceBySegment;
         }
     }
 }

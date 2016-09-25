@@ -36,7 +36,7 @@ namespace msos
 
                     if (SpecificThread == null)
                     {
-                        _context.WriteError("There is no thread with the id '{0}'.", SpecificOSThreadId);
+                        _context.WriteErrorLine("There is no thread with the id '{0}'.", SpecificOSThreadId);
                         return;
                     }
 
@@ -63,7 +63,7 @@ namespace msos
                 _unifiedStackTraces = new UnifiedStackTraces(_temporaryDbgEngTarget.DebuggerInterface, _context);
                 _blockingObjectsStrategy = new DumpFileBlockingObjectsStrategy(_context.Runtime, _unifiedStackTraces, _temporaryDbgEngTarget);
 
-                _threads.AddRange(_unifiedStackTraces.Threads.Select(ti => UnifiedThreadForThread(ti)));
+                _threads.AddRange(_unifiedStackTraces.Threads.Select(ti => _blockingObjectsStrategy.GetThreadWithBlockingObjects(ti)));
             }
             else
             {
@@ -73,28 +73,11 @@ namespace msos
                 // an alternative source of information for threads in live processes. In the future,
                 // we can consider using System.Diagnostics or some other means of enumerating threads
                 // in live processes.
-                _threads.AddRange(_context.Runtime.Threads.Select(thr => UnifiedThreadForThread(thr)));
+                _threads.AddRange(_context.Runtime.Threads.Select(thr => _blockingObjectsStrategy.GetThreadWithBlockingObjects(thr)));
             }
         }
 
         private UnifiedThread SpecificThread => _threads.SingleOrDefault(t => t.OSThreadId == SpecificOSThreadId);
-
-        private UnifiedThread UnifiedThreadForThread(ClrThread thread)
-        {
-            var blockingObjects = _blockingObjectsStrategy.GetUnmanagedBlockingObjects(thread.OSThreadId);
-            blockingObjects.AddRange(_blockingObjectsStrategy.GetManagedBlockingObjects(thread.OSThreadId));
-            return new UnifiedThread(thread, blockingObjects);
-        }
-
-        private UnifiedThread UnifiedThreadForThread(ThreadInformation threadInfo)
-        {
-            var blockingObjects = _blockingObjectsStrategy.GetUnmanagedBlockingObjects(threadInfo.OSThreadId);
-            if (threadInfo.IsManagedThread)
-            {
-                blockingObjects.AddRange(_blockingObjectsStrategy.GetManagedBlockingObjects(threadInfo.OSThreadId));
-            }
-            return new UnifiedThread(threadInfo, blockingObjects);
-        }
 
         private void DisplayChainForThread(UnifiedThread unifiedThread, int depth, HashSet<uint> visitedThreadIds)
         {
@@ -191,6 +174,23 @@ namespace msos
         protected readonly ClrRuntime _runtime;
         protected readonly StackWalkerStrategy _stackWalker;
 
+        public UnifiedThread GetThreadWithBlockingObjects(ClrThread thread)
+        {
+            var blockingObjects = GetUnmanagedBlockingObjects(thread.OSThreadId);
+            blockingObjects.AddRange(GetManagedBlockingObjects(thread.OSThreadId));
+            return new UnifiedThread(thread, blockingObjects);
+        }
+
+        public UnifiedThread GetThreadWithBlockingObjects(ThreadInformation threadInfo)
+        {
+            var blockingObjects = GetUnmanagedBlockingObjects(threadInfo.OSThreadId);
+            if (threadInfo.IsManagedThread)
+            {
+                blockingObjects.AddRange(GetManagedBlockingObjects(threadInfo.OSThreadId));
+            }
+            return new UnifiedThread(threadInfo, blockingObjects);
+        }
+
         public virtual List<UnifiedBlockingObject> GetUnmanagedBlockingObjects(uint osThreadId)
         {
             var result = new List<UnifiedBlockingObject>();
@@ -244,7 +244,14 @@ namespace msos
         {
             if (_dataTarget != null)
             {
-                _handles = runtime.DataTarget.DataReader.EnumerateHandles().ToList();
+                try
+                {
+                    _handles = runtime.DataTarget.DataReader.EnumerateHandles().ToList();
+                }
+                catch (ClrDiagnosticsException)
+                {
+                    // The dump file probably doesn't contain the handle stream.
+                }
             }
         }
 

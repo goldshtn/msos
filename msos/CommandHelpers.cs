@@ -13,7 +13,7 @@ namespace msos
         {
             if (context.HeapIndex == null)
             {
-                context.WriteError("This command requires a heap index. Build one with !bhi or load one with !lhi.");
+                context.WriteErrorLine("This command requires a heap index. Build one with !bhi or load one with !lhi.");
                 return false;
             }
             return true;
@@ -27,13 +27,13 @@ namespace msos
             
             if (type == null || String.IsNullOrEmpty(type.Name))
             {
-                context.WriteError("The specified address does not point to a valid object.");
+                context.WriteErrorLine("The specified address does not point to a valid object.");
                 return false;
             }
 
             if (type.IsFree)
             {
-                context.WriteError("The specified address points to a free object.");
+                context.WriteErrorLine("The specified address points to a free object.");
                 return false;
             }
 

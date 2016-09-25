@@ -58,24 +58,24 @@ namespace msos
             var threadToSwitchTo = _context.Runtime.ThreadWithActiveExceptionOrFirstThread();
             if (threadToSwitchTo.CurrentException != null)
             {
-                _context.WriteInfo("The current thread has an exception; use !pe to view it.");
+                _context.WriteInfoLine("The current thread has an exception; use !pe to view it.");
             }
             new SwitchThread() { ManagedThreadId = threadToSwitchTo.ManagedThreadId }.Execute(_context);
 
             if (_context.Runtime.OutOfMemoryExceptionOccurred)
             {
-                _context.WriteInfo("There was an out-of-memory condition in this target:");
+                _context.WriteInfoLine("There was an out-of-memory condition in this target:");
                 var oomInfo = _context.Runtime.OutOfMemoryInformation;
-                _context.WriteInfo("\tAn OOM occurred after GC {0} when trying to allocate {1}",
+                _context.WriteInfoLine("\tAn OOM occurred after GC {0} when trying to allocate {1}",
                     oomInfo.GCNumber, oomInfo.AllocationSize.ToMemoryUnits());
-                _context.WriteInfo("\t" + oomInfo.Reason);
+                _context.WriteInfoLine("\t" + oomInfo.Reason);
             }
         }
 
         private void Bail(string format, params object[] args)
         {
             string errorMessage = String.Format(format, args);
-            _context.WriteError(errorMessage);
+            _context.WriteErrorLine(errorMessage);
             throw new AnalysisFailedException(errorMessage);
         }
 
@@ -87,20 +87,20 @@ namespace msos
             }
 
             _target = DataTarget.LoadCrashDump(_dumpFile, CrashDumpReader.ClrMD);
-            _context.WriteInfo("Opened dump file '{0}', architecture {1}, {2} CLR versions detected.",
+            _context.WriteInfoLine("Opened dump file '{0}', architecture {1}, {2} CLR versions detected.",
                 _dumpFile, _target.Architecture, _target.ClrVersions.Count);
             _context.DumpFile = _dumpFile;
             _context.TargetType = _target.IsHeapAvailable ? TargetType.DumpFile : TargetType.DumpFileNoHeap;
 
             if (!_target.IsHeapAvailable)
             {
-                _context.WriteWarning(
+                _context.WriteWarningLine(
                     "This dump does not have heap information present. Most commands will not work. " + 
                     "Basic triage commands such as !pe, !clrstack, !threads are still available.");
             }
             if (_target.IsMinidump)
             {
-                _context.WriteWarning(
+                _context.WriteWarningLine(
                     "This dump is a minidump, which means it's possible that module contents were " +
                     "not included in the file. To get good information, make sure to put your modules " +
                     "(.exe/.dll files) on the symbol path, not just the symbols (.pdb files).");
@@ -112,7 +112,7 @@ namespace msos
             VerifyTargetProcessArchitecture();
 
             _target = DataTarget.AttachToProcess(_processId, ATTACH_TIMEOUT, AttachFlag.Passive);
-            _context.WriteInfo("Attached to process {0}, architecture {1}, {2} CLR versions detected.",
+            _context.WriteInfoLine("Attached to process {0}, architecture {1}, {2} CLR versions detected.",
                 _processId, _target.Architecture, _target.ClrVersions.Count);
             _context.ProcessId = _processId;
             _context.TargetType = TargetType.LiveProcess;
@@ -123,7 +123,7 @@ namespace msos
             ClrInfo clrInfo = _target.ClrVersions[_clrVersionIndex];
             string dacLocation;
             _context.Runtime = _target.CreateRuntimeAndGetDacLocation(clrInfo, out dacLocation);
-            _context.WriteInfo("Using Data Access DLL at: " + dacLocation);
+            _context.WriteInfoLine("Using Data Access DLL at: " + dacLocation);
             _context.DacLocation = dacLocation;
             _context.ClrVersionIndex = _clrVersionIndex;
             _context.ClrVersion = clrInfo;
@@ -133,7 +133,7 @@ namespace msos
         private void SetupSymPath()
         {
             string symPath = Environment.GetEnvironmentVariable("_NT_SYMBOL_PATH");
-            _context.WriteInfo("Symbol path: " + symPath);
+            _context.WriteInfoLine("Symbol path: " + symPath);
             _context.SymbolLocator = _target.SymbolLocator;
             _context.SymbolLocator.SymbolPath = symPath;
             _context.SymbolPath = symPath;
@@ -148,7 +148,7 @@ namespace msos
             for (int i = 0; i < _target.ClrVersions.Count; ++i)
             {
                 var clrVersion = _target.ClrVersions[i];
-                _context.WriteInfo("#{0} Flavor: {1}, Version: {2}", i, clrVersion.Flavor, clrVersion.Version);
+                _context.WriteInfoLine("#{0} Flavor: {1}, Version: {2}", i, clrVersion.Flavor, clrVersion.Version);
             }
             if (_clrVersionIndex < 0 || _clrVersionIndex >= _target.ClrVersions.Count)
             {
@@ -157,7 +157,7 @@ namespace msos
             }
             if (_target.ClrVersions.Count > 1)
             {
-                _context.WriteInfo("The rest of this session will interact with CLR version #{0} ({1}). Change using --clrVersion.",
+                _context.WriteInfoLine("The rest of this session will interact with CLR version #{0} ({1}). Change using --clrVersion.",
                     _clrVersionIndex, _target.ClrVersions[_clrVersionIndex].Version);
             }
         }

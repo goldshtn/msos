@@ -50,7 +50,7 @@ namespace msos
 
             if (RowsPerPage == 0)
             {
-                context.WriteError("Can't have 0 rows per page. Use --disable to disable paging altogether.");
+                context.WriteErrorLine("Can't have 0 rows per page. Use --disable to disable paging altogether.");
                 return;
             }
 

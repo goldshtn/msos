@@ -77,6 +77,8 @@ namespace msos
 
         public List<UnifiedHandle> Handles { get; } = new List<UnifiedHandle>();
 
+        public string DisplayString => String.Format("{0}!{1}", Module, Method);
+
         public string SourceAndLine
         {
             get
@@ -241,28 +243,62 @@ namespace msos
         public uint NumThreads { get { return _numThreads; } }
         public List<ThreadInformation> Threads { get; } = new List<ThreadInformation>();
 
-        private ThreadInformation GetThreadInfo(uint threadIndex)
+        private ThreadInformation GetThreadInfo(uint? threadIndex)
         {
-            uint[] engineThreadIds = new uint[1];
-            uint[] osThreadIds = new uint[1];
-            Util.VerifyHr(((IDebugSystemObjects)_debugClient).GetThreadIdsByIndex(threadIndex, 1, engineThreadIds, osThreadIds));
-            ClrThread managedThread = _runtime.Threads.FirstOrDefault(thread => thread.OSThreadId == osThreadIds[0]);
+            uint engineThreadId, osThreadId;
+            if (threadIndex.HasValue)
+            {
+                uint[] engineThreadIds = new uint[1];
+                uint[] osThreadIds = new uint[1];
+                Util.VerifyHr(((IDebugSystemObjects)_debugClient).GetThreadIdsByIndex(threadIndex.Value, 1, engineThreadIds, osThreadIds));
+                engineThreadId = engineThreadIds[0];
+                osThreadId = osThreadIds[0];
+            }
+            else
+            {
+                Util.VerifyHr(((IDebugSystemObjects)_debugClient).GetCurrentThreadId(out engineThreadId));
+                Util.VerifyHr(((IDebugSystemObjects)_debugClient).GetCurrentThreadSystemId(out osThreadId));
+            }
+            ClrThread managedThread = _runtime.Threads.FirstOrDefault(thread => thread.OSThreadId == osThreadId);
             return new ThreadInformation
             {
-                Index = threadIndex,
-                EngineThreadId = engineThreadIds[0],
-                OSThreadId = osThreadIds[0],
+                Index = threadIndex ?? uint.MaxValue,
+                EngineThreadId = engineThreadId,
+                OSThreadId = osThreadId,
                 ManagedThread = managedThread
             };
         }
 
-        private List<UnifiedStackFrame> GetNativeStackTrace(uint engineThreadId)
+        private List<UnifiedStackFrame> GetNativeStackTrace(uint? engineThreadId, CONTEXT? context)
         {
-            Util.VerifyHr(((IDebugSystemObjects)_debugClient).SetCurrentThreadId(engineThreadId));
+            if (engineThreadId.HasValue)
+                Util.VerifyHr(((IDebugSystemObjects)_debugClient).SetCurrentThreadId(engineThreadId.Value));
 
             DEBUG_STACK_FRAME[] stackFrames = new DEBUG_STACK_FRAME[200];
             uint framesFilled;
-            Util.VerifyHr(((IDebugControl)_debugClient).GetStackTrace(0, 0, 0, stackFrames, stackFrames.Length, out framesFilled));
+
+            if (context.HasValue)
+            {
+                int ctxSize = Marshal.SizeOf(context);
+                IntPtr ctxPtr = Marshal.AllocHGlobal(ctxSize);
+                IntPtr frameCtxsPtr = Marshal.AllocHGlobal(ctxSize * stackFrames.Length);
+                try
+                {
+                    Marshal.StructureToPtr(context, ctxPtr, false);
+                    Util.VerifyHr(((IDebugControl4)_debugClient).GetContextStackTrace(
+                        ctxPtr, (uint)ctxSize, stackFrames, stackFrames.Length, frameCtxsPtr, (uint)(stackFrames.Length * ctxSize), (uint)ctxSize, out framesFilled));
+                }
+                finally
+                {
+                    Marshal.FreeHGlobal(ctxPtr);
+                    Marshal.FreeHGlobal(frameCtxsPtr);
+                }
+            }
+            else
+            {
+                Util.VerifyHr(((IDebugControl)_debugClient).GetStackTrace(
+                    0, 0, 0, stackFrames, stackFrames.Length, out framesFilled));
+            }
 
             List<UnifiedStackFrame> stackTrace = new List<UnifiedStackFrame>();
             for (uint i = 0; i < framesFilled; ++i)
@@ -282,9 +318,21 @@ namespace msos
 
         public List<UnifiedStackFrame> GetStackTrace(uint threadIndex)
         {
+            return GetStackTraceFromContext(threadIndex, null);
+        }
+
+        public List<UnifiedStackFrame> GetStackTraceFromStoredEvent()
+        {
+            Util.VerifyHr(((IDebugSymbols3)_debugClient).SetScopeFromStoredEvent());
+            return GetStackTraceFromContext(null, null);
+        }
+
+        public List<UnifiedStackFrame> GetStackTraceFromContext(uint? threadIndex, CONTEXT? context)
+        {
             ThreadInformation threadInfo = GetThreadInfo(threadIndex);
             List<UnifiedStackFrame> unifiedStackTrace = new List<UnifiedStackFrame>();
-            List<UnifiedStackFrame> nativeStackTrace = GetNativeStackTrace(threadInfo.EngineThreadId);
+            List<UnifiedStackFrame> nativeStackTrace = GetNativeStackTrace(
+                threadIndex.HasValue ? (uint?)threadInfo.EngineThreadId : null, context);
 
             if (threadInfo.IsManagedThread)
             {
@@ -452,12 +500,12 @@ namespace msos
             }
         }
 
-        public UnifiedBlockingObject(CRITICAL_SECTION section, ulong handle) : this(BlockingObjectOrigin.StackWalker)
+        public UnifiedBlockingObject(CRITICAL_SECTION section, ulong address) : this(BlockingObjectOrigin.StackWalker)
         {
             OwnerOSThreadIds.Add((uint)section.OwningThread);
             Reason = UnifiedBlockingReason.CriticalSection;
             Type = UnifiedBlockingType.CriticalSectionObject;
-            Handle = handle;
+            Handle = address;
         }
 
         public UnifiedBlockingObject(ulong handle, string objectName, string objectType) : this(BlockingObjectOrigin.StackWalker)

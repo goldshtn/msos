@@ -22,7 +22,7 @@ namespace msos
             }
             else
             {
-                context.WriteError("No thread has the managed thread id {0}", ManagedThreadId);
+                context.WriteErrorLine("No thread has the managed thread id {0}", ManagedThreadId);
             }
         }
     }

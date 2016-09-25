@@ -20,7 +20,7 @@ namespace msos
 
         private void Bail(string format, params object[] args)
         {
-            _context.WriteError(format, args);
+            _context.WriteErrorLine(format, args);
             Bail();
         }
 
@@ -58,6 +58,11 @@ namespace msos
                 _target = new AnalysisTarget(_options.DumpFile, _context, _options.ClrVersion);
                 Console.Title = "msos - " + _options.DumpFile;
             }
+            else if (!String.IsNullOrEmpty(_options.SummaryDumpFile))
+            {
+                DisplayShortSummary();
+                return; // Do not proceed to the main loop
+            }
             else if (!String.IsNullOrEmpty(_options.ProcessName))
             {
                 AttachToProcessByName();
@@ -81,18 +86,44 @@ namespace msos
             RunMainLoop();
         }
 
+        private static string[] GetFilesFromPattern(string dumpPattern)
+        {
+            string directory = Path.GetDirectoryName(dumpPattern);
+            string pattern = Path.GetFileName(dumpPattern);
+            return Directory.GetFiles(directory, pattern, SearchOption.AllDirectories);
+        }
+
+        private void DisplayShortSummary()
+        {
+            // We are using the DbgEng dump reader here, because the CLRMD dump reader doesn't work
+            // well with mismatched architectures. For the sake of just getting basic information out
+            // there, the DbgEng reader is better.
+            string[] dumpFiles = GetFilesFromPattern(_options.SummaryDumpFile);
+            foreach (var dumpFile in dumpFiles)
+            {
+                using (var target = DataTarget.LoadCrashDump(dumpFile, CrashDumpReader.DbgEng))
+                {
+                    _context.WriteInfoLine("Summary for dump file {0}", dumpFile);
+                    _context.WriteLine("  Is minidump? {0}", target.IsMinidump);
+                    _context.WriteLine("  Target architecture: {0}", target.Architecture);
+                    _context.WriteLine("  {0} CLR versions in target", target.ClrVersions.Count);
+                    foreach (var clrInfo in target.ClrVersions)
+                        _context.WriteLine("    {0}", clrInfo.Version);
+                    _context.WriteLine();
+                }
+            }
+        }
+
         private void RunTriage()
         {
-            string directory = Path.GetDirectoryName(_options.TriagePattern);
-            string pattern = Path.GetFileName(_options.TriagePattern);
-            string[] dumpFiles = Directory.GetFiles(directory, pattern /* TODO: recursively enumerate? */);
-            _context.WriteInfo("Triage: enumerated {0} dump files in directory '{1}'", dumpFiles.Length, directory);
+            string[] dumpFiles = GetFilesFromPattern(_options.TriagePattern);
+            _context.WriteInfoLine("Triage: enumerated {0} dump files in directory '{1}'", dumpFiles.Length, Path.GetDirectoryName(_options.TriagePattern));
             Dictionary<string, TriageInformation> triages = new Dictionary<string, TriageInformation>();
             for (int i = 0; i < dumpFiles.Length; ++i)
             {
                 string dumpFile = dumpFiles[i];
                 string analysisProgressMessage = String.Format("Analyzing dump file '{0}' ({1}/{2})", dumpFile, i + 1, dumpFiles.Length);
-                _context.WriteInfo(analysisProgressMessage);
+                _context.WriteInfoLine(analysisProgressMessage);
                 Console.Title = analysisProgressMessage;
 
                 _target = new AnalysisTarget(dumpFile, _context);
@@ -202,13 +233,13 @@ namespace msos
 
                 foreach (var command in commands)
                 {
-                    _context.WriteInfo("#> {0}", command);
+                    _context.WriteInfoLine("#> {0}", command);
                     _context.ExecuteOneCommand(command, _options.DisplayDiagnosticInformation);
                 }
             }
             else if (!String.IsNullOrEmpty(_options.InitialCommand))
             {
-                _context.WriteInfo("#> {0}", _options.InitialCommand);
+                _context.WriteInfoLine("#> {0}", _options.InitialCommand);
                 _context.ExecuteCommand(_options.InitialCommand, _options.DisplayDiagnosticInformation);
             }
         }
@@ -223,8 +254,8 @@ namespace msos
             }
             if (processes.Length > 1)
             {
-                _context.WriteError("There is more than one process matching the name '{0}', use --pid to disambiguate.", processName);
-                _context.WriteInfo("Matching process ids: {0}", String.Join(", ", processes.Select(p => p.Id).ToArray()));
+                _context.WriteErrorLine("There is more than one process matching the name '{0}', use --pid to disambiguate.", processName);
+                _context.WriteInfoLine("Matching process ids: {0}", String.Join(", ", processes.Select(p => p.Id).ToArray()));
                 Bail();
             }
             _target = new AnalysisTarget(processes[0].Id, _context, _options.ClrVersion);
@@ -294,8 +325,12 @@ namespace msos
             }
             catch (Exception ex)
             {
-                _context.WriteError("An unexpected error occurred.");
-                _context.WriteError("{0}: {1}", ex.GetType().Name, ex.Message);
+                _context.WriteErrorLine("An unexpected error occurred.");
+                _context.WriteErrorLine("{0}: {1}", ex.GetType().Name, ex.Message);
+                if (_options.DisplayDiagnosticInformation)
+                {
+                    _context.WriteErrorLine("\n" + ex.StackTrace);
+                }
             }
         }
 

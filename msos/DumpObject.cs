@@ -41,7 +41,7 @@ namespace msos
                 type = context.Heap.GetTypeByName(TypeName);
                 if (type == null)
                 {
-                    context.WriteError("There is no type named '{0}'.", TypeName);
+                    context.WriteErrorLine("There is no type named '{0}'.", TypeName);
                     return;
                 }
             }
@@ -50,7 +50,7 @@ namespace msos
                 type = context.Heap.GetObjectType(ObjectAddress);
                 if (type == null || String.IsNullOrEmpty(type.Name))
                 {
-                    context.WriteError("The specified address is not an object.");
+                    context.WriteErrorLine("The specified address is not an object.");
                     return;
                 }
             }
@@ -58,7 +58,7 @@ namespace msos
             ulong mt = 0;
             if (type.IsObjectReference && !context.Runtime.ReadPointer(ObjectAddress, out mt))
             {
-                context.WriteWarning("Unable to retrieve MT for object.");
+                context.WriteWarningLine("Unable to retrieve MT for object.");
             }
 
             var size = type.GetSize(ObjectAddress);

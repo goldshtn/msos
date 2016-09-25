@@ -44,7 +44,7 @@ namespace msos
             }
             else
             {
-                context.WriteError("The specified object is not an array, list, or dictionary. " +
+                context.WriteErrorLine("The specified object is not an array, list, or dictionary. " +
                     "These are the only collection types that are currently supported. For other " +
                     "collections, try using the !hq command to inspect the object's contents.");
                 return;

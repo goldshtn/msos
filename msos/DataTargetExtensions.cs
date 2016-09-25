@@ -17,6 +17,7 @@ namespace msos
         public string EventDescription { get; set; }
         public DEBUG_EVENT EventType { get; set; }
         public EXCEPTION_RECORD64? ExceptionRecord { get; set; }
+        public CONTEXT? ExceptionContext { get; set; }
     }
 
     static class DataTargetExtensions
@@ -29,10 +30,10 @@ namespace msos
             StringBuilder description = new StringBuilder(2048);
             uint unused;
             uint descriptionSize;
-            if (0 != control.GetLastEventInformation(
+            if (HR.Failed(control.GetLastEventInformation(
                 out eventType, out procId, out threadId,
                 IntPtr.Zero, 0, out unused,
-                description, description.Capacity, out descriptionSize))
+                description, description.Capacity, out descriptionSize)))
             {
                 return null;
             }
@@ -49,12 +50,37 @@ namespace msos
             int outSize;
             byte[] buffer = new byte[Marshal.SizeOf(typeof(EXCEPTION_RECORD64))];
             int hr = debugAdvanced.Request(DEBUG_REQUEST.TARGET_EXCEPTION_RECORD, null, 0, buffer, buffer.Length, out outSize);
-            if (hr == 0)
+            if (HR.Succeeded(hr))
             {
                 GCHandle gch = GCHandle.Alloc(buffer, GCHandleType.Pinned);
                 try
                 {
                     eventInformation.ExceptionRecord = (EXCEPTION_RECORD64)Marshal.PtrToStructure(gch.AddrOfPinnedObject(), typeof(EXCEPTION_RECORD64));
+                }
+                finally
+                {
+                    gch.Free();
+                }
+            }
+
+            buffer = new byte[Marshal.SizeOf(typeof(uint))];
+            hr = debugAdvanced.Request(DEBUG_REQUEST.TARGET_EXCEPTION_THREAD, null, 0, buffer, buffer.Length, out outSize);
+            if (HR.Succeeded(hr))
+            {
+                // If there is a stored exception event with a thread id, use that instead
+                // of what GetLastEventInformation returns, because it might be different.
+                eventInformation.OSThreadId = (int)BitConverter.ToUInt32(buffer, 0);
+            }
+
+            buffer = new byte[Marshal.SizeOf(typeof(CONTEXT))];
+            hr = debugAdvanced.Request(DEBUG_REQUEST.TARGET_EXCEPTION_CONTEXT, null, 0, buffer, buffer.Length, out outSize);
+            if (HR.Succeeded(hr))
+            {
+                var gch = GCHandle.Alloc(buffer, GCHandleType.Pinned);
+                try
+                {
+                    eventInformation.ExceptionContext = (CONTEXT)Marshal.PtrToStructure(
+                        gch.AddrOfPinnedObject(), typeof(CONTEXT));
                 }
                 finally
                 {
@@ -68,19 +94,24 @@ namespace msos
         public static IEnumerable<MEMORY_BASIC_INFORMATION64> EnumerateVMRegions(this DataTarget target)
         {
             var dataSpaces = (IDebugDataSpaces4)target.DebuggerInterface;
-            ulong maxAddress = Environment.Is64BitProcess ? uint.MaxValue : ulong.MaxValue;
-            for (ulong address = 0; address < maxAddress;)
+            ulong maxAddress = Environment.Is64BitProcess ? ulong.MaxValue : uint.MaxValue;
+            ulong address = 0;
+            while (true)
             {
                 MEMORY_BASIC_INFORMATION64 memInfo;
                 if (0 != dataSpaces.QueryVirtual(address, out memInfo))
                     break;
 
-                if (memInfo.RegionSize == 0)
+                // TODO 32-bit processes on 64-bit Windows with `/LARGEADDRESSAWARE`
+                // enabled are behaving oddly here. Specifically, no valid addresses
+                // above 2GB and below 4GB are reported by `QueryVirtual`, whereas the
+                // WinDbg `!address` command can see them.
+                if (memInfo.BaseAddress >= maxAddress || memInfo.RegionSize == 0)
                     break;
 
                 yield return memInfo;
 
-                address += memInfo.RegionSize;
+                address = memInfo.BaseAddress + memInfo.RegionSize;
             }
         }
 
@@ -104,7 +135,7 @@ namespace msos
             int hr = control.ExecuteWide(
                 DEBUG_OUTCTL.THIS_CLIENT, command, DEBUG_EXECUTE.DEFAULT);
             if (HR.Failed(hr))
-                context.WriteError("Command execution failed with hr = {0:x8}", hr);
+                context.WriteErrorLine("Command execution failed with hr = {0:x8}", hr);
         }
     }
 }

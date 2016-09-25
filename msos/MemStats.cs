@@ -119,25 +119,8 @@ namespace msos
 
         private void ManagedHeapFragmentation()
         {
-            var freeSpaceBySegment = new Dictionary<ClrSegment, ulong>();
-            ulong totalFreeSize = 0;
-            foreach (ClrSegment segment in _context.Heap.Segments)
-            {
-                for (ulong currentObject = segment.FirstObject; currentObject != 0;
-                    currentObject = segment.NextObject(currentObject))
-                {
-                    ClrType type = _context.Heap.GetObjectType(currentObject);
-                    if (type != null && type.IsFree)
-                    {
-                        ulong size = type.GetSize(currentObject);
-                        if (!freeSpaceBySegment.ContainsKey(segment))
-                            freeSpaceBySegment.Add(segment, size);
-                        else
-                            freeSpaceBySegment[segment] += size;
-                        totalFreeSize += size;
-                    }
-                }
-            }
+            var freeSpaceBySegment = _context.Heap.GetFreeSpaceBySegment();
+            ulong totalFreeSize = (ulong)freeSpaceBySegment.Values.Sum(f => (long)f);
 
             _context.WriteLine("Fragmentation statistics:");
             _context.WriteLine(
@@ -161,7 +144,7 @@ namespace msos
                     "",
                     String.Format("!hq tabular from o in ObjectsInSegment({0}) " +
                                   "group (long)o.__Size by o.__Type into g " +
-                                  "let totalSize = g.Sum() " + 
+                                  "let totalSize = g.Sum() " +
                                   "orderby totalSize ascending " +
                                   "select new {{ Type = g.Key, TotalSize = totalSize }}",
                                   segmentIdx)

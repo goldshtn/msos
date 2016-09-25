@@ -29,7 +29,7 @@ namespace msos
                 int read = 0;
                 if (!context.Runtime.ReadMemory(Address, buffer, Math.Min(remaining, Columns), out read))
                 {
-                    context.WriteError("Error reading memory at {0:x16}, could only read {1} bytes while {2} requested",
+                    context.WriteErrorLine("Error reading memory at {0:x16}, could only read {1} bytes while {2} requested",
                         Address, read, Columns);
                     return;
                 }

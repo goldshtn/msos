@@ -53,7 +53,7 @@ namespace msos
         {
             if (HelperIndex < 0 || HelperIndex >= context.Defines.Count)
             {
-                context.WriteError(
+                context.WriteErrorLine(
                     "There is no helper method at index {0} defined. Use .listdefines to get the indexes.",
                     HelperIndex);
                 return;

@@ -6,6 +6,14 @@ Build status: [![Build status](https://ci.appveyor.com/api/projects/status/gla95
 
 You should use this project when you don't have SOS available, or when you want a quick alternative to firing up WinDbg and locating SOS. One such situation is when debugging dumps from Windows Phone devices; Microsoft does not make the Windows Phone CoreCLR SOS publicly available at present. What's more, some msos commands already offer more information than their SOS counterparts. Especially cool is the ```!hq``` command, which compiles an arbitrary dynamic query over heap objects and classes.
 
+#### Building
+
+Currently, msos depends on a [fork of the Microsoft CLRMD library](https://github.com/goldshtn/clrmd). You will need to configure your NuGet package feed to include the following feed: `https://ci.appveyor.com/nuget/clrmd-goldshtn` before restoring NuGet packages.
+
+You can also find the binary artifacts from any build [on AppVeyor](https://ci.appveyor.com/project/goldshtn/msos). Navigate to the x86 or x64 build, and then click Artifacts to download the binary archive.
+
+#### Basic Usage
+
 To use msos, compile the project and run it from the command line with a dump file or a live target:
 
 ```

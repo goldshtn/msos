@@ -23,7 +23,7 @@ namespace msos
         {
             if (context.Aliases.ContainsKey(AliasName))
             {
-                context.WriteError("The specified alias already exists. Clear it first with .rmalias.");
+                context.WriteErrorLine("The specified alias already exists. Clear it first with .rmalias.");
                 return;
             }
             context.Aliases.Add(AliasName, AliasCommand);
@@ -45,7 +45,7 @@ namespace msos
             string aliasCommand;
             if (!context.Aliases.TryGetValue(AliasName, out aliasCommand))
             {
-                context.WriteError("Unknown alias '{0}'", AliasName);
+                context.WriteErrorLine("Unknown alias '{0}'", AliasName);
                 return;
             }
             int index = 1;
@@ -53,7 +53,7 @@ namespace msos
             {
                 aliasCommand = aliasCommand.Replace("$" + index, paramValue);
             }
-            context.WriteInfo("Alias '{0}' expanded to '{1}'", AliasName, aliasCommand);
+            context.WriteInfoLine("Alias '{0}' expanded to '{1}'", AliasName, aliasCommand);
             context.ExecuteCommand(aliasCommand);
         }
     }
@@ -69,7 +69,7 @@ namespace msos
         {
             if (!context.Aliases.Remove(AliasName))
             {
-                context.WriteError("Unknown alias '{0}'", AliasName);
+                context.WriteErrorLine("Unknown alias '{0}'", AliasName);
                 return;
             }
         }

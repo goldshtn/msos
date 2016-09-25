@@ -21,6 +21,9 @@ namespace msos
         [Option("triage", MutuallyExclusiveSet = "target", HelpText = "The path pattern for dump files to automatically load, triage, and report statistics for. Example pattern: C:\\Dumps\\MyApp*.dmp")]
         public string TriagePattern { get; set; }
 
+        [Option("dumpsummary", MutuallyExclusiveSet = "target", HelpText = "The dump file to open, display a short information summary for, and then exit. This can also be a path pattern, such as C:\\Dumps\\MyApp*.dmp")]
+        public string SummaryDumpFile { get; set; }
+
         [Option("diag", HelpText = "Display diagnostic information after executing each command.")]
         public bool DisplayDiagnosticInformation { get; set; }
 
