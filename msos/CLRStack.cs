@@ -24,7 +24,7 @@ namespace msos
             var thread = context.CurrentThread;
             if (thread == null)
             {
-                context.WriteError("There is no current managed thread");
+                context.WriteErrorLine("There is no current managed thread");
                 return;
             }
 

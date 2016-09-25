@@ -36,7 +36,7 @@ namespace msos
 
                     if (SpecificThread == null)
                     {
-                        _context.WriteError("There is no thread with the id '{0}'.", SpecificOSThreadId);
+                        _context.WriteErrorLine("There is no thread with the id '{0}'.", SpecificOSThreadId);
                         return;
                     }
 

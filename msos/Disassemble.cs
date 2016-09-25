@@ -34,7 +34,7 @@ namespace msos
             ClrMethod method = context.Runtime.GetMethodByAddress(InstructionPointer);
             if (method == null)
             {
-                context.WriteError("There is no managed method at the address {0:x16}.", InstructionPointer);
+                context.WriteErrorLine("There is no managed method at the address {0:x16}.", InstructionPointer);
                 return;
             }
 

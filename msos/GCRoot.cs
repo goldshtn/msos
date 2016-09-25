@@ -36,7 +36,7 @@ namespace msos
             _heap = context.Heap;
             if (!_heap.CanWalkHeap)
             {
-                context.WriteError("The heap is not in a walkable state.");
+                context.WriteErrorLine("The heap is not in a walkable state.");
                 return;
             }
 

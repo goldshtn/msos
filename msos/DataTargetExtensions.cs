@@ -135,7 +135,7 @@ namespace msos
             int hr = control.ExecuteWide(
                 DEBUG_OUTCTL.THIS_CLIENT, command, DEBUG_EXECUTE.DEFAULT);
             if (HR.Failed(hr))
-                context.WriteError("Command execution failed with hr = {0:x8}", hr);
+                context.WriteErrorLine("Command execution failed with hr = {0:x8}", hr);
         }
     }
 }

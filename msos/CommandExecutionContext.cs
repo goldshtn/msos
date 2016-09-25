@@ -100,7 +100,7 @@ namespace msos
                 var parseResult = _commandParser.Parse(_allCommandTypes, command);
                 if (!parseResult.Success)
                 {
-                    WriteError(parseResult.Error);
+                    WriteErrorLine(parseResult.Error);
                     return;
                 }
                 if (parseResult.Value == null)
@@ -114,7 +114,7 @@ namespace msos
                 {
                     if (!IsCommandIsSupportedForThisTarget(commandToExecute.GetType()))
                     {
-                        WriteError("This command is not supported for the current target type: '{0}'", TargetType);
+                        WriteErrorLine("This command is not supported for the current target type: '{0}'", TargetType);
                     }
                     else
                     {
@@ -127,14 +127,14 @@ namespace msos
                     // after an arbitrary exception, but some of them are perfectly benign. We are
                     // taking the risk because there is no critical state that could become corrupted
                     // as a result of continuing.
-                    WriteError("Exception during command execution -- {0}: '{1}'", ex.GetType().Name, ex.Message);
-                    WriteError("\n" + ex.StackTrace);
-                    WriteError("Proceed at your own risk, or restart the debugging session.");
+                    WriteErrorLine("Exception during command execution -- {0}: '{1}'", ex.GetType().Name, ex.Message);
+                    WriteErrorLine("\n" + ex.StackTrace);
+                    WriteErrorLine("Proceed at your own risk, or restart the debugging session.");
                 }
             }
             if (HyperlinkOutput && _temporaryAliases.Count > WarnThresholdCountOfTemporaryAliases)
             {
-                WriteWarning("Hyperlinks are enabled. You currently have {0} temporary aliases. " +
+                WriteWarningLine("Hyperlinks are enabled. You currently have {0} temporary aliases. " +
                     "Use .clearalias --temporary to clear them.", _temporaryAliases.Count);
             }
             Printer.CommandEnded();
@@ -174,34 +174,49 @@ namespace msos
             Printer.WriteCommandOutput(Environment.NewLine);
         }
 
-        public void WriteError(string format, params object[] args)
+        public void WriteErrorLine(string format, params object[] args)
         {
             Printer.WriteError(format + Environment.NewLine, args);
         }
 
-        public void WriteError(string value)
+        public void WriteErrorLine(string value)
         {
             Printer.WriteError(value + Environment.NewLine);
         }
 
-        public void WriteWarning(string format, params object[] args)
+        public void WriteError(string value)
+        {
+            Printer.WriteError(value);
+        }
+
+        public void WriteWarningLine(string format, params object[] args)
         {
             Printer.WriteWarning(format + Environment.NewLine, args);
         }
 
-        public void WriteWarning(string value)
+        public void WriteWarningLine(string value)
         {
             Printer.WriteWarning(value + Environment.NewLine);
         }
 
-        public void WriteInfo(string format, params object[] args)
+        public void WriteWarning(string value)
+        {
+            Printer.WriteWarning(value);
+        }
+
+        public void WriteInfoLine(string format, params object[] args)
         {
             Printer.WriteInfo(format + Environment.NewLine, args);
         }
 
-        public void WriteInfo(string value)
+        public void WriteInfoLine(string value)
         {
             Printer.WriteInfo(value + Environment.NewLine);
+        }
+
+        public void WriteInfo(string value)
+        {
+            Printer.WriteInfo(value);
         }
 
         public void WriteLink(string text, string command)

@@ -23,7 +23,7 @@ namespace msos
             var type = context.Heap.GetObjectType(ObjectAddress);
             if (!type.IsArray)
             {
-                context.WriteError("The object at the specified address is not an array.");
+                context.WriteErrorLine("The object at the specified address is not an array.");
                 return;
             }
 

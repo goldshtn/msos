@@ -63,7 +63,7 @@ namespace msos
                     // Catching everything here because the input is user-controlled, so we can have 
                     // compilation errors, dynamic binder errors, and a variety of other things I haven't
                     // even thought of yet.
-                    context.WriteError(ex.Message);
+                    context.WriteErrorLine(ex.Message);
                 }
             }
 

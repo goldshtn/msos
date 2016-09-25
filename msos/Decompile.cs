@@ -54,7 +54,7 @@ namespace msos
                     );
                 if (module == null)
                 {
-                    context.WriteError("Could not find the assembly '{0}'.", AssemblyName);
+                    context.WriteErrorLine("Could not find the assembly '{0}'.", AssemblyName);
                     return;
                 }
                 if (!String.IsNullOrEmpty(TypeName))
@@ -71,7 +71,7 @@ namespace msos
                 ClrType type = context.Heap.GetTypeByName(TypeName);
                 if (type == null)
                 {
-                    context.WriteError(
+                    context.WriteErrorLine(
                         "Could not find the type '{0}' on the heap. Try specifying the assembly name.",
                         TypeName);
                     return;
@@ -81,7 +81,7 @@ namespace msos
                     var methods = type.Methods.Where(m => m.Name == MethodName).ToArray();
                     if (methods.Length == 0)
                     {
-                        context.WriteError("Could not find the method '{0}'.", MethodName);
+                        context.WriteErrorLine("Could not find the method '{0}'.", MethodName);
                         return;
                     }
                     DecompileMethods(methods);
@@ -93,7 +93,7 @@ namespace msos
             }
             else
             {
-                context.WriteError("At least one of --assembly or --type must be specified.");
+                context.WriteErrorLine("At least one of --assembly or --type must be specified.");
             }
         }
 
