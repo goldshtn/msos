@@ -133,6 +133,12 @@ namespace msos
         private void SetupSymPath()
         {
             string symPath = Environment.GetEnvironmentVariable("_NT_SYMBOL_PATH");
+            if (symPath == null)
+            {
+                string localCache = Path.Combine(Path.GetTempPath(), "Symbols");
+                symPath = $"srv*{localCache}*http://msdl.microsoft.com/download/symbols";
+                _context.WriteWarningLine("_NT_SYMBOL_PATH is not set, using default");
+            }
             _context.WriteInfoLine("Symbol path: " + symPath);
             _context.SymbolLocator = _target.SymbolLocator;
             _context.SymbolLocator.SymbolPath = symPath;
