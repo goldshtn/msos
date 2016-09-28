@@ -35,6 +35,8 @@ Global
 		Debug|x86 = Debug|x86
 		Release|x64 = Release|x64
 		Release|x86 = Release|x86
+		Release-NoCostura|x64 = Release-NoCostura|x64
+		Release-NoCostura|x86 = Release-NoCostura|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{18421729-EAD5-41D1-857C-D496466FAC2D}.Debug|x64.ActiveCfg = Debug|x64
@@ -45,6 +47,10 @@ Global
 		{18421729-EAD5-41D1-857C-D496466FAC2D}.Release|x64.Build.0 = Release|x64
 		{18421729-EAD5-41D1-857C-D496466FAC2D}.Release|x86.ActiveCfg = Release|x86
 		{18421729-EAD5-41D1-857C-D496466FAC2D}.Release|x86.Build.0 = Release|x86
+		{18421729-EAD5-41D1-857C-D496466FAC2D}.Release-NoCostura|x64.ActiveCfg = Release-NoCostura|x64
+		{18421729-EAD5-41D1-857C-D496466FAC2D}.Release-NoCostura|x64.Build.0 = Release-NoCostura|x64
+		{18421729-EAD5-41D1-857C-D496466FAC2D}.Release-NoCostura|x86.ActiveCfg = Release-NoCostura|x86
+		{18421729-EAD5-41D1-857C-D496466FAC2D}.Release-NoCostura|x86.Build.0 = Release-NoCostura|x86
 		{249A0236-8FC8-4CD7-B6E1-C3422924EA09}.Debug|x64.ActiveCfg = Debug|x64
 		{249A0236-8FC8-4CD7-B6E1-C3422924EA09}.Debug|x64.Build.0 = Debug|x64
 		{249A0236-8FC8-4CD7-B6E1-C3422924EA09}.Debug|x86.ActiveCfg = Debug|x86
@@ -53,6 +59,10 @@ Global
 		{249A0236-8FC8-4CD7-B6E1-C3422924EA09}.Release|x64.Build.0 = Release|x64
 		{249A0236-8FC8-4CD7-B6E1-C3422924EA09}.Release|x86.ActiveCfg = Release|x86
 		{249A0236-8FC8-4CD7-B6E1-C3422924EA09}.Release|x86.Build.0 = Release|x86
+		{249A0236-8FC8-4CD7-B6E1-C3422924EA09}.Release-NoCostura|x64.ActiveCfg = Release-NoCostura|x64
+		{249A0236-8FC8-4CD7-B6E1-C3422924EA09}.Release-NoCostura|x64.Build.0 = Release-NoCostura|x64
+		{249A0236-8FC8-4CD7-B6E1-C3422924EA09}.Release-NoCostura|x86.ActiveCfg = Release-NoCostura|x86
+		{249A0236-8FC8-4CD7-B6E1-C3422924EA09}.Release-NoCostura|x86.Build.0 = Release-NoCostura|x86
 		{F634ED9D-3A0F-4FC4-988C-BB319BB69FA6}.Debug|x64.ActiveCfg = Debug|x64
 		{F634ED9D-3A0F-4FC4-988C-BB319BB69FA6}.Debug|x64.Build.0 = Debug|x64
 		{F634ED9D-3A0F-4FC4-988C-BB319BB69FA6}.Debug|x86.ActiveCfg = Debug|x86
@@ -61,12 +71,20 @@ Global
 		{F634ED9D-3A0F-4FC4-988C-BB319BB69FA6}.Release|x64.Build.0 = Release|x64
 		{F634ED9D-3A0F-4FC4-988C-BB319BB69FA6}.Release|x86.ActiveCfg = Release|x86
 		{F634ED9D-3A0F-4FC4-988C-BB319BB69FA6}.Release|x86.Build.0 = Release|x86
+		{F634ED9D-3A0F-4FC4-988C-BB319BB69FA6}.Release-NoCostura|x64.ActiveCfg = Release-NoCostura|x64
+		{F634ED9D-3A0F-4FC4-988C-BB319BB69FA6}.Release-NoCostura|x64.Build.0 = Release-NoCostura|x64
+		{F634ED9D-3A0F-4FC4-988C-BB319BB69FA6}.Release-NoCostura|x86.ActiveCfg = Release-NoCostura|x86
+		{F634ED9D-3A0F-4FC4-988C-BB319BB69FA6}.Release-NoCostura|x86.Build.0 = Release-NoCostura|x86
 		{168BD1D6-F926-4D6E-BBBC-873C0D4E6CB3}.Debug|x64.ActiveCfg = Debug|x64
 		{168BD1D6-F926-4D6E-BBBC-873C0D4E6CB3}.Debug|x86.ActiveCfg = Debug|x86
 		{168BD1D6-F926-4D6E-BBBC-873C0D4E6CB3}.Debug|x86.Build.0 = Debug|x86
 		{168BD1D6-F926-4D6E-BBBC-873C0D4E6CB3}.Release|x64.ActiveCfg = Release|x64
 		{168BD1D6-F926-4D6E-BBBC-873C0D4E6CB3}.Release|x86.ActiveCfg = Release|x86
 		{168BD1D6-F926-4D6E-BBBC-873C0D4E6CB3}.Release|x86.Build.0 = Release|x86
+		{168BD1D6-F926-4D6E-BBBC-873C0D4E6CB3}.Release-NoCostura|x64.ActiveCfg = Release-NoCostura|x64
+		{168BD1D6-F926-4D6E-BBBC-873C0D4E6CB3}.Release-NoCostura|x64.Build.0 = Release-NoCostura|x64
+		{168BD1D6-F926-4D6E-BBBC-873C0D4E6CB3}.Release-NoCostura|x86.ActiveCfg = Release-NoCostura|x86
+		{168BD1D6-F926-4D6E-BBBC-873C0D4E6CB3}.Release-NoCostura|x86.Build.0 = Release-NoCostura|x86
 		{1C19B4D7-E6A6-4A9A-8495-8231FA167D1C}.Debug|x64.ActiveCfg = Debug|x64
 		{1C19B4D7-E6A6-4A9A-8495-8231FA167D1C}.Debug|x64.Build.0 = Debug|x64
 		{1C19B4D7-E6A6-4A9A-8495-8231FA167D1C}.Debug|x86.ActiveCfg = Debug|x86
@@ -75,6 +93,10 @@ Global
 		{1C19B4D7-E6A6-4A9A-8495-8231FA167D1C}.Release|x64.Build.0 = Release|x64
 		{1C19B4D7-E6A6-4A9A-8495-8231FA167D1C}.Release|x86.ActiveCfg = Release|x86
 		{1C19B4D7-E6A6-4A9A-8495-8231FA167D1C}.Release|x86.Build.0 = Release|x86
+		{1C19B4D7-E6A6-4A9A-8495-8231FA167D1C}.Release-NoCostura|x64.ActiveCfg = Release-NoCostura|x64
+		{1C19B4D7-E6A6-4A9A-8495-8231FA167D1C}.Release-NoCostura|x64.Build.0 = Release-NoCostura|x64
+		{1C19B4D7-E6A6-4A9A-8495-8231FA167D1C}.Release-NoCostura|x86.ActiveCfg = Release-NoCostura|x86
+		{1C19B4D7-E6A6-4A9A-8495-8231FA167D1C}.Release-NoCostura|x86.Build.0 = Release-NoCostura|x86
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
