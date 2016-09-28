@@ -123,6 +123,10 @@ namespace msos
             ClrInfo clrInfo = _target.ClrVersions[_clrVersionIndex];
             string dacLocation;
             _context.Runtime = _target.CreateRuntimeAndGetDacLocation(clrInfo, out dacLocation);
+            if (_context.Runtime == null)
+            {
+                Bail("Unable to create runtime object for runtime version {0}", clrInfo.Version);
+            }
             _context.WriteInfoLine("Using Data Access DLL at: " + dacLocation);
             _context.DacLocation = dacLocation;
             _context.ClrVersionIndex = _clrVersionIndex;
