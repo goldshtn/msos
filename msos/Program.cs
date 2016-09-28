@@ -42,10 +42,15 @@ namespace msos
 
         private void Run()
         {
-            const int ConsoleBufferSize = 4096;
-            Console.SetIn(new StreamReader(
-                Console.OpenStandardInput(bufferSize: ConsoleBufferSize), Console.InputEncoding, false, ConsoleBufferSize)
-                );
+            // The NO_CONSOLE environment variable requests that console modifications such as the following one
+            // are not performed. This is necessary in no-console environments such as Azure App Service.
+            if (Environment.GetEnvironmentVariable("NO_CONSOLE") == null)
+            {
+                const int ConsoleBufferSize = 4096;
+                Console.SetIn(new StreamReader(
+                    Console.OpenStandardInput(bufferSize: ConsoleBufferSize), Console.InputEncoding, false, ConsoleBufferSize)
+                    );
+            }
 
             Console.BackgroundColor = ConsoleColor.Black;
             _context.Printer = new ConsolePrinter();
