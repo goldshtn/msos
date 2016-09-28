@@ -258,11 +258,13 @@ namespace msos
     }
 #elif X64
 
+#pragma warning disable CS0169
     struct M128A
     {
         ulong Low;
         ulong High;
     }
+#pragma warning restore CS0169
 
     struct XSAVE_FORMAT
     {
