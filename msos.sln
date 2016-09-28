@@ -82,7 +82,6 @@ Global
 		{168BD1D6-F926-4D6E-BBBC-873C0D4E6CB3}.Release|x86.ActiveCfg = Release|x86
 		{168BD1D6-F926-4D6E-BBBC-873C0D4E6CB3}.Release|x86.Build.0 = Release|x86
 		{168BD1D6-F926-4D6E-BBBC-873C0D4E6CB3}.Release-NoCostura|x64.ActiveCfg = Release-NoCostura|x64
-		{168BD1D6-F926-4D6E-BBBC-873C0D4E6CB3}.Release-NoCostura|x64.Build.0 = Release-NoCostura|x64
 		{168BD1D6-F926-4D6E-BBBC-873C0D4E6CB3}.Release-NoCostura|x86.ActiveCfg = Release-NoCostura|x86
 		{168BD1D6-F926-4D6E-BBBC-873C0D4E6CB3}.Release-NoCostura|x86.Build.0 = Release-NoCostura|x86
 		{1C19B4D7-E6A6-4A9A-8495-8231FA167D1C}.Debug|x64.ActiveCfg = Debug|x64
