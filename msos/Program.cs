@@ -32,7 +32,7 @@ namespace msos
         private void Exit(int exitCode)
         {
             _context.Dispose();
-            Environment.Exit(ERROR_EXIT_CODE);
+            Environment.Exit(exitCode);
         }
 
         private CommandLineOptions _options;
