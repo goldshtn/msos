@@ -283,6 +283,7 @@ namespace msos
 
             var target = DataTarget.LoadCrashDump(DumpFile, CrashDumpReader.DbgEng);
             target.SymbolLocator.SymbolPath = SymbolPath;
+            ((IDebugSymbols)target.DebuggerInterface).SetSymbolPath(SymbolPath);
 
             var outputCallbacks = new OutputCallbacks(this);
             IDebugClient5 client = (IDebugClient5)target.DebuggerInterface;
