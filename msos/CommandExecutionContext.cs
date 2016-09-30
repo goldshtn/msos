@@ -32,6 +32,7 @@ namespace msos
         public int ClrVersionIndex { get; set; }
         public ClrInfo ClrVersion { get; set; }
         public TargetType TargetType { get; set; }
+        public bool DisplayDiagnosticInformation { get; set; }
 
         private CmdLineParser _commandParser;
         private Type[] _allCommandTypes;
@@ -69,16 +70,16 @@ namespace msos
             }
         }
 
-        public void ExecuteCommand(string inputCommand, bool displayDiagnosticInformation = false)
+        public void ExecuteCommand(string inputCommand)
         {
             var commands = inputCommand.Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
             foreach (var command in commands)
             {
-                ExecuteOneCommand(command, displayDiagnosticInformation);
+                ExecuteOneCommand(command);
             }
         }
 
-        public void ExecuteOneCommand(string command, bool displayDiagnosticInformation = false)
+        public void ExecuteOneCommand(string command)
         {
             InitParserIfNecessary();
 
@@ -108,7 +109,7 @@ namespace msos
                 commandToExecute = (ICommand)parseResult.Value;
             }
 
-            using (new TimeAndMemory(displayDiagnosticInformation, Printer))
+            using (new TimeAndMemory(DisplayDiagnosticInformation, Printer))
             {
                 try
                 {
@@ -284,6 +285,11 @@ namespace msos
             var target = DataTarget.LoadCrashDump(DumpFile, CrashDumpReader.DbgEng);
             target.SymbolLocator.SymbolPath = SymbolPath;
             ((IDebugSymbols)target.DebuggerInterface).SetSymbolPath(SymbolPath);
+            if (DisplayDiagnosticInformation)
+            {
+                ((IDebugControl)target.DebuggerInterface).Execute(DEBUG_OUTCTL.NOT_LOGGED, "!sym noisy", DEBUG_EXECUTE.NOT_LOGGED);
+            }
+            ((IDebugControl)target.DebuggerInterface).Execute(DEBUG_OUTCTL.NOT_LOGGED, ".reload", DEBUG_EXECUTE.NOT_LOGGED);
 
             var outputCallbacks = new OutputCallbacks(this);
             IDebugClient5 client = (IDebugClient5)target.DebuggerInterface;

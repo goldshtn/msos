@@ -57,6 +57,7 @@ namespace msos
             _parser = new CmdLineParser(new PrinterTextWriter(_context.Printer));
 
             ParseCommandLineArguments();
+            _context.DisplayDiagnosticInformation = _options.DisplayDiagnosticInformation;
 
             if (!String.IsNullOrEmpty(_options.DumpFile))
             {
@@ -206,7 +207,7 @@ namespace msos
                     }
                 }
 
-                _context.ExecuteOneCommand(command, _options.DisplayDiagnosticInformation);
+                _context.ExecuteOneCommand(command);
             }
         }
 
@@ -239,13 +240,13 @@ namespace msos
                 foreach (var command in commands)
                 {
                     _context.WriteInfoLine("#> {0}", command);
-                    _context.ExecuteOneCommand(command, _options.DisplayDiagnosticInformation);
+                    _context.ExecuteOneCommand(command);
                 }
             }
             else if (!String.IsNullOrEmpty(_options.InitialCommand))
             {
                 _context.WriteInfoLine("#> {0}", _options.InitialCommand);
-                _context.ExecuteCommand(_options.InitialCommand, _options.DisplayDiagnosticInformation);
+                _context.ExecuteCommand(_options.InitialCommand);
             }
         }
 
