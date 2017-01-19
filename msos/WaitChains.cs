@@ -56,8 +56,7 @@ namespace msos
 
         private void SetStrategy()
         {
-            if (_context.TargetType == TargetType.DumpFile
-                || _context.TargetType == TargetType.DumpFile)
+            if (_context.TargetType == TargetType.DumpFile)
             {
                 _temporaryDbgEngTarget = _context.CreateTemporaryDbgEngTarget();
                 _unifiedStackTraces = new UnifiedStackTraces(_temporaryDbgEngTarget.DebuggerInterface, _context);
