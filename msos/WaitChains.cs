@@ -56,8 +56,7 @@ namespace msos
 
         private void SetStrategy()
         {
-            if (_context.TargetType == TargetType.DumpFile
-                || _context.TargetType == TargetType.DumpFile)
+            if (_context.TargetType == TargetType.DumpFile)
             {
                 _temporaryDbgEngTarget = _context.CreateTemporaryDbgEngTarget();
                 _unifiedStackTraces = new UnifiedStackTraces(_temporaryDbgEngTarget.DebuggerInterface, _context);
@@ -202,7 +201,10 @@ namespace msos
                     var stack = _unifiedStackTraces.GetStackTrace(threadInfo.EngineThreadId);
                     foreach (var frame in stack)
                     {
-                        _stackWalker.SetFrameParameters(frame);
+                        if (_stackWalker.SetFrameParameters(frame))
+                        {
+                            
+                        }
 
                         UnifiedBlockingObject blockingObject;
                         if (_stackWalker.GetCriticalSectionBlockingObject(frame, out blockingObject))
