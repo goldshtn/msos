@@ -93,7 +93,7 @@ namespace msos
             {
                 var handle = ConvertToAddress(parameters[0]);
                 
-                UnifiedHandle unifiedHandle = new UnifiedHandle(handle, frame.Method, null);
+                UnifiedHandle unifiedHandle = new UnifiedHandle(handle, nameof(UnifiedBlockingReason.ThreadSleep), null);
                 frame.Handles.Add(unifiedHandle);
             }
         }
@@ -191,7 +191,7 @@ namespace msos
                 return true;
             }
 
-            if (IsMatchingMethod(frame, SLEEP_FUNCTION_NAME) 
+            if (IsMatchingMethod(frame, SLEEP_FUNCTION_NAME)
                 || IsMatchingMethod(frame, SLEEPEX_FUNCTION_NAME)
                 || IsMatchingMethod(frame, THREAD_SLEEP_FUNCTION_NAME))
             {

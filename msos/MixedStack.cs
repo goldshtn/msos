@@ -548,9 +548,10 @@ namespace msos
         {
             UnifiedBlockingReason result = UnifiedBlockingReason.Unknown;
 
-            switch (objectType)
+             switch (objectType)
             {
                 case "Thread": result = UnifiedBlockingReason.Thread; break;
+                case "ThreadSleep": result = UnifiedBlockingReason.ThreadSleep; break;
                 case "Job": result = UnifiedBlockingReason.Job; break;
                 case "File": result = UnifiedBlockingReason.File; break;
                 case "Semaphore": result = UnifiedBlockingReason.Semaphore; break;
@@ -625,6 +626,7 @@ namespace msos
         Semaphore = 21,
         Event = 22,        
         Timer = 23,
-        MemorySection = 24
+        MemorySection = 24,
+        ThreadSleep = 35
     }
 }
