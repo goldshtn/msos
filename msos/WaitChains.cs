@@ -67,7 +67,7 @@ namespace msos
             else
             {
                 _blockingObjectsStrategy = new LiveProcessBlockingObjectsStrategy(_context.Runtime);
-                
+
                 // Currently, we are only enumerating the managed threads because we don't have 
                 // an alternative source of information for threads in live processes. In the future,
                 // we can consider using System.Diagnostics or some other means of enumerating threads
@@ -107,7 +107,10 @@ namespace msos
         {
             foreach (var blockingObject in unifiedThread.BlockingObjects)
             {
-                _context.Write("{0}| {1} ", new string(' ', (depth + 1) * 2), blockingObject.Reason);
+                string reason = blockingObject.Reason == UnifiedBlockingReason.ThreadSleep
+                                ? $"ThreadSleep {blockingObject.Handle}" : blockingObject.Reason.ToString();
+
+                _context.Write("{0}| {1} ", new string(' ', (depth + 1) * 2), reason);
 
                 if (!String.IsNullOrEmpty(blockingObject.KernelObjectName))
                 {
@@ -201,11 +204,8 @@ namespace msos
                     var stack = _unifiedStackTraces.GetStackTrace(threadInfo.EngineThreadId);
                     foreach (var frame in stack)
                     {
-                        if (_stackWalker.SetFrameParameters(frame))
-                        {
+                        _stackWalker.SetFrameParameters(frame);
                             
-                        }
-
                         UnifiedBlockingObject blockingObject;
                         if (_stackWalker.GetCriticalSectionBlockingObject(frame, out blockingObject))
                             result.Add(blockingObject);
@@ -229,7 +229,7 @@ namespace msos
         protected virtual UnifiedBlockingObject GetUnifiedBlockingObjectForHandle(UnifiedHandle handle)
         {
             return new UnifiedBlockingObject(handle.Value, handle.ObjectName, handle.Type);
-        }
+        }   
     }
 
 
