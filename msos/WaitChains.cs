@@ -8,7 +8,7 @@ using System.Runtime.InteropServices;
 
 namespace msos
 {
-    [SupportedTargets(TargetType.DumpFile, TargetType.LiveProcess)]
+    [SupportedTargets(TargetType.DumpFile, TargetType.LiveProcess, TargetType.DumpFileNoHeap)]
     [Verb("!waits", HelpText = "Displays wait chain information and detects deadlocks.")]
     class WaitChains : ICommand
     {
@@ -57,7 +57,7 @@ namespace msos
         private void SetStrategy()
         {
             if (_context.TargetType == TargetType.DumpFile
-                || _context.TargetType == TargetType.DumpFile)
+                || _context.TargetType == TargetType.DumpFileNoHeap)
             {
                 _temporaryDbgEngTarget = _context.CreateTemporaryDbgEngTarget();
                 _unifiedStackTraces = new UnifiedStackTraces(_temporaryDbgEngTarget.DebuggerInterface, _context);
