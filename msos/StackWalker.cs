@@ -85,18 +85,6 @@ namespace msos
                 AddSingleWaitInformation(frame, handle);
             }
         }
-
-        protected override void ExtractSleepObjectInformation(UnifiedStackFrame frame)
-        {
-            var parameters = GetParameters(frame, SLEEP_FUNCTION_OBJECT_PARAM_COUNT);
-            if (parameters.Count > 0)
-            {
-                var handle = ConvertToAddress(parameters[0]);
-                
-                UnifiedHandle unifiedHandle = new UnifiedHandle(handle, nameof(UnifiedBlockingReason.ThreadSleep), null);
-                frame.Handles.Add(unifiedHandle);
-            }
-        }
     }
 
     /// <summary>
@@ -111,11 +99,7 @@ namespace msos
         public const string WAIT_FOR_MULTIPLE_OBJECTS_FUNCTION_NAME = "WaitForMultipleObjects";
         public const string WAIT_FOR_MULTIPLE_OBJECTS_EX_FUNCTION_NAME = "WaitForMultipleObjectsEx";
         public const string ENTER_CRITICAL_SECTION_FUNCTION_NAME = "RtlEnterCriticalSection";
-        public const string THREAD_SLEEP_FUNCTION_NAME = "Thread.Sleep";
-        public const string SLEEP_FUNCTION_NAME = "SleepEx";
-        public const string SLEEPEX_FUNCTION_NAME = "SleepEx";
 
-        protected const int SLEEP_FUNCTION_OBJECT_PARAM_COUNT = 1;
         protected const int ENTER_CRITICAL_SECTION_FUNCTION_PARAM_COUNT = 1;
         protected const int WAIT_FOR_SINGLE_OBJECT_PARAM_COUNT = 2;
         protected const int WAIT_FOR_MULTIPLE_OBJECTS_PARAM_COUNT = 4;
@@ -191,14 +175,6 @@ namespace msos
                 return true;
             }
 
-            if (IsMatchingMethod(frame, SLEEP_FUNCTION_NAME)
-                || IsMatchingMethod(frame, SLEEPEX_FUNCTION_NAME)
-                || IsMatchingMethod(frame, THREAD_SLEEP_FUNCTION_NAME))
-            {
-                ExtractSleepObjectInformation(frame);
-                return true;
-            }
-
             return false;
         }
 
@@ -218,7 +194,7 @@ namespace msos
         {
             if (numberOfHandles > MAXIMUM_WAIT_OBJECTS)
                 numberOfHandles = MAXIMUM_WAIT_OBJECTS;
-                
+
             var handles = ReadHandles(addressOfHandlesArray, numberOfHandles);
             foreach (var handleBytes in handles)
             {
@@ -240,7 +216,6 @@ namespace msos
         }
 
         #region Abstract Methods
-        protected abstract void ExtractSleepObjectInformation(UnifiedStackFrame frame);
 
         protected abstract void ExtractWaitForSingleObjectInformation(UnifiedStackFrame frame);
 
