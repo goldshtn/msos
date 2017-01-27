@@ -27,7 +27,7 @@ namespace msos
             var largeIntegerAddress = ConvertToAddress(parameters[1]);
 
             var largeInt = ReadStructureFromAddress<LARGE_INTEGER>(largeIntegerAddress);
-            var awaitMs = ((-1) * largeInt.QuadPart) / 10000;
+            var awaitMs = (-largeInt.QuadPart) / 10000;
 
             return new UnifiedBlockingObject(awaitMs);
         }
@@ -49,7 +49,7 @@ namespace msos
             int read;
 
             if (!_runtime.ReadMemory(address, buffer, buffer.Length, out read) || read != buffer.Length)
-                throw new Exception($"Error reading structure data from address: {address}");
+                throw new Exception($"Error reading structure data from address: 0x{address.ToString("X")}");
 
             var gch = GCHandle.Alloc(buffer, GCHandleType.Pinned);
             try

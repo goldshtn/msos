@@ -517,13 +517,12 @@ namespace msos
             Reason = ConvertToUnified(objectType);
         }
 
-        public UnifiedBlockingObject(long sleepWait) : this(BlockingObjectOrigin.StackWalker)
+        public UnifiedBlockingObject(long msTimeout) : this(BlockingObjectOrigin.StackWalker)
         {
             Type = UnifiedBlockingType.ThreadSleep;
-            SleepWait = sleepWait;
+            Reason = UnifiedBlockingReason.ThreadWait;
+            ReasonDescription = $"MsTimeout : {msTimeout}";
         }
-
-        public long? SleepWait { get; set; }
 
         public BlockingObjectOrigin Origin { get; private set; }
 
@@ -534,6 +533,8 @@ namespace msos
         public bool HasOwnershipInformation => OwnerOSThreadIds.Count > 0;
 
         public UnifiedBlockingReason Reason { get; private set; } = UnifiedBlockingReason.Unknown;
+
+        public string ReasonDescription { get; private set; }
 
         public List<uint> WaiterOSThreadIds { get; } = new List<uint>();
 
