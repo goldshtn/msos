@@ -423,7 +423,7 @@ namespace msos
 
     enum UnifiedBlockingType
     {
-        WaitChainInfoObject, ClrBlockingObject, DumpHandle, CriticalSectionObject, UnmanagedHandleObject
+        WaitChainInfoObject, ClrBlockingObject, DumpHandle, CriticalSectionObject, UnmanagedHandleObject, ThreadSleep
     }
 
     enum BlockingObjectOrigin
@@ -519,8 +519,7 @@ namespace msos
 
         public UnifiedBlockingObject(long sleepWait) : this(BlockingObjectOrigin.StackWalker)
         {
-            Type = UnifiedBlockingType.UnmanagedHandleObject;
-            Reason = UnifiedBlockingReason.ThreadSleep;
+            Type = UnifiedBlockingType.ThreadSleep;
             SleepWait = sleepWait;
         }
 
@@ -560,7 +559,6 @@ namespace msos
             switch (objectType)
             {
                 case "Thread": result = UnifiedBlockingReason.Thread; break;
-                case "ThreadSleep": result = UnifiedBlockingReason.ThreadSleep; break;
                 case "Job": result = UnifiedBlockingReason.Job; break;
                 case "File": result = UnifiedBlockingReason.File; break;
                 case "Semaphore": result = UnifiedBlockingReason.Semaphore; break;
@@ -635,7 +633,6 @@ namespace msos
         Semaphore = 21,
         Event = 22,        
         Timer = 23,
-        MemorySection = 24,
-        ThreadSleep = 25
+        MemorySection = 24
     }
 }

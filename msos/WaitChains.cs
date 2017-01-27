@@ -108,7 +108,7 @@ namespace msos
         {
             foreach (var blockingObject in unifiedThread.BlockingObjects)
             {
-                string reason = blockingObject.Reason == UnifiedBlockingReason.ThreadSleep
+                string reason = blockingObject.Type == UnifiedBlockingType.ThreadSleep
                                 ? $"ThreadSleep: {blockingObject.SleepWait.Value}"
                                 : blockingObject.Reason.ToString();
 
