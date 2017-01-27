@@ -68,7 +68,7 @@ namespace msos
             else
             {
                 _blockingObjectsStrategy = new LiveProcessBlockingObjectsStrategy(_context.Runtime);
-
+                
                 // Currently, we are only enumerating the managed threads because we don't have 
                 // an alternative source of information for threads in live processes. In the future,
                 // we can consider using System.Diagnostics or some other means of enumerating threads
