@@ -162,7 +162,7 @@ namespace msos
             return result;
         }
 
-        protected bool IsMatchingMethod(UnifiedStackFrame frame, string key)
+        private bool IsMatchingMethod(UnifiedStackFrame frame, string key)
         {
             return frame?.Method == key;
         }
@@ -172,9 +172,7 @@ namespace msos
             blockingObject = null;
 
             if (IsMatchingMethod(frame, NTDELAY_EXECUTION_FUNCTION_NAME))
-            {
                 blockingObject = GetNtDelayExecutionBlockingObject(frame);
-            }
 
             return blockingObject != null;
         }
@@ -185,9 +183,7 @@ namespace msos
             blockingObject = null;
 
             if (frame.Handles != null && IsMatchingMethod(frame, ENTER_CRITICAL_SECTION_FUNCTION_NAME))
-            {
                 blockingObject = GetCriticalSectionBlockingObject(frame);
-            }
            
             return blockingObject != null;
         }
