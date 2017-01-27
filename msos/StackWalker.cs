@@ -118,13 +118,8 @@ namespace msos
         public const string WAIT_FOR_MULTIPLE_OBJECTS_EX_FUNCTION_NAME = "WaitForMultipleObjectsEx";
         public const string ENTER_CRITICAL_SECTION_FUNCTION_NAME = "RtlEnterCriticalSection";
         public const string NTDELAY_EXECUTION_FUNCTION_NAME = "NtDelayExecution";
-
-        public const string THREAD_SLEEP_FUNCTION_NAME = "Sleep";
-        public const string SLEEP_FUNCTION_NAME = "SleepEx";
-        public const string SLEEPEX_FUNCTION_NAME = "SleepEx";
-
+        
         protected const int NTDELAY_EXECUTION_FUNCTION_PARAM_COUNT = 2;
-        protected const int SLEEP_FUNCTION_OBJECT_PARAM_COUNT = 1;
         protected const int ENTER_CRITICAL_SECTION_FUNCTION_PARAM_COUNT = 1;
         protected const int WAIT_FOR_SINGLE_OBJECT_PARAM_COUNT = 2;
         protected const int WAIT_FOR_MULTIPLE_OBJECTS_PARAM_COUNT = 4;
