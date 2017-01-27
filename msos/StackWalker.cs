@@ -24,11 +24,9 @@ namespace msos
         internal override UnifiedBlockingObject GetNtDelayExecutionBlockingObject(UnifiedStackFrame frame)
         {
             var parameters = GetParameters(frame, NTDELAY_EXECUTION_FUNCTION_PARAM_COUNT);
-
             var largeIntegerAddress = ConvertToAddress(parameters[1]);
 
             var largeInt = ReadStructureFromAddress<LARGE_INTEGER>(largeIntegerAddress);
-
             var awaitMs = ((-1) * largeInt.QuadPart) / 10000;
 
             return new UnifiedBlockingObject(awaitMs);
@@ -37,11 +35,9 @@ namespace msos
         protected override UnifiedBlockingObject GetCriticalSectionBlockingObject(UnifiedStackFrame frame)
         {
             var parameters = GetParameters(frame, ENTER_CRITICAL_SECTION_FUNCTION_PARAM_COUNT);
-
             var criticalSectionAddress = ConvertToAddress(parameters[0]);
 
             var section = ReadStructureFromAddress<CRITICAL_SECTION>(criticalSectionAddress);
-
             return new UnifiedBlockingObject(section, criticalSectionAddress);
         }
 
