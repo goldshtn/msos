@@ -423,7 +423,7 @@ namespace msos
 
     enum UnifiedBlockingType
     {
-        WaitChainInfoObject, ClrBlockingObject, DumpHandle, CriticalSectionObject, UnmanagedHandleObject
+        WaitChainInfoObject, ClrBlockingObject, DumpHandle, CriticalSectionObject, UnmanagedHandleObject, ThreadSleep
     }
 
     enum BlockingObjectOrigin
@@ -516,6 +516,14 @@ namespace msos
             Type = UnifiedBlockingType.UnmanagedHandleObject;
             Reason = ConvertToUnified(objectType);
         }
+
+        public UnifiedBlockingObject(long sleepWait) : this(BlockingObjectOrigin.StackWalker)
+        {
+            Type = UnifiedBlockingType.ThreadSleep;
+            SleepWait = sleepWait;
+        }
+
+        public long? SleepWait { get; set; }
 
         public BlockingObjectOrigin Origin { get; private set; }
 

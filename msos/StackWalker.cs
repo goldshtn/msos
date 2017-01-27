@@ -20,29 +20,47 @@ namespace msos
                 throw new Exception("Unexpected architecture: only X86 is supported");
         }
 
+
+        internal override UnifiedBlockingObject GetNtDelayExecutionBlockingObject(UnifiedStackFrame frame)
+        {
+            var parameters = GetParameters(frame, NTDELAY_EXECUTION_FUNCTION_PARAM_COUNT);
+            var largeIntegerAddress = ConvertToAddress(parameters[1]);
+
+            var largeInt = ReadStructureFromAddress<LARGE_INTEGER>(largeIntegerAddress);
+            var awaitMs = ((-1) * largeInt.QuadPart) / 10000;
+
+            return new UnifiedBlockingObject(awaitMs);
+        }
+
         protected override UnifiedBlockingObject GetCriticalSectionBlockingObject(UnifiedStackFrame frame)
         {
-            UnifiedBlockingObject result = null;
             var parameters = GetParameters(frame, ENTER_CRITICAL_SECTION_FUNCTION_PARAM_COUNT);
             var criticalSectionAddress = ConvertToAddress(parameters[0]);
 
-            byte[] buffer = new byte[Marshal.SizeOf(typeof(CRITICAL_SECTION))];
+            var section = ReadStructureFromAddress<CRITICAL_SECTION>(criticalSectionAddress);
+            return new UnifiedBlockingObject(section, criticalSectionAddress);
+        }
+
+        private T ReadStructureFromAddress<T>(ulong address)
+        {
+            T result = default(T);
+
+            byte[] buffer = new byte[Marshal.SizeOf(typeof(T))];
             int read;
 
-            if (!_runtime.ReadMemory(criticalSectionAddress, buffer, buffer.Length, out read) || read != buffer.Length)
-                throw new Exception($"Error reading critical section data from address: {criticalSectionAddress}");
+            if (!_runtime.ReadMemory(address, buffer, buffer.Length, out read) || read != buffer.Length)
+                throw new Exception($"Error reading structure data from address: {address}");
 
             var gch = GCHandle.Alloc(buffer, GCHandleType.Pinned);
             try
             {
-                CRITICAL_SECTION section = (CRITICAL_SECTION)Marshal.PtrToStructure(
-                    gch.AddrOfPinnedObject(), typeof(CRITICAL_SECTION));
-                result = new UnifiedBlockingObject(section, criticalSectionAddress);
+                result = Marshal.PtrToStructure<T>(gch.AddrOfPinnedObject());
             }
             finally
             {
                 gch.Free();
             }
+
             return result;
         }
 
@@ -99,7 +117,9 @@ namespace msos
         public const string WAIT_FOR_MULTIPLE_OBJECTS_FUNCTION_NAME = "WaitForMultipleObjects";
         public const string WAIT_FOR_MULTIPLE_OBJECTS_EX_FUNCTION_NAME = "WaitForMultipleObjectsEx";
         public const string ENTER_CRITICAL_SECTION_FUNCTION_NAME = "RtlEnterCriticalSection";
-
+        public const string NTDELAY_EXECUTION_FUNCTION_NAME = "NtDelayExecution";
+        
+        protected const int NTDELAY_EXECUTION_FUNCTION_PARAM_COUNT = 2;
         protected const int ENTER_CRITICAL_SECTION_FUNCTION_PARAM_COUNT = 1;
         protected const int WAIT_FOR_SINGLE_OBJECT_PARAM_COUNT = 2;
         protected const int WAIT_FOR_MULTIPLE_OBJECTS_PARAM_COUNT = 4;
@@ -142,21 +162,25 @@ namespace msos
             return frame?.Method == key;
         }
 
+        internal bool GetThreadSleepBlockingObject(UnifiedStackFrame frame, out UnifiedBlockingObject blockingObject)
+        {
+            blockingObject = null;
+
+            if (IsMatchingMethod(frame, NTDELAY_EXECUTION_FUNCTION_NAME))
+                blockingObject = GetNtDelayExecutionBlockingObject(frame);
+
+            return blockingObject != null;
+        }
+
+
         public bool GetCriticalSectionBlockingObject(UnifiedStackFrame frame, out UnifiedBlockingObject blockingObject)
         {
-            bool result = false;
+            blockingObject = null;
 
             if (frame.Handles != null && IsMatchingMethod(frame, ENTER_CRITICAL_SECTION_FUNCTION_NAME))
-            {
                 blockingObject = GetCriticalSectionBlockingObject(frame);
-                result = blockingObject != null;
-            }
-            else
-            {
-                blockingObject = null;
-            }
-
-            return result;
+           
+            return blockingObject != null;
         }
 
         public bool SetFrameParameters(UnifiedStackFrame frame)
@@ -220,6 +244,8 @@ namespace msos
         protected abstract void ExtractWaitForSingleObjectInformation(UnifiedStackFrame frame);
 
         protected abstract void ExtractWaitForMultipleObjectsInformation(UnifiedStackFrame frame);
+
+        internal abstract UnifiedBlockingObject GetNtDelayExecutionBlockingObject(UnifiedStackFrame frame);
 
         protected abstract UnifiedBlockingObject GetCriticalSectionBlockingObject(UnifiedStackFrame frame);
 
