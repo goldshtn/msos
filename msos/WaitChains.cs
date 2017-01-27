@@ -8,7 +8,7 @@ using System.Runtime.InteropServices;
 
 namespace msos
 {
-    [SupportedTargets(TargetType.DumpFile, TargetType.LiveProcess, TargetType.DumpFileNoHeap)]
+    [SupportedTargets(TargetType.DumpFile, TargetType.LiveProcess)]
     [Verb("!waits", HelpText = "Displays wait chain information and detects deadlocks.")]
     class WaitChains : ICommand
     {
@@ -57,7 +57,7 @@ namespace msos
         private void SetStrategy()
         {
             if (_context.TargetType == TargetType.DumpFile
-                || _context.TargetType == TargetType.DumpFileNoHeap)
+                || _context.TargetType == TargetType.DumpFile)
             {
                 _temporaryDbgEngTarget = _context.CreateTemporaryDbgEngTarget();
                 _unifiedStackTraces = new UnifiedStackTraces(_temporaryDbgEngTarget.DebuggerInterface, _context);
@@ -108,7 +108,11 @@ namespace msos
         {
             foreach (var blockingObject in unifiedThread.BlockingObjects)
             {
-                _context.Write("{0}| {1} ", new string(' ', (depth + 1) * 2), blockingObject.Reason);
+                string reason = blockingObject.Reason == UnifiedBlockingReason.ThreadSleep
+                                ? $"ThreadSleep: {blockingObject.SleepWait.Value}"
+                                : blockingObject.Reason.ToString();
+
+                _context.Write("{0}| {1} ", new string(' ', (depth + 1) * 2), reason);
 
                 if (!String.IsNullOrEmpty(blockingObject.KernelObjectName))
                 {
@@ -207,8 +211,13 @@ namespace msos
                         UnifiedBlockingObject blockingObject;
                         if (_stackWalker.GetCriticalSectionBlockingObject(frame, out blockingObject))
                             result.Add(blockingObject);
+                        else if (_stackWalker.GetThreadSleepBlockingObject(frame, out blockingObject))
+                            result.Add(blockingObject);
 
-                        result.AddRange(frame.Handles.Select(GetUnifiedBlockingObjectForHandle));
+                        if (frame.Handles.Count > 0)
+                        {
+                            result.AddRange(frame.Handles.Select(GetUnifiedBlockingObjectForHandle));
+                        }
                     }
                 }
             }
