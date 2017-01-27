@@ -61,10 +61,7 @@ namespace msos
             [FieldOffset(4)]
             public Int32 HighPart;
         }
-
-            public Int32 HighPart;
-        }
-
+        
         public unsafe struct PUBLIC_OBJECT_TYPE_INFORMATION
         {
             public UNICODE_STRING TypeName;
