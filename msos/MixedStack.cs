@@ -10,6 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using static msos.NativeStructs;
 
 namespace msos
@@ -423,7 +424,7 @@ namespace msos
 
     enum UnifiedBlockingType
     {
-        WaitChainInfoObject, ClrBlockingObject, DumpHandle, CriticalSectionObject, UnmanagedHandleObject
+        WaitChainInfoObject, ClrBlockingObject, DumpHandle, CriticalSectionObject, UnmanagedHandleObject, ThreadSleep
     }
 
     enum BlockingObjectOrigin
@@ -517,6 +518,13 @@ namespace msos
             Reason = ConvertToUnified(objectType);
         }
 
+        public UnifiedBlockingObject(long msTimeout) : this(BlockingObjectOrigin.StackWalker)
+        {
+            Type = UnifiedBlockingType.ThreadSleep;
+            Reason = UnifiedBlockingReason.ThreadWait;
+            ReasonDescription = msTimeout == Timeout.Infinite ? $"Sleep with no timeout" : $"Sleep with timeout: {msTimeout}ms" ;
+        }
+
         public BlockingObjectOrigin Origin { get; private set; }
 
         public UnifiedBlockingType Type { get; private set; }
@@ -526,6 +534,8 @@ namespace msos
         public bool HasOwnershipInformation => OwnerOSThreadIds.Count > 0;
 
         public UnifiedBlockingReason Reason { get; private set; } = UnifiedBlockingReason.Unknown;
+
+        public string ReasonDescription { get; private set; }
 
         public List<uint> WaiterOSThreadIds { get; } = new List<uint>();
 
