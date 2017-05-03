@@ -26,8 +26,8 @@ namespace msos
             var parameters = GetParameters(frame, NTDELAY_EXECUTION_FUNCTION_PARAM_COUNT);
             var largeIntegerAddress = ConvertToAddress(parameters[1]);
 
-            var largeInt = ReadStructureFromAddress<LARGE_INTEGER>(largeIntegerAddress);
-            var awaitMs = (-largeInt.QuadPart) / 10000;
+            var largeInt = ReadStructureFromAddress<Int64>(largeIntegerAddress);
+            var awaitMs = (-largeInt) / 10000;
 
             return new UnifiedBlockingObject(awaitMs);
         }
