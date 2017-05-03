@@ -51,8 +51,6 @@ namespace msos
 
         #region NtDll
 
-        [StructLayout(LayoutKind.Explicit, Size = 8)]
-
         public unsafe struct PUBLIC_OBJECT_TYPE_INFORMATION
         {
             public UNICODE_STRING TypeName;
