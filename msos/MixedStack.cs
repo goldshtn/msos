@@ -10,6 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using static msos.NativeStructs;
 
 namespace msos
@@ -521,7 +522,7 @@ namespace msos
         {
             Type = UnifiedBlockingType.ThreadSleep;
             Reason = UnifiedBlockingReason.ThreadWait;
-            ReasonDescription = $"MsTimeout : {msTimeout}";
+            ReasonDescription = msTimeout == Timeout.Infinite ? $"Sleep with no timeout" : $"Sleep with timeout: {msTimeout}ms" ;
         }
 
         public BlockingObjectOrigin Origin { get; private set; }
