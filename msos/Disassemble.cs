@@ -101,8 +101,13 @@ namespace msos
                         sourceLocation.ColStart, sourceLocation.ColEnd);
                     for (int line = sourceLocation.LineNumber; line <= sourceLocation.LineNumberEnd; ++line)
                     {
-                        _context.WriteLine(ReadSourceLine(sourceLocation.FilePath, line));
-                        _context.WriteLine(new string(' ', sourceLocation.ColStart - 1) + new string('^', sourceLocation.ColEnd - sourceLocation.ColStart));
+                        var sourceLine = ReadSourceLine(sourceLocation.FilePath, line);
+
+                        if (sourceLine != null)
+                        {
+                            _context.WriteLine(sourceLine);
+                            _context.WriteLine(new string(' ', sourceLocation.ColStart - 1) + new string('^', sourceLocation.ColEnd - sourceLocation.ColStart));
+                        }
                     }
                 }
                 PrintInstructions(instructions);
@@ -120,7 +125,10 @@ namespace msos
                 contents = File.ReadAllLines(file);
                 _sourceFileCache.Add(file, contents);
             }
-            return contents[line - 1];
+
+            return line - 1 < contents.Length 
+                ? contents[line - 1]
+                : null;
         }
 
         private void PrintInstructions(IEnumerable<Instruction> instructions)
