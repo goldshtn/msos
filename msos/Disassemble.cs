@@ -63,7 +63,7 @@ namespace msos
                 return;
 
             var mapByOffset = (from map in method.ILOffsetMap
-                               where map.ILOffset != -2
+                               where map.ILOffset >= 0 // prolog is -2, epilog -3
                                where map.StartAddress <= map.EndAddress
                                orderby map.ILOffset
                                select map).ToArray();
@@ -75,7 +75,9 @@ namespace msos
 
             // This is the prologue, looks like it's always there, but it could
             // also be the only thing that's in the method
-            DisassembleNative(method.ILOffsetMap.Single(e => e.ILOffset == -2));
+            var prologue = method.ILOffsetMap[0];
+            if (prologue.ILOffset == -2) // -2 is a magic number for prologue
+                DisassembleNative(prologue);
 
             for (int i = 0; i < mapByOffset.Length; ++i)
             {
@@ -114,7 +116,9 @@ namespace msos
                 DisassembleNative(map);
             }
 
-            // TODO We are still not printing the epilogue while sosex does
+            var epilogue = method.ILOffsetMap[method.ILOffsetMap.Length - 1];
+            if (epilogue.ILOffset == -3) // -3 is a magic number for epilog
+                DisassembleNative(epilogue);
         }
 
         private string ReadSourceLine(string file, int line)
@@ -128,7 +132,7 @@ namespace msos
 
             return line - 1 < contents.Length 
                 ? contents[line - 1]
-                : null;
+                : null; // "nop" can have no corresponding c# code
         }
 
         private void PrintInstructions(IEnumerable<Instruction> instructions)
