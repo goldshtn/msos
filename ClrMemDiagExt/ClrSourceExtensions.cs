@@ -68,6 +68,8 @@ namespace Microsoft.Diagnostics.RuntimeExt
                         nearest.LineNumberEnd = (int)point.LineEnd;
                         nearest.ColStart = (int)point.ColBegin;
                         nearest.ColEnd = (int)point.ColEnd;
+
+                        distance = dist;
                     }
                 }
             }
