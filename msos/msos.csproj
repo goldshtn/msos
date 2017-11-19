@@ -306,13 +306,17 @@ foreach (var item in filesToCleanup)
     <PostBuildEvent Condition="'$(Platform)' == 'x86' And '$(Configuration)' == 'Release-NoCostura'">xcopy /Y /F "$(ProjectDir)"costura32\*.dll .</PostBuildEvent>
     <PostBuildEvent Condition="'$(Platform)' == 'x64' And '$(Configuration)' == 'Release-NoCostura'">xcopy /Y /F "$(ProjectDir)"costura64\*.dll .</PostBuildEvent>
   </PropertyGroup>
+  <Import Project="..\packages\Costura.Fody.2.0.0-beta0018\build\Costura.Fody.targets" Condition="Exists('..\packages\Costura.Fody.2.0.0-beta0018\build\Costura.Fody.targets') And '$(Configuration)' != 'Release-NoCostura'" />
+  <Import Project="..\packages\Fody.1.29.4\build\dotnet\Fody.targets" Condition="Exists('..\packages\Fody.1.29.4\build\dotnet\Fody.targets') And '$(Configuration)' != 'Release-NoCostura'" />
+  
+  <Import Project="..\packages\LargeAddressAware.1.0.1\build\LargeAddressAware.targets" Condition="Exists('..\packages\LargeAddressAware.1.0.1\build\LargeAddressAware.targets')" />
   <PropertyGroup Condition="'$(Platform)' == 'x86'">
     <LargeAddressAware>true</LargeAddressAware>
   </PropertyGroup>
-  <Import Project="..\packages\Costura.Fody.2.0.0-beta0018\build\Costura.Fody.targets" Condition="Exists('..\packages\Costura.Fody.2.0.0-beta0018\build\Costura.Fody.targets') And '$(Configuration)' != 'Release-NoCostura'" />
-  <Import Project="..\packages\Fody.1.29.4\build\dotnet\Fody.targets" Condition="Exists('..\packages\Fody.1.29.4\build\dotnet\Fody.targets') And '$(Configuration)' != 'Release-NoCostura'" />
-  <Import Project="..\packages\LargeAddressAware.1.0.1\build\LargeAddressAware.targets" Condition="Exists('..\packages\LargeAddressAware.1.0.1\build\LargeAddressAware.targets')" />
-  
+  <Target Name="CustomSetLargeAddressAware" AfterTargets="FodyTarget" Condition="'$(LargeAddressAware)' == 'true' AND Exists('$(EditBin)')">
+    <Exec Command='"$(EditBin)" "@(IntermediateAssembly)"' />
+  </Target>
+
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
